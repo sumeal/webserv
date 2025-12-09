@@ -12,10 +12,6 @@ SimpleSocket::SimpleSocket(int domain, int service, int protocol, int port, u_lo
 	sock = socket(domain, service, protocol);
 	//Test socket
 	test_connection(sock);
-	//Establish network connection
-	connection = connect_to_network(sock, address);
-	//Test network connection
-	test_connection(connection);
 }
 
 // Test connection virtual function
@@ -42,4 +38,9 @@ int SimpleSocket::get_sock()
 int SimpleSocket::get_connection()
 {
 	return (connection);
+}
+
+void SimpleSocket::set_connection(int con)
+{
+	connection = con;
 }
