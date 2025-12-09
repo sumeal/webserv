@@ -10,5 +10,10 @@ BindingSocket::BindingSocket(int domain, int service, int protocol, int port, u_
 // Defination of connect_to_netowrk virtual fucntion
 int BindingSocket::connect_to_network(int sock, struct sockaddr_in address)
 {
-	return (bind(sock, (struct sockaddr *)&address, sizeof(address)));
+	binding = bind(sock, (struct sockaddr *)&address, sizeof(address));
+}
+
+int BindingSocket::get_binding()
+{
+	return (binding);
 }

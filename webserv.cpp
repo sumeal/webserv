@@ -16,7 +16,7 @@ SimpleSocket::SimpleSocket(int domain, int service, int protocol, int port, u_lo
 
 // Test connection virtual function
 
-void SimpleSocket::SimpleSocket::test_connection(int item_to_test)
+void SimpleSocket::test_connection(int item_to_test)
 {
 	if (item_to_test < 0)
 	{
