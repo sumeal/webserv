@@ -4,6 +4,8 @@ SRCS = webserv.cpp \
 	   BindingSocket.cpp \
 	   ConnectingSocket.cpp \
 	   ListeningSocket.cpp \
+	   SimpleServer.cpp \
+	   TestServer.cpp \
 	   main.cpp
 
 OBJS = $(SRCS:.cpp=.o)

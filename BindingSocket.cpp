@@ -11,6 +11,7 @@ BindingSocket::BindingSocket(int domain, int service, int protocol, int port, u_
 int BindingSocket::connect_to_network(int sock, struct sockaddr_in address)
 {
 	binding = bind(sock, (struct sockaddr *)&address, sizeof(address));
+	return (binding);
 }
 
 int BindingSocket::get_binding()
