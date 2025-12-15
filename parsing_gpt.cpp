@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/14 08:44:23 by mbani-ya          #+#    #+#             */
-/*   Updated: 2025/12/15 15:40:29 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2025/12/15 16:37:53 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,10 +42,29 @@ bool	isCGIextOK(std::string path, std::string cgi_path)
 		return false;
 	//1 case may need to handle but idk necessary or not.
 	//./../../../etc/passwd.
+	//but still considering to do this right after location matching or now.
+	//bcus if now it might be redundant since static also may need it.
 	//this will causes the user to go outside of root & get private info
 	//if want to handle, use list and every node is separated by /. 
 	//lets say meet .. pop back the last node.
 	//then we create a string and compare with "var/www/html"
 	return true;
 }
+
+void	executeCGI()
+{
+	//normal case. 1 request
+	int	fds[4];
+	pipe_in;
+	pipe_out;
+	fork()
+	//> 1
+	while ()
+	{
+		
+	}
+}
+
+
+
 
