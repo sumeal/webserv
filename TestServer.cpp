@@ -2,8 +2,17 @@
 
 TestServer::TestServer() : SimpleServer(AF_INET, SOCK_STREAM, 0 ,8080, INADDR_ANY, 10)
 {
+	poll_setup();
 	memset(buffer, 0, sizeof(buffer));
 	launch();
+}
+
+void TestServer::poll_setup()
+{
+	pollfd pfd;
+	pfd.fd = get_socket()->get_sock();
+	pfd.events = POLLIN;
+	pfds.push_back(pfd);
 }
 
 void TestServer::accepter()
@@ -30,10 +39,28 @@ void TestServer::launch()
 {
 	while (true)
 	{
-		std::cout << "====Waiting====" << std::endl;
-		accepter();
-		handler();
-		responder();
-		std::cout << "====Done====" << std::endl;
+		int ready = poll(pfds.data(), pfds.size(), -1);
+		if (ready < 0)
+			perror("Poll error");
+		for(size_t i = 0; i < pfds.size(); i++)
+		{
+			if (pfds[i].revents & POLLIN)
+			{
+				if (pfds[i].fd == get_socket()->get_sock())
+				{
+					accepter();
+					pollfd new_pfd;
+					new_pfd.fd = new_socket;
+					new_pfd.events = POLLIN;
+					pfds.push_back(new_pfd);
+				}
+				else
+				{
+					handler();
+					responder();
+					pfds.erase(pfds.begin() + i);
+				}
+			}
+		}
 	}
 }
