@@ -1,30 +1,42 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   parsing_gpt.cpp                                    :+:      :+:    :+:   */
+/*   CGI_request.cpp                                    :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/14 08:44:23 by mbani-ya          #+#    #+#             */
-/*   Updated: 2025/12/15 16:37:53 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2025/12/16 16:03:06 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "parsing_gpt.h"
+#include "CGI_request.h"
+#include "CGI_data.h"
 #include <unistd.h>
 #include <string>
+
+CGI_request::CGI_request(const t_request& request, const t_location& locate)
+	 : _request(request), _locate(locate)
+{}
+
+CGI_request::~CGI_request()
+{}
 
 //check 2 things
 //1. cgi enabled? is the location for script to be run have permission for script
 //2. executable name/suffix is correct? and can be execute?
-bool	isCGI(t_location* locate, t_request* request)
+bool	CGI_request::isCGI() const
 {
-	return (locate->cgi_enabled && isCGIextOK(request->path, locate->cgi_path));
+	return (_locate.cgi_enabled && isCGIextOK());
 }
 
 //should at least support one. which we focus on .py
-bool	isCGIextOK(std::string path, std::string cgi_path)
+bool	CGI_request::isCGIextOK() const
 {
+	const std::string	path		= _request.path;
+	const std::string	cgi_path	= _locate.cgi_path;
+	
+	//manually without taking from config cgi_ext
 	//use rfind to detect the last dot
 	size_t lastDot = path.rfind(".");
 	if (lastDot == std::string::npos) //how to check npos
@@ -34,6 +46,7 @@ bool	isCGIextOK(std::string path, std::string cgi_path)
 	if (ext != ".cgi" && ext != ".php" && ext != ".py"
 		&& ext != ".sh" && ext != ".pl")
 		return false;
+	
 	//use access to check valid or not
 	if (access(path.c_str(), R_OK) == -1)
 		return false;
@@ -50,21 +63,3 @@ bool	isCGIextOK(std::string path, std::string cgi_path)
 	//then we create a string and compare with "var/www/html"
 	return true;
 }
-
-void	executeCGI()
-{
-	//normal case. 1 request
-	int	fds[4];
-	pipe_in;
-	pipe_out;
-	fork()
-	//> 1
-	while ()
-	{
-		
-	}
-}
-
-
-
-

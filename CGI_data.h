@@ -1,18 +1,18 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   parsing_gpt.h                                      :+:      :+:    :+:   */
+/*   CGI_data.h                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/12/13 23:59:28 by mbani-ya          #+#    #+#             */
-/*   Updated: 2025/12/15 13:50:31 by mbani-ya         ###   ########.fr       */
+/*   Created: 2025/12/16 15:03:57 by mbani-ya          #+#    #+#             */
+/*   Updated: 2025/12/16 15:04:51 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#ifndef PARSING_GPT_H
-# define PARSING_GPT_H
 
+#ifndef CGI_DATA_H
+#define CGI_DATA_H
 #include <string>
 #include <map>
 #include <vector>
