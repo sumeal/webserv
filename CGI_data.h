@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/16 15:03:57 by mbani-ya          #+#    #+#             */
-/*   Updated: 2025/12/16 15:04:51 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2025/12/18 17:21:15 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,11 +25,6 @@ typedef struct s_request {
     std::string version;     // HTTP/1.1
     std::map<std::string, std::string> headers;
     std::string body;
-	//for execve. 
-    std::string abs_path;    // /var/www/html/cgi-bin/test.py
-	//execve.CGI script(eg. py)
-    std::string remote_addr; // 192.168.1.5
-    int         server_port; // 8080
 } t_request;
 
 typedef struct s_location {
@@ -38,7 +33,11 @@ typedef struct s_location {
     std::vector<std::string> methods;
     bool cgi_enabled;
     std::string cgi_extension;     // ".py"
-    std::string cgi_path;          // "/usr/bin/python3"
+    std::string cgi_path;          // "/usr/bin/python3". the binary
 } t_location;
+
+typedef struct s_CGIContext {
+	
+} t_CGIContext;
 
 #endif

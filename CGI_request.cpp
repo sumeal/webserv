@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/14 08:44:23 by mbani-ya          #+#    #+#             */
-/*   Updated: 2025/12/16 16:03:06 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2025/12/18 11:22:03 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,7 @@
 #include "CGI_data.h"
 #include <unistd.h>
 #include <string>
+#include <iostream> //debug
 
 CGI_request::CGI_request(const t_request& request, const t_location& locate)
 	 : _request(request), _locate(locate)
@@ -46,13 +47,6 @@ bool	CGI_request::isCGIextOK() const
 	if (ext != ".cgi" && ext != ".php" && ext != ".py"
 		&& ext != ".sh" && ext != ".pl")
 		return false;
-	
-	//use access to check valid or not
-	if (access(path.c_str(), R_OK) == -1)
-		return false;
-	//check interpreter
-	if (access(cgi_path.c_str(), X_OK) == -1)
-		return false;
 	//1 case may need to handle but idk necessary or not.
 	//./../../../etc/passwd.
 	//but still considering to do this right after location matching or now.
@@ -63,3 +57,11 @@ bool	CGI_request::isCGIextOK() const
 	//then we create a string and compare with "var/www/html"
 	return true;
 }
+
+//use access to check valid or not. the path is /cgi-bin/test.py?x=1. add . so it check from current directory
+// std::string root_path =  "." + path;
+// if (access(root_path.c_str(), R_OK) == -1)
+// 	return false;
+// //check interpreter
+// if (access(cgi_path.c_str(), X_OK) == -1)
+// 	return false;

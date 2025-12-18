@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/16 14:44:53 by mbani-ya          #+#    #+#             */
-/*   Updated: 2025/12/18 17:19:31 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2025/12/18 11:39:07 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -94,7 +94,8 @@ void	CGI_execute::execute()
 		close(pipe_in[0]);
 		close(pipe_out[1]);
 		//Proceed with parent logic. write body to CGI
-		
+		write(pipe_in[1], _request.body.c_str(), _request.body.size());
+		close(pipe_in[1]); //close so that CGI gets EOF
 		//read from CGI
 		char		read_buf[8192];
 		ssize_t		read_len = 0;
