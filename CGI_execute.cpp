@@ -6,10 +6,11 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/16 14:44:53 by mbani-ya          #+#    #+#             */
-/*   Updated: 2025/12/18 17:19:31 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2025/12/19 09:44:31 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
+#include "CGI_data.h"
 #include "CGI_request.h"
 #include "CGI_execute.h"
 #include <cstdlib>
@@ -19,6 +20,7 @@
 #include <cstring> //strdup
 #include <sys/wait.h>
 #include <iostream>
+#include <poll.h>
 
 CGI_execute::CGI_execute(const t_request& request, const t_location& locate)
 	: _request(request), _locate(locate)
@@ -94,40 +96,50 @@ void	CGI_execute::execute()
 		close(pipe_in[0]);
 		close(pipe_out[1]);
 		//Proceed with parent logic. write body to CGI
-		
+		t_CGI*  CGI = new t_CGI();
+		CGI->pipeToCgi = pipe_in[1];
+		CGI->clientSocket = 1; //hardcoded for now
+		CGI->pid = pid;
 		//read from CGI
-		char		read_buf[8192];
-		ssize_t		read_len = 0;
-		while((read_len = read(pipe_out[0], read_buf, sizeof(read_buf))) > 0)
-			_output.append(read_buf, read_len);
-		if (read_len == -1)
-			throw (std::runtime_error("CGI: cannot read. pipe error")); // pipe error since nothing to read
-		close(pipe_out[0]);
-		//wait for child
-		int status;
-		//pid_t res = waitpid(pid, &status, WNOHANG);
-		// while (res == 0)
-		// {
-		// 	sleep(5);
-		// }
-		pid_t res = waitpid(pid, &status, 0);
-		//add waitpid handling
-		if (WIFEXITED(status))
-		{
-			int code = WEXITSTATUS(status);
-			if (code !=  0)
-			{
-				std::cerr << "CGI error: exited with code" << code << std::endl;
-				throw(std::runtime_error("CGI error: child process"));
-			}
-		}
-		else if (WIFSIGNALED(status))
-		{
-			std::cerr << "CGI error: crash with code" << WTERMSIG(status) << std::endl;
-			throw (std::runtime_error("CGI error: child process"));
-		}
+		CGI->pipeFromCgi = pipe_out[0];
+		//register in global map/struct
+		data.map = 
+		//add the pollfd vector
+
+		//
 	}
 }
+
+// char		read_buf[8192];
+// ssize_t		read_len = 0;
+// while((read_len = read(pipe_out[0], read_buf, sizeof(read_buf))) > 0)
+// 	_output.append(read_buf, read_len);
+// if (read_len == -1)
+// 	throw (std::runtime_error("CGI: cannot read. pipe error")); // pipe error since nothing to read
+// 	//wait for child
+// 	int status;
+// 	//pid_t res = waitpid(pid, &status, WNOHANG);
+// 	// while (res == 0)
+// 	// {
+// 	// 	sleep(5);
+// 	// }
+// 	pid_t res = waitpid(pid, &status, 0);
+// 	//add waitpid handling
+// 	if (WIFEXITED(status))
+// 	{
+// 		int code = WEXITSTATUS(status);
+// 		if (code !=  0)
+// 		{
+// 			std::cerr << "CGI error: exited with code" << code << std::endl;
+// 			throw(std::runtime_error("CGI error: child process"));
+// 		}
+// 	}
+// 	else if (WIFSIGNALED(status))
+// 	{
+// 		std::cerr << "CGI error: crash with code" << WTERMSIG(status) << std::endl;
+// 		throw (std::runtime_error("CGI error: child process"));
+// 	}
+// }
 
 //calculate abspath
 //prepare envp, args, 

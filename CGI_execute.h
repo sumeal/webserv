@@ -7,6 +7,7 @@ class CGI_execute {
 private:
 	const t_request&	_request;
 	const t_location&	_locate;
+	const t_data&		_data;
 	int		pipe_in[2];
 	int		pipe_out[2];
 	pid_t	pid;
