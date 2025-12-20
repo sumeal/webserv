@@ -2,12 +2,13 @@
 #define CGI_EXECUTE_H
 
 #include "CGI_data.h"
+#include <sched.h>
 
 class CGI_execute {
 private:
 	const t_request&	_request;
 	const t_location&	_locate;
-	const t_data&		_data;
+	t_CGI*	_cgi;
 	int		pipe_in[2];
 	int		pipe_out[2];
 	pid_t	pid;
@@ -18,7 +19,7 @@ private:
     int         server_port; // 8080
 	std::string	_output;
 public:
-	CGI_execute(const t_request& request, const t_location& locate);
+	CGI_execute(t_data& data, const t_request& request, const t_location& locate);
 	~CGI_execute();
 
 	void	preExecute();
@@ -27,6 +28,7 @@ public:
 	void	cleanup();
 
 	const std::string&	getOutput() const;
+	t_CGI*	getCgiStruct() const;
 };
 
 #endif

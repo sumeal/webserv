@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/16 14:44:53 by mbani-ya          #+#    #+#             */
-/*   Updated: 2025/12/19 09:44:31 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2025/12/20 08:51:38 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,14 +16,15 @@
 #include <cstdlib>
 #include <stdexcept>
 #include <string>
+#include <sys/poll.h>
 #include <unistd.h>
 #include <cstring> //strdup
 #include <sys/wait.h>
 #include <iostream>
 #include <poll.h>
 
-CGI_execute::CGI_execute(const t_request& request, const t_location& locate)
-	: _request(request), _locate(locate)
+CGI_execute::CGI_execute(t_data& data, const t_request& request, const t_location& locate)
+	: _data(data), _request(request), _locate(locate)
 {}
 
 CGI_execute::~CGI_execute()
@@ -96,16 +97,13 @@ void	CGI_execute::execute()
 		close(pipe_in[0]);
 		close(pipe_out[1]);
 		//Proceed with parent logic. write body to CGI
-		t_CGI*  CGI = new t_CGI();
-		CGI->pipeToCgi = pipe_in[1];
-		CGI->clientSocket = 1; //hardcoded for now
-		CGI->pid = pid;
+		_cgi = new t_CGI();
+		_cgi->pipeToCgi = pipe_in[1];
+		_cgi->clientSocket = 1; //hardcoded for now
+		_cgi->pid = pid;
 		//read from CGI
-		CGI->pipeFromCgi = pipe_out[0];
-		//register in global map/struct
-		data.map = 
+		_cgi->pipeFromCgi = pipe_out[0];
 		//add the pollfd vector
-
 		//
 	}
 }
@@ -170,4 +168,9 @@ void	CGI_execute::preExecute()
 const std::string&	CGI_execute::getOutput() const
 {
 	return (_output);
+}
+
+t_CGI*	CGI_execute::getCgiStruct() const
+{
+	return (_cgi);
 }
