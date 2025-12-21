@@ -1,28 +1,19 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   Core.hpp                                           :+:      :+:    :+:   */
+/*   Client.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/12/19 17:35:03 by mbani-ya          #+#    #+#             */
-/*   Updated: 2025/12/22 00:41:16 by mbani-ya         ###   ########.fr       */
+/*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
+/*   Updated: 2025/12/21 00:18:06 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <map>
-#include "CGI_data.h"
-#include "cgiExecute.h"
+#include "Client.h"
 
-class Core {
-private:
-	std::map<int, t_CGI*> cgi_map;
-	std::vector<struct pollfd> _fds;
-public:
-	Core();
-	~Core();
-	void	launchCgi(cgiExecute& executor, t_location& locate, t_request& request);
-	void	cgiRegister(t_CGI* cgiStruct);
-	void	cgiWait(cgiExecute& executor);
-	void	run(t_location& locate, t_request& request)
-};
+Client::Client() : state(READ_REQUEST) 
+{}
+
+Client::~Client()
+{}

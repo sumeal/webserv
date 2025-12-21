@@ -6,12 +6,12 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/14 10:54:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2025/12/20 07:17:43 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2025/12/22 00:40:07 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "CGI_data.h"
-#include "CGI_execute.h"
+#include "cgiExecute.h"
 #include "CGI_request.h"
 #include "Core.hpp"
 #include <exception>
@@ -21,25 +21,16 @@ void	cgitest_data(t_location& _location, t_request& _request);
 
 int main()
 {
-	t_data		data;
+	// t_data		data;
 	t_location	locate;
 	t_request	request;
 
 	Core core;
 	cgitest_data(locate, request);
-	CGI_request requestor(request, locate);
-	CGI_execute executor(data, request, locate);
 
 	try 
 	{
-		if (!requestor.isCGI())
-			return 1;
-		while (1)
-		{
-			core.launchCgi(executor, locate, request);
-			
-		}
-		std::cout << executor.getOutput() << std::endl;
+		core.run(locate,  request);
 	} 
 	catch (const std::exception& e) 
 	{

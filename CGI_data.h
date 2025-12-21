@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/16 15:03:57 by mbani-ya          #+#    #+#             */
-/*   Updated: 2025/12/19 17:25:18 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2025/12/20 17:27:21 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -50,10 +50,10 @@ typedef struct s_CGI {
 	s_CGI();
 } t_CGI;
 
-typedef struct s_data {
-	std::map<int, t_CGI*> cgi_map;
+// typedef struct s_data {
+// 	std::map<int, t_CGI*> cgi_map;
 	
-} t_data;
+// } t_data;
 
 
 inline s_CGI::s_CGI() : pipeToCgi(-1), pipeFromCgi(-1), clientSocket(-1), 

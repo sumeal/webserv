@@ -1,18 +1,19 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   CGI_execute.cpp                                    :+:      :+:    :+:   */
+/*   cgiExecute.cpp                                    :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/16 14:44:53 by mbani-ya          #+#    #+#             */
-/*   Updated: 2025/12/20 08:51:38 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2025/12/22 00:37:50 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "CGI_data.h"
 #include "CGI_request.h"
-#include "CGI_execute.h"
+#include "cgiExecute.h"
+#include <cstddef>
 #include <cstdlib>
 #include <stdexcept>
 #include <string>
@@ -22,15 +23,16 @@
 #include <sys/wait.h>
 #include <iostream>
 #include <poll.h>
+#include <fcntl.h>
 
-CGI_execute::CGI_execute(t_data& data, const t_request& request, const t_location& locate)
-	: _data(data), _request(request), _locate(locate)
+cgiExecute::cgiExecute(const t_request& request, const t_location& locate)
+	: _request(request), _locate(locate)
 {}
 
-CGI_execute::~CGI_execute()
+cgiExecute::~cgiExecute()
 {}
 
-void	CGI_execute::execute()
+void	cgiExecute::execute()
 {
 	//pipe setup
 	if (pipe(pipe_in) == -1)
@@ -89,13 +91,20 @@ void	CGI_execute::execute()
 		envp[envp_vec.size()] = NULL;
 		execve(const_cast<char*>(_locate.cgi_path.c_str()), args, envp);
 		//add execve check
-		std::cerr << "CGI error: execve failed" << std::endl;
+		std::cerr << "CGI: execve error" << std::endl;
+		for (int i = 0; i < envp_vec.size(); i++)
+			free(envp[i]);
+		delete[](envp);
 		exit(1);
 	}
 	else
 	{
 		close(pipe_in[0]);
 		close(pipe_out[1]);
+		if (fcntl(pipe_in[1], F_SETFL, O_NONBLOCK) == -1)
+			throw(std::runtime_error("CGI: pipe nonblock error"));
+		if (fcntl(pipe_out[0], F_SETFL, O_NONBLOCK) == -1)
+			throw(std::runtime_error("CGI: pipe nonblock error"));
 		//Proceed with parent logic. write body to CGI
 		_cgi = new t_CGI();
 		_cgi->pipeToCgi = pipe_in[1];
@@ -103,8 +112,22 @@ void	CGI_execute::execute()
 		_cgi->pid = pid;
 		//read from CGI
 		_cgi->pipeFromCgi = pipe_out[0];
-		//add the pollfd vector
-		//
+	}
+}
+
+void	cgiExecute::readExec()
+{
+	char	read_buf[8096];
+	size_t	len  = 0;
+	ssize_t	read_len;
+	if ((read_len = read(pipe_out[0], &read_buf, sizeof(read_buf))) > 0)
+		_cgi->output.append(read_buf, read_len);
+	if (read_len == -1)
+		throw(std::runtime_error("CGI: cannot read error"));
+	if (read_len == 0)
+	{
+		_cgi->readEnded = 1;
+		close(pipe_out[0]);
 	}
 }
 
@@ -141,7 +164,7 @@ void	CGI_execute::execute()
 
 //calculate abspath
 //prepare envp, args, 
-void	CGI_execute::preExecute()
+void	cgiExecute::preExecute()
 {
 	std::string script_name = _request.path.substr(_locate.path.size()); 
 	std::string	root = _locate.root; //may not need
@@ -165,12 +188,12 @@ void	CGI_execute::preExecute()
 		throw(std::runtime_error("CGI error: no file permission"));
 }
 
-const std::string&	CGI_execute::getOutput() const
+const std::string&	cgiExecute::getOutput() const
 {
 	return (_output);
 }
 
-t_CGI*	CGI_execute::getCgiStruct() const
+t_CGI*	cgiExecute::getCgiStruct() const
 {
 	return (_cgi);
 }
