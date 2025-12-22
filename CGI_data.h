@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/16 15:03:57 by mbani-ya          #+#    #+#             */
-/*   Updated: 2025/12/20 17:27:21 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2025/12/22 14:58:20 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,6 +38,9 @@ typedef struct s_location {
     std::string cgi_path;          // "/usr/bin/python3". the binary
 } t_location;
 
+//created at child
+//hold by map in core object
+//hold by cgiExecute object
 typedef struct s_CGI {
 	int pipeToCgi;
 	int pipeFromCgi;

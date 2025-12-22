@@ -1,7 +1,7 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   cgiExecute.cpp                                    :+:      :+:    :+:   */
+/*   CgiExecute.cpp                                    :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
@@ -10,8 +10,8 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "CGI_request.h"
-#include "cgiExecute.h"
+#include "CgiRequest.h"
+#include "CgiExecute.h"
 #include <cstdlib>
 #include <stdexcept>
 #include <string>
@@ -20,14 +20,14 @@
 #include <sys/wait.h>
 #include <iostream>
 
-cgiExecute::cgiExecute(const t_request& request, const t_location& locate)
+CgiExecute::CgiExecute(const t_request& request, const t_location& locate)
 	: _request(request), _locate(locate)
 {}
 
-cgiExecute::~cgiExecute()
+CgiExecute::~CgiExecute()
 {}
 
-void	cgiExecute::execute()
+void	CgiExecute::execute()
 {
 	//pipe setup
 	if (pipe(pipe_in) == -1)
@@ -132,7 +132,7 @@ void	cgiExecute::execute()
 
 //calculate abspath
 //prepare envp, args, 
-void	cgiExecute::preExecute()
+void	CgiExecute::preExecute()
 {
 	std::string script_name = _request.path.substr(_locate.path.size()); 
 	std::string	root = _locate.root; //may not need
@@ -156,7 +156,7 @@ void	cgiExecute::preExecute()
 		throw(std::runtime_error("CGI error: no file permission"));
 }
 
-const std::string&	cgiExecute::getOutput() const
+const std::string&	CgiExecute::getOutput() const
 {
 	return (_output);
 }

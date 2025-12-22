@@ -6,16 +6,16 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2025/12/22 01:02:03 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2025/12/22 15:16:36 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "Core.hpp"
+#include "Core.h"
 #include "CGI_data.h"
 #include <poll.h>
 #include <stdexcept>
-#include "cgiExecute.h"
-#include "CGI_request.h"
+#include "CgiExecute.h"
+#include "CgiRequest.h"
 #include "Client.h"
 #include <iostream>
 
@@ -23,19 +23,19 @@ Core::Core() {}
 
 Core::~Core() 
 {
-	for (std::map<int, t_CGI *>::iterator it = cgi_map.begin(); 
-		it != cgi_map.end(); it++)
+	for (std::map<int, t_CGI *>::iterator it = _cgi_map.begin(); 
+		it != _cgi_map.end(); it++)
 	{
 		delete(it->second);
 	}
-	cgi_map.clear();
+	_cgi_map.clear();
 }
 
 void	Core::run( t_location& locate, t_request& request)
 {
-	CGI_request requestor(request, locate);
-	cgiExecute	executor(request, locate);
-	Client		client;
+	Client*		c = new Client();
+	CgiRequest	requestor(request, locate);
+	CgiExecute	executor(&client, request, locate);
 
 	while (1)
 	{
@@ -66,19 +66,40 @@ void	Core::run( t_location& locate, t_request& request)
 	}
 }
 
-void	Core::launchCgi(cgiExecute& executor, t_location& locate, t_request& request)
+void	Core::launchCgi(CgiExecute& executor, t_location& locate, t_request& request)
 {
 	executor.preExecute();
 	executor.execute();
 	//the part im trying to implement
-	cgiRegister(executor.getCgiStruct());
+	cgiRegister(executor.getCgiStruct()); //in core because it change the struct that hold all the list
 	
+}
+
+void	Core::cgiWait(CgiExecute& executor)
+{
+	for(int i = 0; i < _fds.size(); i++)
+	{
+		if (_fds[i].revents == POLLIN)
+		{
+			executor.readExec();
+			t_CGI* current = _cgi_map[_fds[i].fd];
+		}
+		if (_fds[i].revents == POLLOUT)
+		{
+			cgi
+		}
+		if (_fds[i].revents == POLLHUP)
+		{
+			
+		}
+		executor.cgiState(); //in cgi class because it change the state of the individual cgi
+	}
 }
 
 void	Core::cgiRegister(t_CGI* cgiStruct)
 {
-	cgi_map[cgiStruct->pipeToCgi] = cgiStruct;
-	cgi_map[cgiStruct->pipeFromCgi] = cgiStruct;
+	_cgi_map[cgiStruct->pipeToCgi] = cgiStruct;
+	_cgi_map[cgiStruct->pipeFromCgi] = cgiStruct;
 	struct pollfd pfdRead;
 	pfdRead.fd = cgiStruct->pipeFromCgi;
 	pfdRead.events = POLLIN;
@@ -89,24 +110,4 @@ void	Core::cgiRegister(t_CGI* cgiStruct)
 	pfdWrite.events = POLLOUT;
 	pfdWrite.revents = 0;
 	_fds.push_back(pfdWrite);
-}
-
-void	Core::cgiWait(cgiExecute& executor)
-{
-	for(int i = 0; i < _fds.size(); i++)
-	{
-		if (_fds[i].revents == POLLIN)
-		{
-			executor.readExec();
-			if (_cgi->readEnded && _cgi->writeEnded)
-		}
-		if (_fds[i].revents == POLLOUT)
-		{
-			cgi
-		}
-		if (_fds[i].revents == POLLHUP)
-		{
-			
-		}
-	}
 }

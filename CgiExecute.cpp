@@ -1,7 +1,7 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   cgiExecute.cpp                                    :+:      :+:    :+:   */
+/*   CgiExecute.cpp                                    :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
@@ -11,8 +11,8 @@
 /* ************************************************************************** */
 
 #include "CGI_data.h"
-#include "CGI_request.h"
-#include "cgiExecute.h"
+#include "CgiRequest.h"
+#include "CgiExecute.h"
 #include <cstddef>
 #include <cstdlib>
 #include <stdexcept>
@@ -24,15 +24,16 @@
 #include <iostream>
 #include <poll.h>
 #include <fcntl.h>
+#include "Client.h"
 
-cgiExecute::cgiExecute(const t_request& request, const t_location& locate)
-	: _request(request), _locate(locate)
+CgiExecute::CgiExecute(Client* client, const t_request& request, const t_location& locate)
+	: _client(client), _request(request), _locate(locate)
 {}
 
-cgiExecute::~cgiExecute()
+CgiExecute::~CgiExecute()
 {}
 
-void	cgiExecute::execute()
+void	CgiExecute::execute()
 {
 	//pipe setup
 	if (pipe(pipe_in) == -1)
@@ -115,7 +116,7 @@ void	cgiExecute::execute()
 	}
 }
 
-void	cgiExecute::readExec()
+void	CgiExecute::readExec()
 {
 	char	read_buf[8096];
 	size_t	len  = 0;
@@ -164,7 +165,7 @@ void	cgiExecute::readExec()
 
 //calculate abspath
 //prepare envp, args, 
-void	cgiExecute::preExecute()
+void	CgiExecute::preExecute()
 {
 	std::string script_name = _request.path.substr(_locate.path.size()); 
 	std::string	root = _locate.root; //may not need
@@ -188,12 +189,18 @@ void	cgiExecute::preExecute()
 		throw(std::runtime_error("CGI error: no file permission"));
 }
 
-const std::string&	cgiExecute::getOutput() const
+void	CgiExecute::cgiState()
+{
+	if (_cgi->readEnded && _cgi->writeEnded)
+		_client->state = SEND_RESPONSE;
+}
+
+const std::string&	CgiExecute::getOutput() const
 {
 	return (_output);
 }
 
-t_CGI*	cgiExecute::getCgiStruct() const
+t_CGI*	CgiExecute::getCgiStruct() const
 {
 	return (_cgi);
 }

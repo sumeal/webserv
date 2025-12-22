@@ -6,14 +6,14 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/14 10:54:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2025/12/22 00:40:07 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2025/12/22 14:40:24 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "CGI_data.h"
-#include "cgiExecute.h"
-#include "CGI_request.h"
-#include "Core.hpp"
+#include "CgiExecute.h"
+#include "CgiRequest.h"
+#include "Core.h"
 #include <exception>
 #include <iostream>
 
@@ -30,7 +30,7 @@ int main()
 
 	try 
 	{
-		core.run(locate,  request);
+		core.run(locate, request);
 	} 
 	catch (const std::exception& e) 
 	{

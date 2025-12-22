@@ -1,38 +1,38 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   CGI_request.cpp                                    :+:      :+:    :+:   */
+/*   CgiRequest.cpp                                    :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/14 08:44:23 by mbani-ya          #+#    #+#             */
-/*   Updated: 2025/12/18 11:22:03 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2025/12/22 13:44:55 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "CGI_request.h"
+#include "CgiRequest.h"
 #include "CGI_data.h"
 #include <unistd.h>
 #include <string>
 #include <iostream> //debug
 
-CGI_request::CGI_request(const t_request& request, const t_location& locate)
+CgiRequest::CgiRequest(const t_request& request, const t_location& locate)
 	 : _request(request), _locate(locate)
 {}
 
-CGI_request::~CGI_request()
+CgiRequest::~CgiRequest()
 {}
 
 //check 2 things
 //1. cgi enabled? is the location for script to be run have permission for script
 //2. executable name/suffix is correct? and can be execute?
-bool	CGI_request::isCGI() const
+bool	CgiRequest::isCGI() const
 {
 	return (_locate.cgi_enabled && isCGIextOK());
 }
 
 //should at least support one. which we focus on .py
-bool	CGI_request::isCGIextOK() const
+bool	CgiRequest::isCGIextOK() const
 {
 	const std::string	path		= _request.path;
 	const std::string	cgi_path	= _locate.cgi_path;

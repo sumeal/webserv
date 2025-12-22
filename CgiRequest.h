@@ -1,28 +1,33 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   Core.hpp                                           :+:      :+:    :+:   */
+/*   CgiRequest.h                                      :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/12/19 17:35:03 by mbani-ya          #+#    #+#             */
-/*   Updated: 2025/12/22 00:41:16 by mbani-ya         ###   ########.fr       */
+/*   Created: 2025/12/13 23:59:28 by mbani-ya          #+#    #+#             */
+/*   Updated: 2025/12/16 16:26:45 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <map>
-#include "CGI_data.h"
-#include "cgiExecute.h"
+#ifndef CGIREQUEST_H
+# define CGIREQUEST_H
 
-class Core {
+#include "CGI_data.h"
+
+class CgiRequest {
 private:
-	std::map<int, t_CGI*> cgi_map;
-	std::vector<struct pollfd> _fds;
+	const t_request&	_request;
+	const t_location&	_locate;
+
+	CgiRequest(const CgiRequest& other);
+	CgiRequest& operator=(const CgiRequest& other);
 public:
-	Core();
-	~Core();
-	void	launchCgi(cgiExecute& executor, t_location& locate, t_request& request);
-	void	cgiRegister(t_CGI* cgiStruct);
-	void	cgiWait(cgiExecute& executor);
-	void	run(t_location& locate, t_request& request)
+	CgiRequest(const t_request& request, const t_location& locate);
+	~CgiRequest();
+	
+	bool	isCGI() const;
+	bool	isCGIextOK() const;
 };
+
+#endif
