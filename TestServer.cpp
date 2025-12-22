@@ -2,17 +2,12 @@
 
 TestServer::TestServer() : SimpleServer(AF_INET, SOCK_STREAM, 0 ,8080, INADDR_ANY, 10)
 {
-	poll_setup();
 	memset(buffer, 0, sizeof(buffer));
-	launch();
 }
 
-void TestServer::poll_setup()
+void TestServer::parse_config(const std::string &filename)
 {
-	pollfd pfd;
-	pfd.fd = get_socket()->get_sock();
-	pfd.events = POLLIN;
-	pfds.push_back(pfd);
+	std::ifstream file(filename);
 }
 
 void TestServer::accepter()
