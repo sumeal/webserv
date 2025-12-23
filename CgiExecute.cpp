@@ -215,6 +215,8 @@ void	CgiExecute::preExecute()
 
 void	CgiExecute::cgiState()
 {
+	if (_cgi->pid == -1)
+		return ;
 	int status;
 	int res = waitpid(_cgi->pid, &status, WNOHANG);
 	if (res == 0)
@@ -223,24 +225,25 @@ void	CgiExecute::cgiState()
 	{
 		if (WIFEXITED(status))
 		{
-			if(WEXITSTATUS(status) != 0)
-				throw (std::runtime_error("Waitpid Error"));
+			if (WEXITSTATUS(status) == 0)
+				_cgi->pid = -1;
+			else if(WEXITSTATUS(status) != 0)
+				throw (std::runtime_error("Waitpid WEXITSTATUS Error"));
 		}
 		else //WIFSIGNALED case
 			throw (std::runtime_error("Waitpid WIFSIGNALED Error"));
 	}
 	if (res == -1)
 		throw (std::runtime_error("Waitpid Error"));
-	std::cout << _cgi->readEnded << std::endl; //debug
-	std::cout << _cgi->writeEnded << std::endl; //debug
 	if (_cgi->readEnded && _cgi->writeEnded)
+	{
 		_client->state = SEND_RESPONSE;
-	std::cout << "inside5" << std::endl;
+	}
 }
 
 const std::string&	CgiExecute::getOutput() const
 {
-	return (_output);
+	return (_cgi->output);
 }
 
 t_CGI*	CgiExecute::getCgiStruct() const

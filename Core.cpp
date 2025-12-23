@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2025/12/23 15:50:34 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2025/12/23 17:59:07 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -70,7 +70,7 @@ void	Core::run( t_location& locate, t_request& request)
 			client->state = EXECUTE_CGI;
 		}
 		//if execute CGI state
-		std::cout << client->state << std::endl;
+		std::cout << "state1: " << client->state << std::endl;
 		if (client->state == EXECUTE_CGI)
 		{
 			if (!requestor.isCGI())
@@ -78,7 +78,7 @@ void	Core::run( t_location& locate, t_request& request)
 			launchCgi(executor, locate, request);
 			client->state = WAIT_CGI;
 		}
-		std::cout << client->state << std::endl;
+		std::cout << "state2: " << client->state << std::endl;
 		if (result > 0 && client->state == WAIT_CGI)
 		{
 			cgiWait(executor);
@@ -87,13 +87,13 @@ void	Core::run( t_location& locate, t_request& request)
 		if (client->state == SEND_RESPONSE)
 		{
 			//for now
-			std::cout << executor.getOutput() << std::endl;
+			std::cout << "output: " << executor.getOutput() << std::endl;
 			break; 
 		}		
 		if (client->state == FINISHED)
 		{
 			//clear/delete/break
-			std::cout << executor.getOutput() << std::endl;
+			std::cout << "output: " << executor.getOutput() << std::endl;
 			delete(client);
 			client = NULL;
 			break; 
@@ -113,21 +113,23 @@ void	Core::launchCgi(CgiExecute& executor, t_location& locate, t_request& reques
 
 void	Core::cgiWait(CgiExecute& executor)
 {
+	int pipeFromCgi = executor.getCgiStruct()->pipeFromCgi;
+	int pipeToCgi = executor.getCgiStruct()->pipeToCgi;
+
 	for(int i = 0; i < _fds.size(); i++)
 	{
-		std::cout << "inside" << std::endl; //debug
-		if (!_fds[i].revents)
+		int	revents = _fds[i].revents;
+		int	fd = _fds[i].fd;
+
+		if (!revents)
 			continue;
-		std::cout << "inside2" << std::endl; //debug
-		if (_fds[i].revents & (POLLIN | POLLHUP) && _fds[i].fd == executor.getCgiStruct()->pipeFromCgi)
+		if (revents & (POLLIN | POLLHUP) && fd == pipeFromCgi)
 		{
 			executor.readExec();
-			std::cout << "inside3" << std::endl; //debug
 			executor.cgiState();
 		}
-		if (_fds[i].revents & POLLOUT && _fds[i].fd == executor.getCgiStruct()->pipeToCgi)
+		if (revents & POLLOUT && fd == pipeToCgi)
 		{
-			std::cout << "inside4" << std::endl; //debug
 			executor.writeExec();
 			executor.cgiState();
 		}
