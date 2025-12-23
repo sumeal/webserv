@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2025/12/22 15:16:36 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2025/12/23 15:50:34 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,51 +18,87 @@
 #include "CgiRequest.h"
 #include "Client.h"
 #include <iostream>
+#include <set>
 
 Core::Core() {}
 
 Core::~Core() 
 {
-	for (std::map<int, t_CGI *>::iterator it = _cgi_map.begin(); 
-		it != _cgi_map.end(); it++)
+	// for (std::map<int, t_CGI *>::iterator it = _cgi_map.begin(); 
+	// 	it != _cgi_map.end(); it++)
+	// {
+	// 	delete(it->second);
+	// 	it->second = NULL;
+	// }
+	// _cgi_map.clear();
+	// std::cout << "Cleaning up CGI map..." << std::endl;
+    // for (std::map<int, t_CGI *>::iterator it = _cgi_map.begin(); it != _cgi_map.end(); it++)
+    // {
+    //     std::cout << "Deleting CGI at address: " << it->second << std::endl;
+    //     delete it->second;
+    //     it->second = NULL;
+    // }
+    // _cgi_map.clear();
+	std::set<t_CGI*> deletedPtrs;
+	
+	for (std::map<int, t_CGI*>::iterator it = _cgi_map.begin(); it != _cgi_map.end(); it++)
 	{
-		delete(it->second);
+		t_CGI* current = it->second;
+		if (current != NULL && deletedPtrs.find(current) == deletedPtrs.end())
+		{
+			deletedPtrs.insert(current);
+			delete(current);
+		}
 	}
-	_cgi_map.clear();
+	_cgi_map.clear();//redundant as this only being used when we clear vector but keep the heap object. now the heap object already gone no use
 }
 
 void	Core::run( t_location& locate, t_request& request)
 {
-	Client*		c = new Client();
 	CgiRequest	requestor(request, locate);
-	CgiExecute	executor(&client, request, locate);
+	Client*		client = new Client(&requestor);
+	CgiExecute	executor(client, request, locate);
 
 	while (1)
 	{
+		std::cout << "looping" << std::endl;
 		int result = poll(&_fds[0], _fds.size(), 5000);
 		//if request state
-		if(client.state == READ_REQUEST)
+		if(client->state == READ_REQUEST)
 		{
-			//parser/config part 
+			//parser/config part
+			client->state = EXECUTE_CGI;
 		}
 		//if execute CGI state
-		if (client.state == EXECUTE_CGI)
+		std::cout << client->state << std::endl;
+		if (client->state == EXECUTE_CGI)
 		{
 			if (!requestor.isCGI())
 				throw(std::runtime_error("CGI: request not CGI"));
 			launchCgi(executor, locate, request);
-			std::cout << executor.getOutput() << std::endl;
-			client.state = WAIT_CGI;
+			client->state = WAIT_CGI;
 		}
-		if (result > 0 && client.state == WAIT_CGI)
+		std::cout << client->state << std::endl;
+		if (result > 0 && client->state == WAIT_CGI)
 		{
 			cgiWait(executor);
 		}
 		//if send output to client
-		if (client.state == FINISHED)
+		if (client->state == SEND_RESPONSE)
+		{
+			//for now
+			std::cout << executor.getOutput() << std::endl;
+			break; 
+		}		
+		if (client->state == FINISHED)
 		{
 			//clear/delete/break
+			std::cout << executor.getOutput() << std::endl;
+			delete(client);
+			client = NULL;
+			break; 
 		}
+		std::cout << "inside6" << std::endl;
 	}
 }
 
@@ -79,20 +115,22 @@ void	Core::cgiWait(CgiExecute& executor)
 {
 	for(int i = 0; i < _fds.size(); i++)
 	{
-		if (_fds[i].revents == POLLIN)
+		std::cout << "inside" << std::endl; //debug
+		if (!_fds[i].revents)
+			continue;
+		std::cout << "inside2" << std::endl; //debug
+		if (_fds[i].revents & (POLLIN | POLLHUP) && _fds[i].fd == executor.getCgiStruct()->pipeFromCgi)
 		{
 			executor.readExec();
-			t_CGI* current = _cgi_map[_fds[i].fd];
+			std::cout << "inside3" << std::endl; //debug
+			executor.cgiState();
 		}
-		if (_fds[i].revents == POLLOUT)
+		if (_fds[i].revents & POLLOUT && _fds[i].fd == executor.getCgiStruct()->pipeToCgi)
 		{
-			cgi
+			std::cout << "inside4" << std::endl; //debug
+			executor.writeExec();
+			executor.cgiState();
 		}
-		if (_fds[i].revents == POLLHUP)
-		{
-			
-		}
-		executor.cgiState(); //in cgi class because it change the state of the individual cgi
 	}
 }
 

@@ -24,5 +24,5 @@ public:
 	void	launchCgi(CgiExecute& executor, t_location& locate, t_request& request);
 	void	cgiRegister(t_CGI* cgiStruct);
 	void	cgiWait(CgiExecute& executor);
-	void	run(t_location& locate, t_request& request)
+	void	run(t_location& locate, t_request& request);
 };

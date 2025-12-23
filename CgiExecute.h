@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/22 00:37:30 by mbani-ya          #+#    #+#             */
-/*   Updated: 2025/12/22 14:41:50 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2025/12/22 17:03:57 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,6 +42,7 @@ public:
 	bool	isFinished() const;
 	void	cleanup();
 	void	readExec();
+	void	writeExec();
 	void	cgiState();
 
 	const std::string&	getOutput() const;

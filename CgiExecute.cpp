@@ -31,7 +31,9 @@ CgiExecute::CgiExecute(Client* client, const t_request& request, const t_locatio
 {}
 
 CgiExecute::~CgiExecute()
-{}
+{
+	_cgi = NULL;
+}
 
 void	CgiExecute::execute()
 {
@@ -121,14 +123,36 @@ void	CgiExecute::readExec()
 	char	read_buf[8096];
 	size_t	len  = 0;
 	ssize_t	read_len;
-	if ((read_len = read(pipe_out[0], &read_buf, sizeof(read_buf))) > 0)
+	if ((read_len = read(pipe_out[0], read_buf, sizeof(read_buf))) > 0)
 		_cgi->output.append(read_buf, read_len);
-	if (read_len == -1)
-		throw(std::runtime_error("CGI: cannot read error"));
 	if (read_len == 0)
 	{
 		_cgi->readEnded = 1;
 		close(pipe_out[0]);
+		_cgi->pipeFromCgi = -1; //best practice indicating closed
+	}
+	if (read_len == -1)
+		throw(std::runtime_error("CGI: read error"));
+}
+
+void	CgiExecute::writeExec()
+{
+	if (_request.body.empty() || _cgi->writeEnded)
+	{
+		_cgi->writeEnded = true;
+		return ;
+	}
+	size_t	bytesLeft = _request.body.size() - _cgi->bodySizeSent;
+	ssize_t	written = write(pipe_in[1], _request.body.c_str() + _cgi->bodySizeSent, bytesLeft);
+	if (written > 0)
+		_cgi->bodySizeSent += written;
+	if (written == -1)
+		throw(std::runtime_error("CGI: write error"));
+	if (_cgi->bodySizeSent == _request.body.size())
+	{
+		_cgi->writeEnded = true;
+		close(_cgi->pipeToCgi);
+		_cgi->pipeToCgi = -1; //best practice indicating closed
 	}
 }
 
@@ -191,8 +215,27 @@ void	CgiExecute::preExecute()
 
 void	CgiExecute::cgiState()
 {
+	int status;
+	int res = waitpid(_cgi->pid, &status, WNOHANG);
+	if (res == 0)
+		return ;
+	if (res > 0)
+	{
+		if (WIFEXITED(status))
+		{
+			if(WEXITSTATUS(status) != 0)
+				throw (std::runtime_error("Waitpid Error"));
+		}
+		else //WIFSIGNALED case
+			throw (std::runtime_error("Waitpid WIFSIGNALED Error"));
+	}
+	if (res == -1)
+		throw (std::runtime_error("Waitpid Error"));
+	std::cout << _cgi->readEnded << std::endl; //debug
+	std::cout << _cgi->writeEnded << std::endl; //debug
 	if (_cgi->readEnded && _cgi->writeEnded)
 		_client->state = SEND_RESPONSE;
+	std::cout << "inside5" << std::endl;
 }
 
 const std::string&	CgiExecute::getOutput() const
