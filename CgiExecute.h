@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/22 00:37:30 by mbani-ya          #+#    #+#             */
-/*   Updated: 2025/12/27 22:32:39 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2025/12/28 15:56:20 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,40 +14,61 @@
 #define CGIEXECUTE_H
 
 #include "CGI_data.h"
+#include <cstddef>
 #include <sched.h>
 
 class Client;
 
 class CgiExecute {
 private:
+	//Client data
 	const t_request&	_request;
 	const t_location&	_locate;
-	t_CGI*		_cgi;
+	// t_CGI*		_cgi;
 	Client*		_client;
-	int		pipe_in[2];
-	int		pipe_out[2];
-	pid_t	pid;
-	//for execve. 
-    std::string abs_path;    // /var/www/html/cgi-bin/test.py
-	//execve.CGI script(eg. py)
-    std::string remote_addr; // 192.168.1.5
-    int         server_port; // 8080
+	
+	//Object data
+	//CGI pre
+	pid_t	_pid;
+	int		_pipeIn[2];
+	int		_pipeOut[2];
+	int		_pipeToCgi;
+	int		_pipeFromCgi;
+    std::string _absPath;    // /var/www/html/cgi-bin/test.py
+    std::string _remoteAddr; // 192.168.1.5.  what is this for??
+    int         _serverPort; // 8080
+	//CGI postresult
 	std::string	_output;
+	size_t		_bodySizeSent;
+	bool		_writeEnded;
+	bool		_readEnded;
+	int			_exitStatus;
+	//execve.CGI script(eg. py)
 public:
 	CgiExecute(Client* client, const t_request& request, const t_location& locate);
 	~CgiExecute();
 
 	void	preExecute();
 	void	execute();
-	bool	isFinished() const;
-	void	cleanup();
+	void	execChild();
+	char**	createEnvp();
 	void	readExec();
 	void	writeExec();
 	void	cgiState();
+	void	cleanup(); //check
+
+	bool	isCGI() const;
+	bool	isCGIextOK() const;
+	bool	isDone() const;
+	bool	isReadDone() const;
+	bool	isWriteDone() const;
 
 	const std::string&	getOutput() const;
-	t_CGI*	getCgiStruct() const;
+	int		getpipeToCgi();
+	int		getpipeFromCgi();
 	Client*	getClient();
 };
 
 #endif
+
+// t_CGI*	getCgiStruct() const;

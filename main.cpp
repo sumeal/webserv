@@ -6,13 +6,13 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/14 10:54:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2025/12/25 15:08:17 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2025/12/28 16:52:30 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
+// #include "CgiExecute.h"
+// #include "CgiRequest.h"
 #include "CGI_data.h"
-#include "CgiExecute.h"
-#include "CgiRequest.h"
 #include "Core.h"
 #include <exception>
 #include <iostream>
@@ -41,9 +41,9 @@ int main()
 void cgitest_data(t_location& loc, t_request& req)
 {
     // --- 1. Data from the Request Parser ---
-    req.method   = "GET";
-    req.uri      = "/cgi-bin/test.py?user=gemini&id=42"; // The full raw URI
-    req.path     = "/cgi-bin/test.py";                   // Path without query
+    req.method   = "POST";
+    req.uri      = "/cgi-bin/slowtest2.py?user=gemini&id=42"; // The full raw URI
+    req.path     = "/cgi-bin/slowtest2.py";                   // Path without query
     req.query    = "user=gemini&id=42";                 // The query string
     req.version  = "HTTP/1.1";
     

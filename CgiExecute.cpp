@@ -10,8 +10,8 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+// #include "CgiRequest.h"
 #include "CGI_data.h"
-#include "CgiRequest.h"
 #include "CgiExecute.h"
 #include <cstddef>
 #include <cstdlib>
@@ -27,162 +27,152 @@
 #include "Client.h"
 
 CgiExecute::CgiExecute(Client* client, const t_request& request, const t_location& locate)
-	: _client(client), _request(request), _locate(locate)
+	: _client(client), _request(request), _locate(locate), _pid(-1), _pipeToCgi(-1), 
+	_pipeFromCgi(-1), _bodySizeSent(0), _writeEnded(false), _readEnded(false), 
+	_exitStatus(0)
 {}
 
 CgiExecute::~CgiExecute()
-{
-	_cgi = NULL;
-}
+{}
 
 void	CgiExecute::execute()
 {
-	//pipe setup
-	if (pipe(pipe_in) == -1)
+	//				PIPE & FORK
+	if (pipe(_pipeIn) == -1)
 		throw (std::runtime_error("CGI: pipe error"));
-	if (pipe(pipe_out) == -1)
-		throw (std::runtime_error("CGI: pipe error"));
-	//fork
-	pid = fork();
-	if (pid == -1)
-		throw (std::runtime_error("CGI: pipe error"));
-	//child process
-	else if (pid == 0)
+	if (pipe(_pipeOut) == -1)
 	{
-		//redirection
-		dup2(pipe_in[0], STDIN_FILENO);
-		dup2(pipe_out[1], STDOUT_FILENO);
-		close(pipe_in[1]);
-		close(pipe_out[0]);
-		//execute CGI program
-		char *args[] = {
-    		const_cast<char*>(_locate.cgi_path.c_str()),  // argv[0]: The interpreter name
-			const_cast<char*>(abs_path.c_str()),          // argv[1]: The script to run
-    		NULL                         // Sentinel
-			};
-		//create envp. create a vector list. pushback everything needed from hardcoding
-		std::vector<std::string> envp_vec;
-		envp_vec.push_back("REQUEST_METHOD=" + _request.method); //REQUEST_METHOD
-		envp_vec.push_back("QUERY_STRING=" + _request.query); //QUERY_STRING
-		envp_vec.push_back("SCRIPT_NAME=" + _request.path); //SCRIPT_NAME
-		envp_vec.push_back("SERVER_PROTOCOL=" + _request.version); //PROTOCOL VERSION
-		//a logic for content depends on request headers
-		std::map<std::string, std::string>::const_iterator it;
-		for (it = _request.headers.begin(); it != _request.headers.end(); ++it)
+		close(_pipeIn[0]); close(_pipeIn[1]);
+		throw (std::runtime_error("CGI: pipe error"));
+	}
+	_pid = fork();
+	if (_pid == -1)
+	{
+		close(_pipeIn[0]); close(_pipeIn[1]);
+		close(_pipeOut[0]); close(_pipeOut[1]);
+		throw (std::runtime_error("CGI: pipe error"));
+	}
+	else if (_pid == 0)
+		execChild();
+
+	//			NON-BLOCKING PIPE AND STORE RESULT
+	close(_pipeIn[0]); close(_pipeOut[1]);
+	_pipeToCgi = _pipeIn[1];
+	_pipeFromCgi = _pipeOut[0];
+	if (fcntl(_pipeToCgi, F_SETFL, O_NONBLOCK) == -1
+		|| fcntl(_pipeFromCgi, F_SETFL, O_NONBLOCK) == -1)
+		throw(std::runtime_error("CGI: pipe nonblock error"));
+}
+
+void	CgiExecute::execChild()
+{
+	dup2(_pipeIn[0], STDIN_FILENO);
+	dup2(_pipeOut[1], STDOUT_FILENO);
+	close(_pipeIn[1]); close(_pipeOut[0]);
+
+	//				EXEC CGI
+	char*	interpreter = const_cast<char*>(_locate.cgi_path.c_str());
+	char*	scriptPath = const_cast<char *>(_absPath.c_str());
+	char*	args[] = { interpreter, scriptPath,NULL};
+	char**	envp = createEnvp();
+	execve(interpreter, args, envp);
+
+	//				HANDLE ERROR     
+	std::cerr << "CGI: execve error" << std::endl;
+	for (int i = 0; envp[i]; i++)
+		free(envp[i]);
+	delete[](envp);
+	exit(1);
+}
+
+char**	CgiExecute::createEnvp()
+{
+	std::vector<std::string> envpVector;
+	envpVector.push_back("REQUEST_METHOD=" + _request.method);
+	envpVector.push_back("QUERY_STRING=" + _request.query);
+	envpVector.push_back("SCRIPT_NAME=" + _request.path);
+	envpVector.push_back("SERVER_PROTOCOL=" + _request.version); //PROTOCOL VERSION
+
+	//				FORMAT HEADER
+	//add HTTP_, upper char & push every headers from struct to the envp list
+	std::map<std::string, std::string>::const_iterator it;
+	for (it = _request.headers.begin(); it != _request.headers.end(); ++it)
+	{
+		std::string key = it->first;
+		std::string value = it->second;
+		std::string formattedkey = key;
+		for (int i = 0; key[i]; i++)
 		{
-			std::string key = it->first;
-			std::string value = it->second;
-			std::string formattedkey = key;
-			for (int i = 0; key[i]; i++)
-			{
-				formattedkey[i] = std::toupper(key[i]);
-				if (formattedkey[i] == '-')
-					formattedkey[i] = '_';
-			}
-			std::string name;
-			if (formattedkey == "CONTENT_LENGTH" || formattedkey == "CONTENT_TYPE")
-				name = formattedkey + "=" + value;
-			else
-				name = "HTTP_" + formattedkey + "=" + value;
-			envp_vec.push_back(name);
+			formattedkey[i] = std::toupper(key[i]);
+			if (formattedkey[i] == '-')
+				formattedkey[i] = '_';
 		}
-		//change vectors to array
-		//then add HTTP_, upper every char and push every headers from struct to the envp list
-		char** envp = new char*[envp_vec.size() + 1];
-		for (size_t i = 0; i < envp_vec.size(); i++)
-			envp[i] = strdup(envp_vec[i].c_str());
-		envp[envp_vec.size()] = NULL;
-		execve(const_cast<char*>(_locate.cgi_path.c_str()), args, envp);
-		//add execve check
-		std::cerr << "CGI: execve error" << std::endl;
-		for (int i = 0; i < envp_vec.size(); i++)
-			free(envp[i]);
-		delete[](envp);
-		exit(1);
+		std::string name;
+		if (formattedkey == "CONTENT_LENGTH" || formattedkey == "CONTENT_TYPE")
+			name = formattedkey + "=" + value;
+		else
+			name = "HTTP_" + formattedkey + "=" + value;
+		envpVector.push_back(name);
 	}
-	else
-	{
-		close(pipe_in[0]);
-		close(pipe_out[1]);
-		if (fcntl(pipe_in[1], F_SETFL, O_NONBLOCK) == -1)
-			throw(std::runtime_error("CGI: pipe nonblock error"));
-		if (fcntl(pipe_out[0], F_SETFL, O_NONBLOCK) == -1)
-			throw(std::runtime_error("CGI: pipe nonblock error"));
-		//Proceed with parent logic. write body to CGI
-		_cgi = new t_CGI();
-		_client->setCgi(_cgi);
-		_cgi->pipeToCgi = pipe_in[1];
-		_cgi->clientSocket = 1; //hardcoded for now
-		_cgi->pid = pid;
-		//read from CGI
-		_cgi->pipeFromCgi = pipe_out[0];
-	}
+
+	//				VECTOR to ARRAY
+	char** envp = new char*[envpVector.size() + 1];
+	for (size_t i = 0; i < envpVector.size(); i++)
+		envp[i] = strdup(envpVector[i].c_str());
+	envp[envpVector.size()] = NULL;
+	return envp;
 }
 
 void	CgiExecute::readExec()
 {
 	char	read_buf[8096];
 	size_t	len  = 0;
-	ssize_t	read_len;
-	if ((read_len = read(pipe_out[0], read_buf, sizeof(read_buf))) > 0)
-	{
-		std::cout << "read_len: " << read_len << std::endl; //debug
-		_cgi->output.append(read_buf, read_len);
-	}
-	// std::cout << "fd: "  << pipe_out[0] << std::endl; //debug
-	// std::cout << "read_len: " << read_len << std::endl; //debug
-	if (read_len == 0)
-	{
-		_cgi->readEnded = 1;
-		// close(pipe_out[0]);
-		// _cgi->pipeFromCgi = -1; //best practice indicating closed
-	}
-	if (read_len == -1)
+	ssize_t	readLen;
+	if ((readLen = read(_pipeFromCgi, read_buf, sizeof(read_buf))) > 0)
+		_output.append(read_buf, readLen);
+	if (readLen == 0)
+		_readEnded = 1;
+	if (readLen == -1)
 		throw(std::runtime_error("CGI: read error"));
 }
 
 void	CgiExecute::writeExec()
 {
-	if (_request.body.empty() || _cgi->writeEnded)
+	if (_request.body.empty() || _writeEnded)
 	{
-		_cgi->writeEnded = true;
+		_writeEnded = true;
 		return ;
 	}
-	size_t	bytesLeft = _request.body.size() - _cgi->bodySizeSent;
-	ssize_t	written = write(pipe_in[1], _request.body.c_str() + _cgi->bodySizeSent, bytesLeft);
+	size_t	bytesLeft = _request.body.size() - _bodySizeSent;
+	ssize_t	written = write(_pipeToCgi, _request.body.c_str() + _bodySizeSent, bytesLeft);
 	if (written > 0)
-		_cgi->bodySizeSent += written;
+		_bodySizeSent += written;
 	if (written == -1)
 		throw(std::runtime_error("CGI: write error"));
-	if (_cgi->bodySizeSent == _request.body.size())
-	{
-		_cgi->writeEnded = true;
-		// close(_cgi->pipeToCgi);
-		// _cgi->pipeToCgi = -1; //best practice indicating closed
-	}
+	if (_bodySizeSent == _request.body.size())
+		_writeEnded = true;
 }
 
 //calculate abspath
-//prepare envp, args, 
 void	CgiExecute::preExecute()
 {
 	std::string script_name = _request.path.substr(_locate.path.size()); 
-	std::string	root = _locate.root; //may not need
+	std::string	root 		= _locate.root;
 	std::string	cgi_path	= _locate.cgi_path;
-	//script_name should be /test.py
-	//_locate.root should be ./www
-	//ensure locate.root doesnt end with /
-	if (!_locate.root.empty() && _locate.root[_locate.root.size() - 1] == '/')
-		root.erase(root.size() - 1,  1);
-	//ensure script_name start with /
+
+	//script_name should be /test.py. locate.root should be ./www.
+	//					SCRIPT START W /
 	if (script_name[0] != '/')
 		script_name = "/" + script_name;
-	abs_path = root + script_name;
-	//check if file exist
-	if (access(abs_path.c_str(), F_OK) == -1)
+	_absPath = root + script_name; 
+	//					ROOT END NOT /
+	if (!_locate.root.empty() && _locate.root[_locate.root.size() - 1] == '/')
+		root.erase(root.size() - 1,  1);
+	//					CHECK EXISTENCE
+	if (access(_absPath.c_str(), F_OK) == -1)
 		throw(std::runtime_error("CGI error: no file permission"));
-	//check if executable. do exist and execute check instead of exec check alone to send correct error message
-	if (access(abs_path.c_str(), X_OK) == -1)
+	//					CHECK EXISTENCE & EXEC
+	if (access(_absPath.c_str(), X_OK) == -1)
 		throw(std::runtime_error("CGI error: no file permission"));
 	if (access(cgi_path.c_str(), X_OK) == -1)
 		throw(std::runtime_error("CGI error: no file permission"));
@@ -190,52 +180,106 @@ void	CgiExecute::preExecute()
 
 void	CgiExecute::cgiState()
 {
-	std::cout << _client->state << std::endl; //debug
-	// std::cout << "inside cgistate" << std::endl; //debug
-	if (_cgi->pid != -1)
+	if (_pid != -1)
 	{
-		// std::cout << "inside cgistate2" << std::endl; //debug
 		int status;
-		int res = waitpid(_cgi->pid, &status, WNOHANG);
+		int res = waitpid(_pid, &status, WNOHANG);
 		if (res == 0)
 			return ;
-		_cgi->pid = -1; //the point say it is finished successfully/wrongly
+		_pid = -1; //the point say it is finished successfully/wrongly
 		if (res > 0)
 		{
 			if (WIFEXITED(status))
 			{
 				if (WEXITSTATUS(status) == 0) //maybe can remove since default is 200
-					_cgi->exitStatus = 200;
+					_exitStatus = 200;
 				if (WEXITSTATUS(status))
-					_cgi->exitStatus = 500;
+					_exitStatus = 500;
 			}
 			else //WIFSIGNALED case
-				_cgi->exitStatus = 500;
+				_exitStatus = 500;
 		}
 		else if (res == -1)
-			_cgi->exitStatus = 500;
+			_exitStatus = 500;
 	}
-	// std::cout << "inside cgistate3" << std::endl; //debug
-	// std::cout << "readended: " << _cgi->readEnded << std::endl; //debug
-	// std::cout << "writeended: " << _cgi->writeEnded << std::endl; //debug
-	if (/*_cgi->pid == -1 &&*/ _cgi->readEnded && _cgi->writeEnded)
+	if (/*_cgi->pid == -1 &&*/ _readEnded && _writeEnded)
 		_client->state = SEND_RESPONSE;
+}
+
+//check 2 things
+//1. cgi enabled? is the location for script to be run have permission for script
+//2. executable name/suffix is correct? and can be execute?
+bool	CgiExecute::isCGI() const
+{
+	return (_locate.cgi_enabled && isCGIextOK());
+}
+
+//should at least support one. which we focus on .py
+bool	CgiExecute::isCGIextOK() const
+{
+	const std::string	path		= _request.path;
+	const std::string	cgi_path	= _locate.cgi_path;
+	
+	//manually without taking from config cgi_ext
+	//use rfind to detect the last dot
+	size_t lastDot = path.rfind(".");
+	if (lastDot == std::string::npos) //how to check npos
+		return false; 
+	//use path.substr and check
+	std::string ext = path.substr(lastDot);
+	if (ext != ".cgi" && ext != ".php" && ext != ".py"
+		&& ext != ".sh" && ext != ".pl")
+		return false;
+	//1 case may need to handle but idk necessary or not.
+	//./../../../etc/passwd.
+	//but still considering to do this right after location matching or now.
+	//bcus if now it might be redundant since static also may need it.
+	//this will causes the user to go outside of root & get private info
+	//if want to handle, use list and every node is separated by /. 
+	//lets say meet .. pop back the last node.
+	//then we create a string and compare with "var/www/html"
+	return true;
 }
 
 const std::string&	CgiExecute::getOutput() const
 {
-	return (_cgi->output);
-}
-
-t_CGI*	CgiExecute::getCgiStruct() const
-{
-	return (_cgi);
+	return (_output);
 }
 
 Client*	CgiExecute::getClient()
 {
 	return(_client);
 }
+
+int		CgiExecute::getpipeToCgi()
+{
+	return (_pipeToCgi);
+}
+
+int		CgiExecute::getpipeFromCgi()
+{
+	return (_pipeFromCgi);
+}
+
+bool	CgiExecute::isDone() const
+{
+	return (_readEnded && _writeEnded);
+}
+
+bool	CgiExecute::isReadDone() const
+{
+	return (_readEnded);
+}
+
+bool	CgiExecute::isWriteDone() const
+{
+	return (_writeEnded);
+}
+
+// t_CGI*	CgiExecute::getCgiStruct() const
+// {
+// 	return (_cgi);
+// }
 
 // void	CgiExecute::cgiState()
 // {
@@ -277,4 +321,54 @@ Client*	CgiExecute::getClient()
 // 	{
 // 		_client->state = SEND_RESPONSE;
 // 	}
+// }
+
+// void	CgiExecute::execute()
+// {
+// 	int	pipeIn[2];
+// 	int	pipeOut[2];
+
+// 	//					PIPE & FORK
+// 	if (pipe(pipeIn) == -1)
+// 		throw (std::runtime_error("CGI: pipe error"));
+// 	if (pipe(pipeOut) == -1)
+// 	{
+// 		close(pipeIn[0]); close(pipeIn[1]);
+// 		throw (std::runtime_error("CGI: pipe error"));
+// 	}
+// 	_pid = fork();
+// 	if (_pid == -1)
+// 	{
+// 		close(pipeIn[0]); close(pipeIn[1]);
+// 		close(pipeOut[0]); close(pipeOut[1]);
+// 		throw (std::runtime_error("CGI: pipe error"));
+// 	}
+// 	//					CHILD
+// 	else if (_pid == 0)
+// 	{
+// 		dup2(pipeIn[0], STDIN_FILENO);
+// 		dup2(pipeOut[1], STDOUT_FILENO);
+// 		close(pipeIn[1]); close(pipeOut[0]);
+		
+// 		//				EXEC CGI
+// 		char*	interpreter = const_cast<char*>(_locate.cgi_path.c_str());
+// 		char*	scriptPath = const_cast<char *>(_absPath.c_str());
+// 		char*	args[] = { interpreter, scriptPath,NULL};
+// 		char**	envp = createEnvp();
+// 		execve(interpreter, args, envp);
+		
+// 		//				HANDLE ERROR     
+// 		std::cerr << "CGI: execve error" << std::endl;
+// 		for (int i = 0; envp[i]; i++)
+// 			free(envp[i]);
+// 		delete[](envp);
+// 		exit(1);
+// 	}
+// 	close(pipeIn[0]); close(pipeOut[1]);
+// 	_pipeToCgi = pipeIn[1];
+// 	_pipeFromCgi = pipeOut[0];
+	
+// 	if (fcntl(_pipeToCgi, F_SETFL, O_NONBLOCK) == -1
+// 		|| fcntl(_pipeFromCgi, F_SETFL, O_NONBLOCK) == -1)
+// 		throw(std::runtime_error("CGI: pipe nonblock error"));
 // }

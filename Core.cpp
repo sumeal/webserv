@@ -6,56 +6,40 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2025/12/27 22:33:12 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2025/12/28 15:50:18 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Core.h"
 #include "CGI_data.h"
+#include <cstdint>
 #include <poll.h>
 #include <stdexcept>
 #include "CgiExecute.h"
-#include "CgiRequest.h"
 #include "Client.h"
 #include <iostream>
 #include <set>
 #include <unistd.h>
 #include <chrono> //havetodelete
+// #include "CgiRequest.h"
 
 Core::Core() 
-{
-	//_fds.reserve(15100); //test
-}
+{}
 
 Core::~Core() 
 {
-	// for (std::map<int, t_CGI *>::iterator it = _cgi_map.begin(); 
-	// 	it != _cgi_map.end(); it++)
-	// {
-	// 	delete(it->second);
-	// 	it->second = NULL;
-	// }
-	// _cgi_map.clear();
-	// std::cout << "Cleaning up CGI map..." << std::endl;
-    // for (std::map<int, t_CGI *>::iterator it = _cgi_map.begin(); it != _cgi_map.end(); it++)
-    // {
-    //     std::cout << "Deleting CGI at address: " << it->second << std::endl;
-    //     delete it->second;
-    //     it->second = NULL;
-    // }
-    // _cgi_map.clear();
-	std::set<t_CGI*> deletedPtrs;
+	std::set<CgiExecute*> deletedPtrs;
 	
-	for (std::map<int, t_CGI*>::iterator it = _cgi_map.begin(); it != _cgi_map.end(); it++)
+	for (std::map<int, CgiExecute*>::iterator it = _cgiMap.begin(); it != _cgiMap.end(); it++)
 	{
-		t_CGI* current = it->second;
+		CgiExecute* current = it->second;
 		if (current != NULL && deletedPtrs.find(current) == deletedPtrs.end())
 		{
 			deletedPtrs.insert(current);
 			delete(current);
 		}
 	}
-	_cgi_map.clear();//redundant as this only being used when we clear vector but keep the heap object. now the heap object already gone no use
+	_cgiMap.clear();//redundant as this only being used when we clear vector but keep the heap object. now the heap object already gone no use
 }
 
 void	Core::run( t_location& locate, t_request& request)
@@ -70,8 +54,8 @@ void	Core::run( t_location& locate, t_request& request)
 		{
 			int dummyFd = clientCount + 200;
 			// CgiRequest	requestor(request, locate);
-			Client*		client = new Client(new  CgiRequest(request, locate));
-			client->setCgiExec(new CgiExecute(client, request, locate));
+			Client*		client = new Client();
+			client->setCgiExec(new CgiExecute(client, request, locate)); //will be after i detect there is CGI
 			clientRegister(dummyFd, client); //introduce to fdpoll struct
 			clientCount++;
 		}
@@ -83,13 +67,13 @@ void	Core::run( t_location& locate, t_request& request)
         	if (c && c->state == READ_REQUEST) 
         	    _fds[i].revents = POLLIN; // You are doing the OS's job here!
     	}
-		//if request state
-		std::cout << "fd size" << _fds.size() << std::endl; //debug
 		for (int i = 0; i < _fds.size(); i++)
 		{
 			int	revents = _fds[i].revents;
 			int	*fd = &_fds[i].fd;
 			Client* client = _clients[*fd];
+			int	pipeFromCgi = client->GetCgiExec()->getpipeFromCgi();
+			int	pipeToCgi = client->GetCgiExec()->getpipeToCgi();
 
 			// if (!revents)
 			// 	continue;
@@ -103,47 +87,45 @@ void	Core::run( t_location& locate, t_request& request)
 					//if execute CGI state
 					if (client->state == EXECUTE_CGI)
 					{
-						if (!client->GetCgiReq()->isCGI())
+						if (!client->GetCgiExec()->isCGI())
 							throw(std::runtime_error("CGI: request not CGI"));
-						launchCgi(*client->GetCgiExec(), locate, request);
+						launchCgi(client, locate, request);
 						client->state = WAIT_CGI;
 						break ; //added
 					}
 				}
-				if (client->state == WAIT_CGI && *fd == client->getCgi()->pipeFromCgi)
+				if (client->state == WAIT_CGI && *fd == pipeFromCgi)
 				{
 					client->GetCgiExec()->readExec();
 					client->GetCgiExec()->cgiState();
-					if (client->getCgi()->readEnded)
+					if (client->GetCgiExec()->isReadDone())
 					{
-						removeFd(client->getCgi()->pipeFromCgi);
+						removeFd(pipeFromCgi);
 						break ;
 					}
 				}
 			}
 			if (_fds[i].revents & POLLOUT)
 			{
-				if (client->state == WAIT_CGI && *fd == client->getCgi()->pipeToCgi)
+				if (client->state == WAIT_CGI && *fd == pipeToCgi)
 				{
 					client->GetCgiExec()->writeExec();
 					client->GetCgiExec()->cgiState();
-					if (client->getCgi()->writeEnded)
+					if (client->GetCgiExec()->isWriteDone())
 					{
-						removeFd(client->getCgi()->pipeToCgi);
+						removeFd(pipeToCgi);
 						break ;
 					}
 				}
 			}
-			if (client->getCgi()->readEnded && client->getCgi()->writeEnded)
-					client->state = BUILD_RESPONSE;
-			if (client->state == BUILD_RESPONSE)
-					client->GetCgiExec()->buildResponse;
+			if (client->GetCgiExec()->isDone())
+					client->state = SEND_RESPONSE;
 			if (client->state == SEND_RESPONSE)
 			{
-				std::cout << "output: " << client->getCgi()->output << std::endl;
+				std::cout << "output: " << client->GetCgiExec()->getOutput() << std::endl;
 				client->state = FINISHED;
 			}
-			if (client->state == 4)
+			if (client->state == FINISHED)
 				std::cout << "clientstate:" << client->state << std::endl; //debug
 			if (client->state == FINISHED)
 			{
@@ -154,9 +136,102 @@ void	Core::run( t_location& locate, t_request& request)
 		}
 		if(clientCount >= 10 && _clients.empty())
 			break ;
-		std::cout << "a" << std::endl; //debug
 	}
-	std::cout << "b" << std::endl; //debug
+}
+
+void	Core::launchCgi(Client* client, t_location& locate, t_request& request)
+{
+	client->GetCgiExec()->preExecute();
+	client->GetCgiExec()->execute();
+	//the part im trying to implement
+	cgiRegister(client); //in core because it change the struct that hold all the list
+	
+}
+
+void	Core::cgiRegister(Client* client)
+{
+	CgiExecute* CgiExec = client->GetCgiExec();
+	int ToCgi = CgiExec->getpipeToCgi();
+	int FromCgi = CgiExec->getpipeFromCgi();
+	
+	_cgiMap[ToCgi] = CgiExec;
+	_cgiMap[FromCgi] = CgiExec;
+	_clients[ToCgi] = client;
+	_clients[FromCgi] = client;
+	struct pollfd pfdRead;
+	pfdRead.fd = FromCgi;
+	pfdRead.events = POLLIN;
+	pfdRead.revents = 0;
+	_fds.push_back(pfdRead);
+	struct pollfd pfdWrite;
+	pfdWrite.fd = ToCgi;
+	pfdWrite.events = POLLOUT;
+	pfdWrite.revents = 0;
+	_fds.push_back(pfdWrite);
+}
+
+//Geminied socket listening
+void Core::serverRegister(int serverFd) //GPTed  muzz part
+{
+    struct pollfd pfd;
+    pfd.fd = serverFd;
+    pfd.events = POLLIN; // Listen for new incoming connections
+    pfd.revents = 0;
+    _fds.push_back(pfd);
+    
+    // Note: You don't usually need a map entry for the listener 
+    // unless you have multiple ports/servers.
+}
+
+//Geminied Client Socket
+void Core::clientRegister(int clientFd, Client* client)
+{
+    _clients[clientFd] = client; // Map the socket to the Client object
+	client->setSocket(clientFd);
+    struct pollfd pfd;
+    pfd.fd = clientFd;
+    pfd.events = POLLIN; // Listen for HTTP request data
+    pfd.revents = 0;
+    _fds.push_back(pfd);
+}
+
+void	Core::deleteClient(Client* client)
+{
+	removeFd(client->GetCgiExec()->getpipeFromCgi()); //just extra check
+	removeFd(client->GetCgiExec()->getpipeToCgi()); //just extra check
+	for (std::vector<struct pollfd>::iterator it = _fds.begin(); it != _fds.end(); ++it)
+	{
+		if (it->fd == client->getSocket())
+		{
+			_fds.erase(it);
+			_clients.erase(client->getSocket());
+			client->setSocket(-1);
+			break ;
+		}
+	}
+	//removeFd(client->getSocket());
+	//removefd client socket
+	//update server capacity?
+	delete client;
+}
+
+void	Core::removeFd(int fd)
+{
+	for (std::vector<struct pollfd>::iterator it = _fds.begin(); it != _fds.end(); ++it)
+	{
+		if (it->fd == fd)
+		{
+			close(it->fd);
+			_fds.erase(it);
+			_clients.erase(fd);
+			_cgiMap.erase(fd);
+			fd = -1;
+			return ;
+		}
+	}
+	close(fd);
+	_clients.erase(fd);
+	fd = -1;
 }
 
 // void	Core::run( t_location& locate, t_request& request)
@@ -219,124 +294,20 @@ void	Core::run( t_location& locate, t_request& request)
 // 	std::cout << "Total Time: " << elapsed.count() << " ms" << std::endl; //debug
 // }
 
-void	Core::launchCgi(CgiExecute& executor, t_location& locate, t_request& request)
-{
-	executor.preExecute();
-	executor.execute();
-	//the part im trying to implement
-	cgiRegister(executor.getCgiStruct(), executor.getClient()); //in core because it change the struct that hold all the list
-	
-}
-
-// void	Core::cgiWait(CgiExecute& executor)
+// for (std::map<int, t_CGI *>::iterator it = _cgi_map.begin(); 
+// 	it != _cgi_map.end(); it++)
 // {
-// 	t_CGI *c = executor.getCgiStruct();
-//
-// 	for(int i = 0; i < _fds.size(); i++)
-// 	{
-// 		int	revents = _fds[i].revents;
-// 		int	*fd = &_fds[i].fd;
-//
-// 		if (!revents)
-// 			continue;
-// 		if (revents & (POLLIN | POLLHUP) && *fd == c->pipeFromCgi)
-// 		{
-// 			// std::cout << "insideornot3 "<< std::endl; //debug
-// 			executor.readExec();
-// 			if (c->readEnded)
-// 				*fd = -1;
-// 			// executor.cgiState();
-// 		}
-// 		if (revents & POLLOUT && *fd == c->pipeToCgi)
-// 		{
-// 			// std::cout << "insideornot4 "<< std::endl; //debug
-// 			executor.writeExec();
-// 			if (c->writeEnded)
-// 				*fd = -1;
-// 			// executor.cgiState();
-// 		}
-// 	}
-// 	executor.cgiState();
+// 	delete(it->second);
+// 	it->second = NULL;
 // }
+// _cgi_map.clear();
+// std::cout << "Cleaning up CGI map..." << std::endl;
+// for (std::map<int, t_CGI *>::iterator it = _cgi_map.begin(); it != _cgi_map.end(); it++)
+// {
+//     std::cout << "Deleting CGI at address: " << it->second << std::endl;
+//     delete it->second;
+//     it->second = NULL;
+// }
+// _cgi_map.clear();
 
-void	Core::cgiRegister(t_CGI* cgiStruct, Client* client)
-{
-	_cgi_map[cgiStruct->pipeToCgi] = cgiStruct;
-	_cgi_map[cgiStruct->pipeFromCgi] = cgiStruct;
-	_clients[cgiStruct->pipeToCgi] = client;
-	_clients[cgiStruct->pipeFromCgi] = client;
-	struct pollfd pfdRead;
-	pfdRead.fd = cgiStruct->pipeFromCgi;
-	pfdRead.events = POLLIN;
-	pfdRead.revents = 0;
-	_fds.push_back(pfdRead);
-	struct pollfd pfdWrite;
-	pfdWrite.fd = cgiStruct->pipeToCgi;
-	pfdWrite.events = POLLOUT;
-	pfdWrite.revents = 0;
-	_fds.push_back(pfdWrite);
-}
-
-//Geminied socket listening
-void Core::serverRegister(int serverFd) //GPTed  muzz part
-{
-    struct pollfd pfd;
-    pfd.fd = serverFd;
-    pfd.events = POLLIN; // Listen for new incoming connections
-    pfd.revents = 0;
-    _fds.push_back(pfd);
-    
-    // Note: You don't usually need a map entry for the listener 
-    // unless you have multiple ports/servers.
-}
-
-//Geminied Client Socket
-void Core::clientRegister(int clientFd, Client* client)
-{
-    _clients[clientFd] = client; // Map the socket to the Client object
-	client->setSocket(clientFd);
-    struct pollfd pfd;
-    pfd.fd = clientFd;
-    pfd.events = POLLIN; // Listen for HTTP request data
-    pfd.revents = 0;
-    _fds.push_back(pfd);
-}
-
-void	Core::deleteClient(Client* client)
-{
-	removeFd(client->getCgi()->pipeFromCgi); //just extra check
-	removeFd(client->getCgi()->pipeToCgi); //just extra check
-	for (std::vector<struct pollfd>::iterator it = _fds.begin(); it != _fds.end(); ++it)
-	{
-		if (it->fd == client->getSocket())
-		{
-			_fds.erase(it);
-			_clients.erase(client->getSocket());
-			client->setSocket(-1);
-			break ;
-		}
-	}
-	//removeFd(client->getSocket());
-	//removefd client socket
-	//update server capacity?
-	delete client;
-}
-
-void	Core::removeFd(int fd)
-{
-	for (std::vector<struct pollfd>::iterator it = _fds.begin(); it != _fds.end(); ++it)
-	{
-		if (it->fd == fd)
-		{
-			close(it->fd);
-			_fds.erase(it);
-			_clients.erase(fd);
-			_cgi_map.erase(fd);
-			fd = -1;
-			return ;
-		}
-	}
-	close(fd);
-	_clients.erase(fd);
-	fd = -1;
-}
+//_fds.reserve(15100); //test

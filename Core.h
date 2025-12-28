@@ -16,15 +16,14 @@
 
 class Core {
 private:
-	std::map<int, t_CGI*> _cgi_map;
+	std::map<int, CgiExecute*> _cgiMap;
 	std::map<int, Client*> _clients;
 	std::vector<struct pollfd> _fds;
 public:
 	Core();
 	~Core();
-	void	launchCgi(CgiExecute& executor, t_location& locate, t_request& request);
-	void	cgiRegister(t_CGI* cgiStruct, Client* client);
-	void	cgiWait(CgiExecute& executor);
+	void	launchCgi(Client* client, t_location& locate, t_request& request);
+	void	cgiRegister(Client* client);
 	void	run(t_location& locate, t_request& request);
 	//Geminied. muzz part
 	void 	serverRegister(int serverFd);
