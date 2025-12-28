@@ -110,6 +110,7 @@ void	CgiExecute::execute()
 			throw(std::runtime_error("CGI: pipe nonblock error"));
 		//Proceed with parent logic. write body to CGI
 		_cgi = new t_CGI();
+		_client->setCgi(_cgi);
 		_cgi->pipeToCgi = pipe_in[1];
 		_cgi->clientSocket = 1; //hardcoded for now
 		_cgi->pid = pid;
@@ -124,12 +125,17 @@ void	CgiExecute::readExec()
 	size_t	len  = 0;
 	ssize_t	read_len;
 	if ((read_len = read(pipe_out[0], read_buf, sizeof(read_buf))) > 0)
+	{
+		std::cout << "read_len: " << read_len << std::endl; //debug
 		_cgi->output.append(read_buf, read_len);
+	}
+	// std::cout << "fd: "  << pipe_out[0] << std::endl; //debug
+	// std::cout << "read_len: " << read_len << std::endl; //debug
 	if (read_len == 0)
 	{
 		_cgi->readEnded = 1;
-		close(pipe_out[0]);
-		_cgi->pipeFromCgi = -1; //best practice indicating closed
+		// close(pipe_out[0]);
+		// _cgi->pipeFromCgi = -1; //best practice indicating closed
 	}
 	if (read_len == -1)
 		throw(std::runtime_error("CGI: read error"));
@@ -151,41 +157,10 @@ void	CgiExecute::writeExec()
 	if (_cgi->bodySizeSent == _request.body.size())
 	{
 		_cgi->writeEnded = true;
-		close(_cgi->pipeToCgi);
-		_cgi->pipeToCgi = -1; //best practice indicating closed
+		// close(_cgi->pipeToCgi);
+		// _cgi->pipeToCgi = -1; //best practice indicating closed
 	}
 }
-
-// char		read_buf[8192];
-// ssize_t		read_len = 0;
-// while((read_len = read(pipe_out[0], read_buf, sizeof(read_buf))) > 0)
-// 	_output.append(read_buf, read_len);
-// if (read_len == -1)
-// 	throw (std::runtime_error("CGI: cannot read. pipe error")); // pipe error since nothing to read
-// 	//wait for child
-// 	int status;
-// 	//pid_t res = waitpid(pid, &status, WNOHANG);
-// 	// while (res == 0)
-// 	// {
-// 	// 	sleep(5);
-// 	// }
-// 	pid_t res = waitpid(pid, &status, 0);
-// 	//add waitpid handling
-// 	if (WIFEXITED(status))
-// 	{
-// 		int code = WEXITSTATUS(status);
-// 		if (code !=  0)
-// 		{
-// 			std::cerr << "CGI error: exited with code" << code << std::endl;
-// 			throw(std::runtime_error("CGI error: child process"));
-// 		}
-// 	}
-// 	else if (WIFSIGNALED(status))
-// 	{
-// 		std::cerr << "CGI error: crash with code" << WTERMSIG(status) << std::endl;
-// 		throw (std::runtime_error("CGI error: child process"));
-// 	}
-// }
 
 //calculate abspath
 //prepare envp, args, 
@@ -215,30 +190,36 @@ void	CgiExecute::preExecute()
 
 void	CgiExecute::cgiState()
 {
-	if (_cgi->pid == -1)
-		return ;
-	int status;
-	int res = waitpid(_cgi->pid, &status, WNOHANG);
-	if (res == 0)
-		return ;
-	if (res > 0)
+	std::cout << _client->state << std::endl; //debug
+	// std::cout << "inside cgistate" << std::endl; //debug
+	if (_cgi->pid != -1)
 	{
-		if (WIFEXITED(status))
+		// std::cout << "inside cgistate2" << std::endl; //debug
+		int status;
+		int res = waitpid(_cgi->pid, &status, WNOHANG);
+		if (res == 0)
+			return ;
+		_cgi->pid = -1; //the point say it is finished successfully/wrongly
+		if (res > 0)
 		{
-			if (WEXITSTATUS(status) == 0)
-				_cgi->pid = -1;
-			else if(WEXITSTATUS(status) != 0)
-				throw (std::runtime_error("Waitpid WEXITSTATUS Error"));
+			if (WIFEXITED(status))
+			{
+				if (WEXITSTATUS(status) == 0) //maybe can remove since default is 200
+					_cgi->exitStatus = 200;
+				if (WEXITSTATUS(status))
+					_cgi->exitStatus = 500;
+			}
+			else //WIFSIGNALED case
+				_cgi->exitStatus = 500;
 		}
-		else //WIFSIGNALED case
-			throw (std::runtime_error("Waitpid WIFSIGNALED Error"));
+		else if (res == -1)
+			_cgi->exitStatus = 500;
 	}
-	if (res == -1)
-		throw (std::runtime_error("Waitpid Error"));
-	if (_cgi->readEnded && _cgi->writeEnded)
-	{
+	// std::cout << "inside cgistate3" << std::endl; //debug
+	// std::cout << "readended: " << _cgi->readEnded << std::endl; //debug
+	// std::cout << "writeended: " << _cgi->writeEnded << std::endl; //debug
+	if (/*_cgi->pid == -1 &&*/ _cgi->readEnded && _cgi->writeEnded)
 		_client->state = SEND_RESPONSE;
-	}
 }
 
 const std::string&	CgiExecute::getOutput() const
@@ -250,3 +231,50 @@ t_CGI*	CgiExecute::getCgiStruct() const
 {
 	return (_cgi);
 }
+
+Client*	CgiExecute::getClient()
+{
+	return(_client);
+}
+
+// void	CgiExecute::cgiState()
+// {
+// 	std::cout << "inside cgistate" << std::endl; //debug
+// 	if (_cgi->pid == -1)
+// 	{
+// 		if (_cgi->readEnded && _cgi->writeEnded)
+// 		{	
+// 			_client->state = SEND_RESPONSE;
+// 		}
+// 		std::cout << "readended: " << _cgi->readEnded << std::endl; //debug
+// 		std::cout << "writeended: " << _cgi->writeEnded << std::endl; //debug
+// 		std::cout << "clientstate: " << _client->state << std::endl; //debug
+// 		return ;
+// 	}
+// 	std::cout << "inside cgistate2" << std::endl; //debug
+// 	int status;
+// 	int res = waitpid(_cgi->pid, &status, WNOHANG);
+// 	if (res == 0)
+// 		return ;
+// 	if (res > 0)
+// 	{
+// 		if (WIFEXITED(status))
+// 		{
+// 			if (WEXITSTATUS(status) == 0)
+// 				_cgi->pid = -1;
+// 			else if(WEXITSTATUS(status) != 0)
+// 				throw (std::runtime_error("Waitpid WEXITSTATUS Error"));
+// 		}
+// 		else //WIFSIGNALED case
+// 			throw (std::runtime_error("Waitpid WIFSIGNALED Error"));
+// 	}
+// 	if (res == -1)
+// 		throw (std::runtime_error("Waitpid Error"));
+// 	std::cout << "inside cgistate3" << std::endl; //debug
+// 	std::cout << "readended: " << _cgi->readEnded << std::endl; //debug
+// 	std::cout << "writeended: " << _cgi->writeEnded << std::endl; //debug
+// 	if (_cgi->readEnded && _cgi->writeEnded)
+// 	{
+// 		_client->state = SEND_RESPONSE;
+// 	}
+// }

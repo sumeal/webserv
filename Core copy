@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   Core.cpp                                           :+:      :+:    :+:   */
+/*   Core copy                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2025/12/27 22:33:12 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2025/12/25 14:55:36 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,10 +22,7 @@
 #include <unistd.h>
 #include <chrono> //havetodelete
 
-Core::Core() 
-{
-	//_fds.reserve(15100); //test
-}
+Core::Core() {}
 
 Core::~Core() 
 {
@@ -58,105 +55,78 @@ Core::~Core()
 	_cgi_map.clear();//redundant as this only being used when we clear vector but keep the heap object. now the heap object already gone no use
 }
 
+
 void	Core::run( t_location& locate, t_request& request)
 {
 	int			clientCount = 0;
 	std::vector<Client*> activeClients;
-	
+
 	int loopCount = 0;
 	while (1)
 	{
-		if (clientCount < 10) //lower than 10
+		if (clientCount < 10)
 		{
-			int dummyFd = clientCount + 200;
-			// CgiRequest	requestor(request, locate);
-			Client*		client = new Client(new  CgiRequest(request, locate));
-			client->setCgiExec(new CgiExecute(client, request, locate));
-			clientRegister(dummyFd, client); //introduce to fdpoll struct
-			clientCount++;
+			CgiRequest	requestor(request, locate);
+			Client*		client = new Client(&requestor);
+			CgiExecute	executor(client, request, locate);
 		}
 		int result = poll(&_fds[0], _fds.size(), 4000);
-		for (size_t i = 0; i < _fds.size(); i++) //test to act as acceptor
-		{
-        	Client* c = _clients[_fds[i].fd];
-        	// If this is a dummy FD we want to force into action:
-        	if (c && c->state == READ_REQUEST) 
-        	    _fds[i].revents = POLLIN; // You are doing the OS's job here!
-    	}
 		//if request state
-		std::cout << "fd size" << _fds.size() << std::endl; //debug
 		for (int i = 0; i < _fds.size(); i++)
 		{
-			int	revents = _fds[i].revents;
-			int	*fd = &_fds[i].fd;
-			Client* client = _clients[*fd];
-
-			// if (!revents)
-			// 	continue;
-			if (revents & POLLIN || revents & POLLHUP)
+			if (_fds[i].revents & POLLIN)
 			{
+				int		fd = _fds[i].fd;
+				Client*	client = _clients[fd];
 				if (client->state == READ_REQUEST)
 				{
 					//parser/config part.used to read http
-					// if (/*read request finished*/)
+					if (/*read request finished*/)
 						client->state = EXECUTE_CGI;
 					//if execute CGI state
 					if (client->state == EXECUTE_CGI)
 					{
-						if (!client->GetCgiReq()->isCGI())
+						if (!requestor.isCGI())
 							throw(std::runtime_error("CGI: request not CGI"));
-						launchCgi(*client->GetCgiExec(), locate, request);
+						launchCgi(executor, locate, request);
 						client->state = WAIT_CGI;
-						break ; //added
 					}
 				}
-				if (client->state == WAIT_CGI && *fd == client->getCgi()->pipeFromCgi)
-				{
-					client->GetCgiExec()->readExec();
-					client->GetCgiExec()->cgiState();
-					if (client->getCgi()->readEnded)
-					{
-						removeFd(client->getCgi()->pipeFromCgi);
-						break ;
-					}
-				}
+				cgiWait(executor);//used to trigger read only
 			}
 			if (_fds[i].revents & POLLOUT)
 			{
-				if (client->state == WAIT_CGI && *fd == client->getCgi()->pipeToCgi)
+				if (client->state == READ_REQUEST)
 				{
-					client->GetCgiExec()->writeExec();
-					client->GetCgiExec()->cgiState();
-					if (client->getCgi()->writeEnded)
+					//parser/config part.used to send pipe in data
+					client->state = EXECUTE_CGI;
+					//if execute CGI state
+					if (client->state == EXECUTE_CGI)
 					{
-						removeFd(client->getCgi()->pipeToCgi);
-						break ;
+						if (!requestor.isCGI())
+							throw(std::runtime_error("CGI: request not CGI"));
+						launchCgi(executor, locate, request);
+						client->state = WAIT_CGI;
 					}
 				}
+				cgiWait(executor);//used to trigger write only
 			}
-			if (client->getCgi()->readEnded && client->getCgi()->writeEnded)
-					client->state = BUILD_RESPONSE;
-			if (client->state == BUILD_RESPONSE)
-					client->GetCgiExec()->buildResponse;
+			//if send output to client
 			if (client->state == SEND_RESPONSE)
 			{
-				std::cout << "output: " << client->getCgi()->output << std::endl;
-				client->state = FINISHED;
-			}
-			if (client->state == 4)
-				std::cout << "clientstate:" << client->state << std::endl; //debug
+				//for now
+				std::cout << "output: " << executor.getOutput() << std::endl;
+				break; 
+			}		
 			if (client->state == FINISHED)
 			{
 				//clear/delete/break
-				deleteClient(client);
-				break ;
+				delete(client);
+				client = NULL;
+				break; 
 			}
 		}
-		if(clientCount >= 10 && _clients.empty())
-			break ;
-		std::cout << "a" << std::endl; //debug
 	}
-	std::cout << "b" << std::endl; //debug
 }
 
 // void	Core::run( t_location& locate, t_request& request)
@@ -224,47 +194,45 @@ void	Core::launchCgi(CgiExecute& executor, t_location& locate, t_request& reques
 	executor.preExecute();
 	executor.execute();
 	//the part im trying to implement
-	cgiRegister(executor.getCgiStruct(), executor.getClient()); //in core because it change the struct that hold all the list
+	cgiRegister(executor.getCgiStruct()); //in core because it change the struct that hold all the list
 	
 }
 
-// void	Core::cgiWait(CgiExecute& executor)
-// {
-// 	t_CGI *c = executor.getCgiStruct();
-//
-// 	for(int i = 0; i < _fds.size(); i++)
-// 	{
-// 		int	revents = _fds[i].revents;
-// 		int	*fd = &_fds[i].fd;
-//
-// 		if (!revents)
-// 			continue;
-// 		if (revents & (POLLIN | POLLHUP) && *fd == c->pipeFromCgi)
-// 		{
-// 			// std::cout << "insideornot3 "<< std::endl; //debug
-// 			executor.readExec();
-// 			if (c->readEnded)
-// 				*fd = -1;
-// 			// executor.cgiState();
-// 		}
-// 		if (revents & POLLOUT && *fd == c->pipeToCgi)
-// 		{
-// 			// std::cout << "insideornot4 "<< std::endl; //debug
-// 			executor.writeExec();
-// 			if (c->writeEnded)
-// 				*fd = -1;
-// 			// executor.cgiState();
-// 		}
-// 	}
-// 	executor.cgiState();
-// }
+void	Core::cgiWait(CgiExecute& executor)
+{
+	t_CGI *c = executor.getCgiStruct();
 
-void	Core::cgiRegister(t_CGI* cgiStruct, Client* client)
+	for(int i = 0; i < _fds.size(); i++)
+	{
+		int	revents = _fds[i].revents;
+		int	*fd = &_fds[i].fd;
+
+		if (!revents)
+			continue;
+		if (revents & (POLLIN | POLLHUP) && *fd == c->pipeFromCgi)
+		{
+			// std::cout << "insideornot3 "<< std::endl; //debug
+			executor.readExec();
+			if (c->readEnded)
+				*fd = -1;
+			// executor.cgiState();
+		}
+		if (revents & POLLOUT && *fd == c->pipeToCgi)
+		{
+			// std::cout << "insideornot4 "<< std::endl; //debug
+			executor.writeExec();
+			if (c->writeEnded)
+				*fd = -1;
+			// executor.cgiState();
+		}
+	}
+	executor.cgiState();
+}
+
+void	Core::cgiRegister(t_CGI* cgiStruct)
 {
 	_cgi_map[cgiStruct->pipeToCgi] = cgiStruct;
 	_cgi_map[cgiStruct->pipeFromCgi] = cgiStruct;
-	_clients[cgiStruct->pipeToCgi] = client;
-	_clients[cgiStruct->pipeFromCgi] = client;
 	struct pollfd pfdRead;
 	pfdRead.fd = cgiStruct->pipeFromCgi;
 	pfdRead.events = POLLIN;
@@ -275,68 +243,4 @@ void	Core::cgiRegister(t_CGI* cgiStruct, Client* client)
 	pfdWrite.events = POLLOUT;
 	pfdWrite.revents = 0;
 	_fds.push_back(pfdWrite);
-}
-
-//Geminied socket listening
-void Core::serverRegister(int serverFd) //GPTed  muzz part
-{
-    struct pollfd pfd;
-    pfd.fd = serverFd;
-    pfd.events = POLLIN; // Listen for new incoming connections
-    pfd.revents = 0;
-    _fds.push_back(pfd);
-    
-    // Note: You don't usually need a map entry for the listener 
-    // unless you have multiple ports/servers.
-}
-
-//Geminied Client Socket
-void Core::clientRegister(int clientFd, Client* client)
-{
-    _clients[clientFd] = client; // Map the socket to the Client object
-	client->setSocket(clientFd);
-    struct pollfd pfd;
-    pfd.fd = clientFd;
-    pfd.events = POLLIN; // Listen for HTTP request data
-    pfd.revents = 0;
-    _fds.push_back(pfd);
-}
-
-void	Core::deleteClient(Client* client)
-{
-	removeFd(client->getCgi()->pipeFromCgi); //just extra check
-	removeFd(client->getCgi()->pipeToCgi); //just extra check
-	for (std::vector<struct pollfd>::iterator it = _fds.begin(); it != _fds.end(); ++it)
-	{
-		if (it->fd == client->getSocket())
-		{
-			_fds.erase(it);
-			_clients.erase(client->getSocket());
-			client->setSocket(-1);
-			break ;
-		}
-	}
-	//removeFd(client->getSocket());
-	//removefd client socket
-	//update server capacity?
-	delete client;
-}
-
-void	Core::removeFd(int fd)
-{
-	for (std::vector<struct pollfd>::iterator it = _fds.begin(); it != _fds.end(); ++it)
-	{
-		if (it->fd == fd)
-		{
-			close(it->fd);
-			_fds.erase(it);
-			_clients.erase(fd);
-			_cgi_map.erase(fd);
-			fd = -1;
-			return ;
-		}
-	}
-	close(fd);
-	_clients.erase(fd);
-	fd = -1;
 }

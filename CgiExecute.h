@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/22 00:37:30 by mbani-ya          #+#    #+#             */
-/*   Updated: 2025/12/22 17:03:57 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2025/12/27 22:32:39 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -47,6 +47,7 @@ public:
 
 	const std::string&	getOutput() const;
 	t_CGI*	getCgiStruct() const;
+	Client*	getClient();
 };
 
 #endif

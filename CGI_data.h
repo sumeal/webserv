@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/16 15:03:57 by mbani-ya          #+#    #+#             */
-/*   Updated: 2025/12/22 14:58:20 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2025/12/24 11:17:43 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -45,6 +45,7 @@ typedef struct s_CGI {
 	int pipeToCgi;
 	int pipeFromCgi;
 	int	clientSocket;
+	int	exitStatus;
 	pid_t	pid;
 	size_t	bodySizeSent;
 	std::string	output;
@@ -59,7 +60,7 @@ typedef struct s_CGI {
 // } t_data;
 
 
-inline s_CGI::s_CGI() : pipeToCgi(-1), pipeFromCgi(-1), clientSocket(-1), 
+inline s_CGI::s_CGI() : pipeToCgi(-1), pipeFromCgi(-1), exitStatus(200), clientSocket(-1), 
 	pid(-1), bodySizeSent(0), writeEnded(false), readEnded(false) {}
 
 #endif
