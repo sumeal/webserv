@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2025/12/28 15:49:09 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2025/12/29 14:51:45 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -48,4 +48,9 @@ void	Client::setCgiExec(CgiExecute* executor)
 CgiExecute*		Client::GetCgiExec()
 {
 	return _executor;
+}
+
+Respond&		Client::getRespond()
+{
+	return _responder;
 }

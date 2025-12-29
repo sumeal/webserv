@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:03:33 by mbani-ya          #+#    #+#             */
-/*   Updated: 2025/12/28 15:53:13 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2025/12/29 15:51:21 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,12 +16,12 @@
 #include "CGI_data.h"
 // #include "CgiRequest.h"
 #include "CgiExecute.h"
+#include "Respond.h"
 
 enum e_State {
 READ_REQUEST,
 EXECUTE_CGI,
 WAIT_CGI,
-BUILD_RESPONSE,
 SEND_RESPONSE,
 FINISHED,
 };
@@ -29,6 +29,7 @@ FINISHED,
 class Client {
 private:
 	CgiExecute* _executor;
+	Respond		_responder;
 	int			_socket;
 	// CgiRequest	_requestor;
 	// t_CGI*		_cgi;
@@ -38,8 +39,9 @@ public:
 	~Client();
 	int		getSocket();
 	void	setSocket(int socket);
-	void	setCgiExec(CgiExecute* executor);
 	CgiExecute* GetCgiExec();
+	void	setCgiExec(CgiExecute* executor);
+	Respond&	getRespond();	
 	// CgiRequest* GetCgiReq();
 	// t_CGI*	getCgi();
 	// void	setCgi(t_CGI* cgi);

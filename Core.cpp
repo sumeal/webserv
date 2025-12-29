@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2025/12/28 15:50:18 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2025/12/29 15:45:44 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -101,6 +101,13 @@ void	Core::run( t_location& locate, t_request& request)
 					if (client->GetCgiExec()->isReadDone())
 					{
 						removeFd(pipeFromCgi);
+						if (client->GetCgiExec()->isDone())
+						{
+							client->getRespond().procCgiOutput(client->GetCgiExec()->getOutput());
+							client->getRespond().buildResponse();
+							respondRegister(client);
+							client->state = SEND_RESPONSE;
+						}
 						break ;
 					}
 				}
@@ -114,16 +121,22 @@ void	Core::run( t_location& locate, t_request& request)
 					if (client->GetCgiExec()->isWriteDone())
 					{
 						removeFd(pipeToCgi);
+						if (client->GetCgiExec()->isDone())
+						{
+							client->getRespond().procCgiOutput(client->GetCgiExec()->getOutput());
+							client->getRespond().buildResponse();
+							respondRegister(client);
+							client->state = SEND_RESPONSE;
+						}
 						break ;
 					}
 				}
-			}
-			if (client->GetCgiExec()->isDone())
-					client->state = SEND_RESPONSE;
-			if (client->state == SEND_RESPONSE)
-			{
-				std::cout << "output: " << client->GetCgiExec()->getOutput() << std::endl;
-				client->state = FINISHED;
+				if (client->state == SEND_RESPONSE && *fd == client->getSocket())
+				{
+					int status = client->getRespond().sendResponse();
+					if (status)
+						client->state = FINISHED;
+				}
 			}
 			if (client->state == FINISHED)
 				std::cout << "clientstate:" << client->state << std::endl; //debug
@@ -168,6 +181,21 @@ void	Core::cgiRegister(Client* client)
 	pfdWrite.events = POLLOUT;
 	pfdWrite.revents = 0;
 	_fds.push_back(pfdWrite);
+}
+
+void	Core::respondRegister(Client* client)
+{
+	int	ClientFd = client->getSocket();
+
+	for (int i = 0; i < _fds.size(); i++)
+	{
+		int VecFd = _fds[i].fd;
+		if (VecFd == ClientFd)
+		{
+			_fds[i].events = POLLOUT;
+			return;
+		}
+	}
 }
 
 //Geminied socket listening

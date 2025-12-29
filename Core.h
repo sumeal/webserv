@@ -30,4 +30,5 @@ public:
 	void 	clientRegister(int clientFd, Client* client);
 	void	deleteClient(Client* client);
 	void	removeFd(int fd);
+	void	respondRegister(Client* client);
 };
