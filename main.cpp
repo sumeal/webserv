@@ -12,6 +12,7 @@ int main(int argc, char **argv)
 	std::string config_file = argv[1];
 	TestServer t;
 	t.parse_config(config_file);
-	t.launch();
+	t.print_config();
+	//t.launch();
 	return (0);
 }

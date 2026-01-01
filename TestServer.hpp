@@ -2,22 +2,36 @@
 #define TESTSERVER_HPP
 
  #include "SimpleServer.hpp"
+ #include "Parse.hpp"
  #include <unistd.h>
  #include <string.h>
  #include <fcntl.h>
  #include <poll.h>
  #include <vector>
  #include <map>
+ #include <fstream>
 
-struct client_info
+	class Parse;
+ 	class TestServer;  // Forward declaration
+	struct Server;     // Forward declaration  
+	struct Location;   // Forward declaration
+	struct client_info
 {
 	int socket_fd;
 };
 
+enum ParseState {
+	OUTSIDE,
+	SERVER,
+	LOCATION
+};
 
 struct Location
 {
 	std::string path;
+	bool allow_get;
+	bool allow_post;
+	bool allow_delete;
 	std::vector<std::string> cgi_ext;
 	std::string cgi_path;
 	bool auto_index;
@@ -30,6 +44,7 @@ struct Server
 	std::string root;
 	std::vector<std::string> index_files;
 	std::map<int, std::string> error_pages;
+	std::vector<Location> locations;
 };
 
 class TestServer: public SimpleServer
@@ -40,9 +55,12 @@ class TestServer: public SimpleServer
 		void accepter();
 		void handler();
 		void responder();
+		Server server_config;
+		Location temp_location;
 	public:
 		std::vector<pollfd> pfds;
 		void parse_config(const std::string& filename);
+		void print_config() const;
 		TestServer();
 		void launch();
 

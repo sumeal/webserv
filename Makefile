@@ -6,6 +6,7 @@ SRCS = webserv.cpp \
 	   ListeningSocket.cpp \
 	   SimpleServer.cpp \
 	   TestServer.cpp \
+	   Parse.cpp \
 	   main.cpp
 
 OBJS = $(SRCS:.cpp=.o)
