@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 17:17:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2025/12/29 17:30:54 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/02 14:44:19 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,20 +14,20 @@
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
+#include <fstream>
 #include <sstream>
 #include <variant>
 #include <sys/types.h> //ssize_t
 #include <sys/socket.h> //send
+#include <iostream>
 
-Respond::Respond()
-{
-	
-}
+//initialize the status code
+Respond::Respond() : _statusCode(0), _contentLength(0), _connectionStatus(0),
+	_socketFd(0), _protocol("FromMuzz")
+{}
 
 Respond::~Respond()
-{
-	
-}
+{}
 
 //first line check?
 void	Respond::procCgiOutput(std::string cgiOutput)
@@ -91,6 +91,45 @@ void	Respond::procCgiOutput(std::string cgiOutput)
 	_body = cgiOutput.substr(separatorPos + offset);
 }
 
+void	Respond::procNormalOutput()
+{
+	std::string filePath = "FromMuzz";
+	//read file and take path
+	std::ifstream file(filePath);
+	if (!file.is_open())
+		throw(404);
+	std::stringstream ss;
+	ss << file.rdbuf();
+	_body = ss.str();
+	_contentLength = _body.size();
+	//set status and body
+	_statusCode = 200;
+	//set content type based on the file extension
+	size_t pos = filePath.rfind(".");
+	if (pos != std::string::npos)
+	{
+		std::string ext = filePath.substr(pos);
+		if (ext == ".html")
+			_contentType = "text/html";
+		else if (ext == ".css")
+			_contentType = "text/css";
+		else if (ext == ".js")
+			_contentType = "application/javascript";
+		else if (ext == ".jpeg")
+			_contentType = "image/jpeg";
+		else if (ext == ".png")
+			_contentType = "image/png";
+		else
+		 	_contentType = "text/plain"; //it wouldnt try to execute
+	}
+	else
+	{
+		//trigger to save/downlaod the file only
+		_contentType = "application/octet-stream";
+		//throw (404);
+	}
+}
+
 void	Respond::buildResponse()
 {
 	std::stringstream ss;
@@ -100,7 +139,7 @@ void	Respond::buildResponse()
 	// Status Line: HTTP/1.1 + parsedCode + OK + \r\n
 	ss << _protocol << " " << _statusCode << " " << getStatusMsg() << "\r\n";
 	// Server Header: Server: Webserv/1.0\r\n
-	ss << "Server: " << serverName << "\r\n";
+	ss << "Server: " << _serverName << "\r\n";
 	// Content-Length: Content-Length: + body.size() + \r\n
 	ss << "Content-Length: " << _body.size() << "\r\n";
 	// CGI Headers: Add the Content-Type you found earlier.
@@ -120,7 +159,7 @@ std::string Respond::getStatusMsg()
 		case 200: return "OK";
 		case 201: return "Created";
 		case 204: return "No Content";
-		case 301: return "Mover Permenantly";
+		case 301: return "Moved Permenantly";
 		case 400: return "Bad Request";
 		case 403: return "Forbidden";
 		case 404: return "Not Found";
@@ -131,6 +170,7 @@ std::string Respond::getStatusMsg()
 	}
 }
 
+//should i store in class for the return value or just implement this way?
 int	Respond::sendResponse()
 {	
 	const char* dataToSend = _fullResponse.c_str() + _bytesSent;
@@ -157,17 +197,19 @@ void	Respond::buildErrorResponse(int statusCode)
 	_statusCode = statusCode;
 
 	std::stringstream bodySs;
-	bodySs << "<html>" << "\r\n";
-	bodySs << "<head><title>" << _statusCode << "</title></head>";
-	bodySs << "<body><center><h1>" << _statusCode << "</h1></center>";
-	bodySs << "<hr><center>" << serverName << "</center></body>";
-	bodySs << "</html>";
-	_body = bodySs.str();
-	
+	if(_body.empty())
+	{
+		bodySs << "<html>" << "\r\n";
+		bodySs << "<head><title>" << _statusCode << "</title></head>";
+		bodySs << "<body><center><h1>" << _statusCode << "</h1></center>";
+		bodySs << "<hr><center>" << _serverName << "</center></body>";
+		bodySs << "</html>";
+		_body = bodySs.str();
+	}
 	std::stringstream ss;
 
 	ss << _protocol << " " << _statusCode << " " << getStatusMsg() << "\r\n";
-	ss << "Server: " << serverName << "\r\n";
+	ss << "Server: " << _serverName << "\r\n";
 	ss << "Content-Type: " << "text/html" << "\r\n";
 	ss << "Content-Length: " << _body.size() << "\r\n";
 	ss << "Connection: " << "close" << "\r\n";
@@ -177,3 +219,28 @@ void	Respond::buildErrorResponse(int statusCode)
 	_fullResponse = ss.str();
 	_bytesSent = 0;
 }
+
+void	Respond::findErrorBody(std::string errorPath)
+{
+	std::ifstream file(errorPath.c_str());
+	if (!file.is_open()) //since i assumed my parser friend already check it
+		return ;
+	std::stringstream ss; 
+	ss << file.rdbuf();
+	file.close();
+	_body = ss.str();
+}
+
+void	Respond::printResponse()
+{
+	std::cout << "Full Response: " << _fullResponse << std::endl;
+	std::cout << "Status Code : " << _statusCode << std::endl;
+	std::cout << "Protocol: " << _protocol << std::endl;
+	std::cout << "Body: " << _body << std::endl;
+	std::cout << "Content Type: " << _contentType << std::endl;
+	std::cout << "Content Length: " << _contentLength << std::endl;
+	std::cout << "Server Name: " << _serverName << std::endl;
+	std::cout << "Connection Status: " << _socketFd << std::endl;
+	std::cout << "Socket Fd: " << _socketFd;
+}
+

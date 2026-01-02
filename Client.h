@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:03:33 by mbani-ya          #+#    #+#             */
-/*   Updated: 2025/12/29 15:51:21 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/02 14:34:48 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,6 +31,7 @@ private:
 	CgiExecute* _executor;
 	Respond		_responder;
 	int			_socket;
+	int			_hasCgi;
 	// CgiRequest	_requestor;
 	// t_CGI*		_cgi;
 public:
@@ -41,7 +42,9 @@ public:
 	void	setSocket(int socket);
 	CgiExecute* GetCgiExec();
 	void	setCgiExec(CgiExecute* executor);
-	Respond&	getRespond();	
+	Respond&	getRespond();
+	bool	isCgiOn();
+	void	setHasCgi(bool status);
 	// CgiRequest* GetCgiReq();
 	// t_CGI*	getCgi();
 	// void	setCgi(t_CGI* cgi);

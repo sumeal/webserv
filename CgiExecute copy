@@ -13,7 +13,6 @@
 // #include "CgiRequest.h"
 #include "CGI_data.h"
 #include "CgiExecute.h"
-#include <cerrno>
 #include <cstddef>
 #include <cstdlib>
 #include <stdexcept>
@@ -40,18 +39,18 @@ void	CgiExecute::execute()
 {
 	//				PIPE & FORK
 	if (pipe(_pipeIn) == -1)
-		throw (500);
+		throw (std::runtime_error("CGI: pipe error"));
 	if (pipe(_pipeOut) == -1)
 	{
 		close(_pipeIn[0]); close(_pipeIn[1]);
-		throw (500);
+		throw (std::runtime_error("CGI: pipe error"));
 	}
 	_pid = fork();
 	if (_pid == -1)
 	{
 		close(_pipeIn[0]); close(_pipeIn[1]);
 		close(_pipeOut[0]); close(_pipeOut[1]);
-		throw (500);
+		throw (std::runtime_error("CGI: pipe error"));
 	}
 	else if (_pid == 0)
 		execChild();
@@ -62,7 +61,7 @@ void	CgiExecute::execute()
 	_pipeFromCgi = _pipeOut[0];
 	if (fcntl(_pipeToCgi, F_SETFL, O_NONBLOCK) == -1
 		|| fcntl(_pipeFromCgi, F_SETFL, O_NONBLOCK) == -1)
-		throw(500);
+		throw(std::runtime_error("CGI: pipe nonblock error"));
 }
 
 void	CgiExecute::execChild()
@@ -134,11 +133,7 @@ void	CgiExecute::readExec()
 	if (readLen == 0)
 		_readEnded = 1;
 	if (readLen == -1)
-	{
-		if (errno == EAGAIN || errno == EWOULDBLOCK)
-			return ;
-		throw(502);
-	}
+		throw(std::runtime_error("CGI: read error"));
 }
 
 void	CgiExecute::writeExec()
@@ -153,11 +148,7 @@ void	CgiExecute::writeExec()
 	if (written > 0)
 		_bodySizeSent += written;
 	if (written == -1)
-	{
-		if (errno == EAGAIN || errno == EWOULDBLOCK)
-			return ;
-		throw(500);
-	}
+		throw(std::runtime_error("CGI: write error"));
 	if (_bodySizeSent == _request.body.size())
 		_writeEnded = true;
 }
@@ -179,12 +170,12 @@ void	CgiExecute::preExecute()
 		root.erase(root.size() - 1,  1);
 	//					CHECK EXISTENCE
 	if (access(_absPath.c_str(), F_OK) == -1)
-		throw(404);
+		throw(std::runtime_error("CGI error: File dont exist"));
 	//					CHECK EXISTENCE & EXEC
 	if (access(_absPath.c_str(), X_OK) == -1)
-		throw(403);
+		throw(std::runtime_error("CGI error: no file permission"));
 	if (access(cgi_path.c_str(), X_OK) == -1)
-		throw(403);
+		throw(std::runtime_error("CGI error: no file permission"));
 }
 
 void	CgiExecute::cgiState()

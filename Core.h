@@ -19,6 +19,9 @@ private:
 	std::map<int, CgiExecute*> _cgiMap;
 	std::map<int, Client*> _clients;
 	std::vector<struct pollfd> _fds;
+	std::vector<struct pollfd> _stagedFds;
+	std::vector<int> _deleteFds;
+	bool	_needCleanup;
 public:
 	Core();
 	~Core();
@@ -29,6 +32,14 @@ public:
 	void 	serverRegister(int serverFd);
 	void 	clientRegister(int clientFd, Client* client);
 	void	deleteClient(Client* client);
-	void	removeFd(int fd);
+	void	fdPreCleanup(int fd, int index);
+	void	removeFd(int fd);//maybe not needed
 	void	respondRegister(Client* client);
+	void	handleClientError(Client* client, int statusCode, int index);
+	void	addStagedFds();
+	void	fdCleanup(); //delStagedFd better naming?
+
+	//testing
+	void	acceptMockConnections(t_location& locate, t_request& request, int& clientCount);
+	void	forceMockEvents();
 };

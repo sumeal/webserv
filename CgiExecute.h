@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/22 00:37:30 by mbani-ya          #+#    #+#             */
-/*   Updated: 2025/12/28 15:56:20 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2025/12/30 14:37:27 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -55,6 +55,7 @@ public:
 	void	readExec();
 	void	writeExec();
 	void	cgiState();
+	void	clearCgi();
 	void	cleanup(); //check
 
 	bool	isCGI() const;
