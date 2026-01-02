@@ -1,0 +1,11 @@
+POST /cgi-bin/sum.py HTTP/1.1
+Host: localhost:8080
+User-Agent: curl/8.0
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 7
+Connection: close
+
+a=3&b=4
+
+#curl -X POST http://localhost:8080/cgi-bin/sum.py \
+     -d "a=3&b=4"

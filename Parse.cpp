@@ -2,6 +2,7 @@
 
 int Parse::parse_outside(const std::string& line, int current_state)
 {
+	(void)current_state; // Unused parameter
     if (line.find("server") != std::string::npos && line.find("{") != std::string::npos) {
         return SERVER;
     }
@@ -55,8 +56,18 @@ int Parse::parse_location(const std::string& line, int current_state, Location& 
 				temp_location.allow_delete = true;
 		}
 	}
-	else if (tokens[0] == "upload_path" && tokens.size() >= 2) {
+	else if (tokens[0] == "cgi_ext") {
+		for (size_t i = 1; i < tokens.size(); i++) {
+			temp_location.cgi_ext.push_back(tokens[i]);
+		}
+	}
+	else if (tokens[0] == "cgi_path" && tokens.size() >= 2) {
 		temp_location.cgi_path = tokens[1];
+		temp_location.upload_path = "";
+	}
+	else if (tokens[0] == "upload_path" && tokens.size() >= 2) {
+		temp_location.upload_path = tokens[1];
+		temp_location.cgi_path = "";
 	}
 	else if (tokens[0] == "autoindex" && tokens.size() >= 2) {
 		temp_location.auto_index = (tokens[1] == "on");

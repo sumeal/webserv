@@ -34,6 +34,7 @@ struct Location
 	bool allow_delete;
 	std::vector<std::string> cgi_ext;
 	std::string cgi_path;
+	std::string upload_path;
 	bool auto_index;
 };
 
@@ -46,6 +47,33 @@ struct Server
 	std::map<int, std::string> error_pages;
 	std::vector<Location> locations;
 };
+
+struct HttpRequest
+{
+    // Request line
+    std::string method;          // "GET", "POST", "DELETE"
+    std::string uri;             // "/uploads/file.txt?x=1"
+    std::string path;            // "/uploads/file.txt"
+    std::string query;           // "x=1"
+    std::string http_version;    // "HTTP/1.1"
+
+    // Headers
+    std::map<std::string, std::string> headers;
+
+    // Parsed headers (cached for convenience)
+    std::string host;
+    int         port;
+    size_t      content_length;
+    std::string content_type;
+    bool        keep_alive;
+
+    // Body
+    std::string body;
+
+    // State flags
+    bool is_cgi;
+};
+
 
 class TestServer: public SimpleServer
 {
@@ -63,6 +91,7 @@ class TestServer: public SimpleServer
 		void print_config() const;
 		TestServer();
 		void launch();
+		int set_non_blocking(int fd);
 
 };
 

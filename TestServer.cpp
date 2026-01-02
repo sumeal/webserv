@@ -86,8 +86,14 @@ void TestServer::parse_config(const std::string &filename)
     std::cout << "Server name: '" << server_config.server_name << "'" << std::endl;
     std::cout << "Root: '" << server_config.root << "'" << std::endl;
     std::cout << "Locations count: " << server_config.locations.size() << std::endl;
-    
-    print_config();
+}
+
+int TestServer::set_non_blocking(int fd)
+{
+	int flags = fcntl(fd, F_GETFL, 0);
+	if (flags == -1)
+		return -1;
+	return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 }
 
 void TestServer::accepter()
@@ -95,11 +101,17 @@ void TestServer::accepter()
 	struct sockaddr_in address = get_socket()->get_address();
 	int addrlen = sizeof(address);
 	new_socket = accept(get_socket()->get_sock(), (struct sockaddr *)&address, (socklen_t *)&addrlen);
+	if (new_socket < 0)
+		perror("Accept fail");
+	if (set_non_blocking(new_socket) < 0)
+		perror("Failed to set non-blocking");
+	
 }
 
 void TestServer::handler()
 {
 	read(new_socket, buffer, sizeof(buffer));
+
 	std::cout << buffer << std::endl;
 }
 
@@ -109,14 +121,26 @@ void TestServer::responder()
 	write(new_socket, hello, strlen(hello));
 	close(new_socket);
 }
-
+// Tambah temporary vector
+/*
+	pfds.fd = -1;
+*/
 void TestServer::launch()
 {
+	if (pfds.empty())
+	{
+		pollfd server_pfd;
+		server_pfd.fd = get_socket()->get_sock();
+		server_pfd.events = POLLIN;
+		pfds.push_back(server_pfd);
+	}
 	while (true)
 	{
 		int ready = poll(pfds.data(), pfds.size(), -1);
-		if (ready < 0)
+		if (ready < 0) {
 			perror("Poll error");
+			continue;
+		}
 		for(size_t i = 0; i < pfds.size(); i++)
 		{
 			if (pfds[i].revents & POLLIN)
@@ -204,6 +228,7 @@ void TestServer::print_config() const
             std::cout << std::endl;
             
             std::cout << "  CGI Path: " << (loc.cgi_path.empty() ? "Not set" : loc.cgi_path) << std::endl;
+			std::cout << "  Upload Path: " << (loc.upload_path.empty() ? "Not set" : loc.upload_path) << std::endl;
             std::cout << "  Auto Index: " << (loc.auto_index ? "On" : "Off") << std::endl;
             
             std::cout << "  CGI Extensions: ";
