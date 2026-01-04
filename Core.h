@@ -16,7 +16,7 @@
 
 class Core {
 private:
-	std::map<int, CgiExecute*> _cgiMap;
+	// std::map<int, CgiExecute*> _cgiMap;
 	std::map<int, Client*> _clients;
 	std::vector<struct pollfd> _fds;
 	std::vector<struct pollfd> _stagedFds;
@@ -35,7 +35,7 @@ public:
 	void	fdPreCleanup(int fd, int index);
 	void	removeFd(int fd);//maybe not needed
 	void	respondRegister(Client* client);
-	void	handleClientError(Client* client, int statusCode, int index);
+	void	handleClientError(Client* client, int statusCode);
 	void	addStagedFds();
 	void	fdCleanup(); //delStagedFd better naming?
 

@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 16:58:34 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/02 14:35:56 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/03 16:33:01 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,12 @@
 
 #include <cstddef>
 #include <string>
+
+enum e_connectionStatus {
+	CLOSE,
+	KEEP_ALIVE,
+};
+//tgk how  muzz  store
 
 class Respond {
 private:
@@ -25,7 +31,7 @@ private:
 	std::string	_contentType;
 	int			_contentLength;//
 	std::string	_serverName;
-	int			_connectionStatus;//
+	int			_connStatus;//
 	//send data
 	int			_socketFd;
 	size_t		_bytesSent;

@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 17:17:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/02 14:44:19 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/03 16:45:50 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,8 +22,8 @@
 #include <iostream>
 
 //initialize the status code
-Respond::Respond() : _statusCode(0), _contentLength(0), _connectionStatus(0),
-	_socketFd(0), _protocol("FromMuzz")
+Respond::Respond() : _statusCode(0), _contentLength(0), _serverName() /*FromMuzz*/, 
+	_connStatus(KEEP_ALIVE) /*FromMuzz*/, _socketFd(0)  /*FromMuzz*/, _protocol("FromMuzz")
 {}
 
 Respond::~Respond()
@@ -32,6 +32,7 @@ Respond::~Respond()
 //first line check?
 void	Respond::procCgiOutput(std::string cgiOutput)
 {
+	// std::cout << cgiOutput << std::endl; //debug
 	if (cgiOutput.empty())
 	{
 		buildErrorResponse(502);
@@ -87,8 +88,11 @@ void	Respond::procCgiOutput(std::string cgiOutput)
 	}
 	else
 		_contentType = "text/html";
-	//				EXTRACT BODY
+	//				EXTRACT BODY	
+	// std::cout << "Pre Body: " << _body << std::endl;  //debug
 	_body = cgiOutput.substr(separatorPos + offset);
+	_contentLength = _body.length();
+	// std::cout << "Post Body: " << _body << std::endl; //debug
 }
 
 void	Respond::procNormalOutput()
@@ -145,6 +149,8 @@ void	Respond::buildResponse()
 	// CGI Headers: Add the Content-Type you found earlier.
 	std::string ct = (_contentType.empty()) ? "text/html" : _contentType;
 	ss << "Content-Type: " << ct << "\r\n";
+	std::string cs = (_connStatus == KEEP_ALIVE) ? "keep-alive" : "close";
+	ss << "Connection: " << cs << "\r\n";
 	// Separator: \r\n
 	ss << "\r\n";
 	// Body: The actual HTML/data.
@@ -233,14 +239,16 @@ void	Respond::findErrorBody(std::string errorPath)
 
 void	Respond::printResponse()
 {
-	std::cout << "Full Response: " << _fullResponse << std::endl;
+	std::cout << "\n==========RESPOND===============" << std::endl;
 	std::cout << "Status Code : " << _statusCode << std::endl;
 	std::cout << "Protocol: " << _protocol << std::endl;
 	std::cout << "Body: " << _body << std::endl;
 	std::cout << "Content Type: " << _contentType << std::endl;
 	std::cout << "Content Length: " << _contentLength << std::endl;
 	std::cout << "Server Name: " << _serverName << std::endl;
-	std::cout << "Connection Status: " << _socketFd << std::endl;
+	std::cout << "Connection Status: " << _connStatus << std::endl;
 	std::cout << "Socket Fd: " << _socketFd;
+	std::cout << "\n\nFull Response: \n" << _fullResponse << std::endl;
+	std::cout << "\n==========FINISH================" << std::endl;
 }
 

@@ -126,11 +126,14 @@ char**	CgiExecute::createEnvp()
 
 void	CgiExecute::readExec()
 {
+	std::cout << "inside read" << std::endl; //debug
 	char	read_buf[8096];
 	size_t	len  = 0;
 	ssize_t	readLen;
 	if ((readLen = read(_pipeFromCgi, read_buf, sizeof(read_buf))) > 0)
 		_output.append(read_buf, readLen);
+	// int bytes_read = read(_pipeFromCgi, read_buf, 1024); //debug
+	std::cout << "DEBUG: Read " << readLen << " bytes from CGI" << std::endl; //debug
 	if (readLen == 0)
 		_readEnded = 1;
 	if (readLen == -1)

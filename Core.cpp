@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/02 15:56:09 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/04 15:22:21 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,23 +23,23 @@
 #include <chrono> //havetodelete
 // #include "CgiRequest.h"
 
-Core::Core() 
+Core::Core() : _needCleanup(false)
 {}
 
 Core::~Core() 
 {
-	std::set<CgiExecute*> deletedPtrs;
+	// std::set<CgiExecute*> deletedPtrs;
 	
-	for (std::map<int, CgiExecute*>::iterator it = _cgiMap.begin(); it != _cgiMap.end(); it++)
-	{
-		CgiExecute* current = it->second;
-		if (current != NULL && deletedPtrs.find(current) == deletedPtrs.end())
-		{
-			deletedPtrs.insert(current);
-			delete(current);
-		}
-	}
-	_cgiMap.clear();//redundant as this only being used when we clear vector but keep the heap object. now the heap object already gone no use
+	// for (std::map<int, CgiExecute*>::iterator it = _cgiMap.begin(); it != _cgiMap.end(); it++)
+	// {
+	// 	CgiExecute* current = it->second;
+	// 	if (current != NULL && deletedPtrs.find(current) == deletedPtrs.end())
+	// 	{
+	// 		deletedPtrs.insert(current);
+	// 		delete(current);
+	// 	}
+	// }
+	// _cgiMap.clear();//redundant as this only being used when we clear vector but keep the heap object. now the heap object already gone no use
 }
 
 void	Core::run( t_location& locate, t_request& request)
@@ -56,12 +56,21 @@ void	Core::run( t_location& locate, t_request& request)
 		//					ACTUAL LOOP
 		for (int i = 0; i < _fds.size(); i++)
 		{
-			int	revents = _fds[i].revents;
 			int	*fd = &_fds[i].fd;
+			if (*fd == -1)
+				continue ;
+			int	revents = _fds[i].revents;
 			Client* client = _clients[*fd];
-			int	pipeFromCgi = client->GetCgiExec()->getpipeFromCgi();
-			int	pipeToCgi = client->GetCgiExec()->getpipeToCgi();
-
+			int	pipeFromCgi = -1;
+			int pipeToCgi = -1;
+			if (client->GetCgiExec())
+			{
+				pipeFromCgi = client->GetCgiExec()->getpipeFromCgi();
+				pipeToCgi = client->GetCgiExec()->getpipeToCgi();
+			}
+			// std::cout << "a" << std::endl; //debug
+			// std::cout << "state: "<< client->state << std::endl; //debug
+			// std::cout << "revents: " << revents << std::endl; //debug
 			// if (!revents)
 			// 	continue;
 			try
@@ -78,6 +87,7 @@ void	Core::run( t_location& locate, t_request& request)
 							client->getRespond().buildResponse();
 							respondRegister(client);
 							client->state = SEND_RESPONSE;
+							std::cout << "this trigger" << std::endl; //debug
 						}
 						else
 							client->state = EXECUTE_CGI;
@@ -85,7 +95,10 @@ void	Core::run( t_location& locate, t_request& request)
 						if (client->state == EXECUTE_CGI)
 						{
 							if (!client->GetCgiExec()->isCGI())
+							{
 								client->state = SEND_RESPONSE; //need to ask muzz
+								std::cout << "this trigger 1" << std::endl; //debug
+							}
 							launchCgi(client, locate, request);
 							client->state = WAIT_CGI;
 							// break ; //added
@@ -105,12 +118,13 @@ void	Core::run( t_location& locate, t_request& request)
 								client->getRespond().buildResponse();
 								respondRegister(client);
 								client->state = SEND_RESPONSE;
+								std::cout << "this trigger 2" << std::endl; //debug
 							}
 							// break ; //may not need to break
 						}
 					}
 				}
-				if (_fds[i].revents & POLLOUT)
+				if (_fds[i].revents & POLLOUT || revents & POLLHUP)
 				{
 					if (client->state == WAIT_CGI && *fd == pipeToCgi)
 					{
@@ -126,11 +140,12 @@ void	Core::run( t_location& locate, t_request& request)
 								client->getRespond().buildResponse();
 								respondRegister(client);
 								client->state = SEND_RESPONSE;
+								std::cout << "this trigger 3" << std::endl; //debug
 							}
 							// break; //may not need to break
 						}
 					}
-					if (client->state == SEND_RESPONSE && *fd == client->getSocket())
+					if (client->state == SEND_RESPONSE /*&& *fd == client->getSocket()*/)
 					{
 						int status = client->getRespond().sendResponse();
 						if (status)
@@ -143,18 +158,31 @@ void	Core::run( t_location& locate, t_request& request)
 			}
 			catch (int statusCode)
 			{
-				handleClientError(client, statusCode, i);
+				std::cout << "statusCode: " << statusCode << std::endl; //debug
+				handleClientError(client, statusCode);
 			}
-			if (client->state == FINISHED)
-				std::cout << "clientstate:" << client->state << std::endl; //debug
+			std::cout << "client state: " << client->state << std::endl; //debug
+			// if (client->state == FINISHED)
+				// std::cout << "clientstate:" << client->state << std::endl; //debug
+			if (client->state == SEND_RESPONSE /*&& *fd == client->getSocket()*/)
+			{
+				int status = client->getRespond().sendResponse();
+				if (status)
+				{
+					client->getRespond().printResponse();
+					client->state = FINISHED;
+				}
+			}
 			if (client->state == FINISHED) // timeout only need to trigger this
 			{
 				//clear/delete/break
+				std::cout << "this trigger" << std::endl; //debug
 				deleteClient(client);
-				break ;
+				// break ;
 			}
 		}
 		//delete all in the delete list
+		std::cout << "b" << std::endl; //debug
 		fdCleanup();
 		addStagedFds();
 		if(clientCount >= 10 && _clients.empty())
@@ -177,8 +205,8 @@ void	Core::cgiRegister(Client* client)
 	int ToCgi = CgiExec->getpipeToCgi();
 	int FromCgi = CgiExec->getpipeFromCgi();
 	
-	_cgiMap[ToCgi] = CgiExec;
-	_cgiMap[FromCgi] = CgiExec;
+	// _cgiMap[ToCgi] = CgiExec;
+	// _cgiMap[FromCgi] = CgiExec;
 	_clients[ToCgi] = client;
 	_clients[FromCgi] = client;
 	struct pollfd pfdRead;
@@ -237,23 +265,44 @@ void Core::clientRegister(int clientFd, Client* client)
 
 void	Core::deleteClient(Client* client)
 {
-	removeFd(client->GetCgiExec()->getpipeFromCgi()); //just extra check
-	removeFd(client->GetCgiExec()->getpipeToCgi()); //just extra check
-	for (std::vector<struct pollfd>::iterator it = _fds.begin(); it != _fds.end(); ++it)
+	CgiExecute* Cgi = client->GetCgiExec();
+	int	pipeFromCgi = client->GetCgiExec()->getpipeFromCgi();
+	int	pipeToCgi	= client->GetCgiExec()->getpipeToCgi();
+	int	socketFd	= client->getSocket();
+	
+	if (client->isCgiOn()) //supposely dont need since all have closed their CGI
 	{
-		if (it->fd == client->getSocket())
-		{
-			_fds.erase(it);
-			_clients.erase(client->getSocket());
-			client->setSocket(-1);
-			break ;
-		}
+		fdPreCleanup(pipeFromCgi, 0);
+		fdPreCleanup(pipeToCgi, 0);
+		// _cgiMap.erase(pipeFromCgi);
+		// _cgiMap.erase(pipeToCgi);
+		// _clients.erase(pipeFromCgi);
+		// _clients.erase(pipeToCgi);
 	}
-	//removeFd(client->getSocket());
-	//removefd client socket
-	//update server capacity?
+	fdPreCleanup(socketFd, 0);
+	_clients.erase(socketFd);
 	delete client;
 }
+
+// void	Core::deleteClient(Client* client)
+// {
+// 	removeFd(client->GetCgiExec()->getpipeFromCgi()); //just extra check
+// 	removeFd(client->GetCgiExec()->getpipeToCgi()); //just extra check
+// 	for (std::vector<struct pollfd>::iterator it = _fds.begin(); it != _fds.end(); ++it)
+// 	{
+// 		if (it->fd == client->getSocket())
+// 		{
+// 			_fds.erase(it);
+// 			_clients.erase(client->getSocket());
+// 			client->setSocket(-1);
+// 			break ;
+// 		}
+// 	}
+// 	//removeFd(client->getSocket());
+// 	//removefd client socket
+// 	//update server capacity?
+// 	delete client;
+// }
 
 void	Core::removeFd(int fd)
 {
@@ -264,14 +313,11 @@ void	Core::removeFd(int fd)
 			close(it->fd);
 			_fds.erase(it);
 			_clients.erase(fd);
-			_cgiMap.erase(fd);
+			// _cgiMap.erase(fd);
 			fd = -1;
 			return ;
 		}
 	}
-	close(fd);
-	_clients.erase(fd);
-	fd = -1;
 }
 
 void	Core::fdPreCleanup(int fd, int i)
@@ -283,7 +329,7 @@ void	Core::fdPreCleanup(int fd, int i)
 			return ;
 		close(fd2);
 		_clients.erase(fd2);
-		_cgiMap.erase(fd2);
+		// _cgiMap.erase(fd2);
 		_fds[i].fd = -1;
 		_needCleanup = true;
 		return;
@@ -296,7 +342,7 @@ void	Core::fdPreCleanup(int fd, int i)
 			{
 				close(it->fd);
 				_clients.erase(fd);
-				_cgiMap.erase(fd);
+				// _cgiMap.erase(fd);
 				it->fd = -1;
 				_needCleanup = true;
 				return ;
@@ -328,8 +374,10 @@ void	Core::fdPreCleanup(int fd, int i)
 
 void	Core::fdCleanup()
 {
+	std::cout << " pre needCleanup" << std::endl; //debug
 	if (!_needCleanup)
 		return ;
+	std::cout << "needCleanup dont trigger" << std::endl; //debug
 	for (size_t i = 0; i < _fds.size(); )
 	{
 		if (_fds[i].fd == -1)
@@ -340,7 +388,7 @@ void	Core::fdCleanup()
 	_needCleanup = 0;
 }
 
-void	Core::handleClientError(Client* client, int statusCode, int index)
+void	Core::handleClientError(Client* client, int statusCode)
 {
 	//How do Muzz store in map for the custom error file
 	// std::string errorPath = error_pages[statusCode]; //will do map later
@@ -358,6 +406,8 @@ void	Core::handleClientError(Client* client, int statusCode, int index)
 	}
 	//State update
 	client->state = SEND_RESPONSE;
+	respondRegister(client);
+	std::cout << "this trigger 4" << std::endl; //debug
 	//Poll update
 	for (size_t i = 0; i < _fds.size(); i++)
 	{
