@@ -78,16 +78,24 @@ struct HttpRequest
 class TestServer: public SimpleServer
 {
 	private:
-		char buffer[30000];
-		int new_socket;
+		std::map<int, HttpRequest> client_req;
+		std::map<int, std::string> client_buffer;
 		void accepter();
-		void handler();
-		void responder();
+		void handler(int client_fd);
+		void responder(int client_fd);
 		Server server_config;
 		Location temp_location;
+		void handle_get_request(int client_fd, const HttpRequest& request, const std::string& location);
+		void handle_post_request(int client_fd, const HttpRequest& request, const std::string& location);
+		void handle_delete_request(int client_fd, const HttpRequest& request, const std::string& location);
+		void send_error_response(int client_fd, int error_code, const std::string& message);
+		void send_file_response(int client_fd, const std::string& file_path);
+		bool is_method_allowed(const std::string& method, const std::string& location_path);
 	public:
 		std::vector<pollfd> pfds;
+		void parse_http_request(const std::string &raw_req, int client_fd);
 		void parse_config(const std::string& filename);
+		std::string find_matching_location(const std::string& path);
 		void print_config() const;
 		TestServer();
 		void launch();

@@ -2,9 +2,7 @@
 #include "Parse.hpp"
 
 TestServer::TestServer() : SimpleServer(AF_INET, SOCK_STREAM, 0 ,8080, INADDR_ANY, 10)
-{
-	memset(buffer, 0, sizeof(buffer));
-	
+{	
 	// Initialize config values
 	server_config.port = 0;
 	server_config.server_name = "";
@@ -101,25 +99,203 @@ void TestServer::accepter()
 	struct sockaddr_in address = get_socket()->get_address();
 	int addrlen = sizeof(address);
 	new_socket = accept(get_socket()->get_sock(), (struct sockaddr *)&address, (socklen_t *)&addrlen);
-	if (new_socket < 0)
+	if (new_socket < 0) {
 		perror("Accept fail");
-	if (set_non_blocking(new_socket) < 0)
+		return;
+	}
+	if (set_non_blocking(new_socket) < 0) {
 		perror("Failed to set non-blocking");
+		return;
+	}
 	
 }
 
-void TestServer::handler()
+void TestServer::handler(int client_fd)
 {
-	read(new_socket, buffer, sizeof(buffer));
+	char buffer[42000];
+	memset(buffer, 0, sizeof(buffer));
+	ssize_t bytes_read = read(client_fd, buffer, sizeof(buffer - 1));
+	if (bytes_read <= 0) {
+		std::cout << "Client disconnected or read error" << std::endl;
+		client_req.erase(client_fd);
+		client_buffer.erase(client_fd);
+		return;
+	}
+	buffer[bytes_read] = '\0';
+	client_buffer[client_fd] += std::string(buffer);
+	if (client_buffer[client_fd].find("\r\n\r\n") != std::string::npos) {
+		parse_http_request(client_buffer[client_fd], client_fd);
+		responder(client_fd);
 
-	std::cout << buffer << std::endl;
+		client_req.erase(client_fd);
+		client_buffer.erase(client_fd);
+	}
 }
 
-void TestServer::responder()
+void TestServer::parse_http_request(const std::string &raw_req, int client_fd)
 {
-	const char *hello = "Hello from server!";
-	write(new_socket, hello, strlen(hello));
-	close(new_socket);
+	HttpRequest& current_request = client_req[client_fd];
+	std::istringstream request_stream(raw_req);
+	std::string line;
+
+	if (std::getline(request_stream, line)) {
+		std::istringstream req_line(line);
+		req_line >> current_request.method >> current_request.uri >> current_request.http_version;
+
+		size_t query_pos = current_request.uri.find('?');
+		if (query_pos != std::string::npos) {
+			current_request.path = current_request.uri.substr(0, query_pos);
+			current_request.query = current_request.uri.substr(query_pos +1);
+		}
+		else {
+			current_request.path = current_request.uri;
+		}
+	}
+
+	while (std::getline(request_stream, line) && line != "\r" && !line.empty()) {
+		size_t colon_pos = line.find(':');
+		if (colon_pos != std::string::npos) {
+			std::string header_name = line.substr(0, colon_pos);
+			std::string header_value = line.substr(colon_pos + 2);
+
+			if (!header_value.empty() && header_value[header_value.length() - 1] == '\r') {
+				header_value.pop_back();
+			}
+			current_request.headers[header_name] = header_value;
+		}
+	}
+}
+
+void TestServer::responder(int client_fd)
+{
+	try {
+		std::map<int, HttpRequest>::iterator it = client_req.find(client_fd);
+		if (it == client_req.end()) {
+			throw std::runtime_error("No request found for client");
+		}
+
+		HttpRequest& request = it->second;
+		std::string matched_location = find_matching_location(request.path);
+
+		// if (is_cgi_request(request.path,matched_location)) {
+		// 	handle_cgi_request(client_fd, request, matched_location);
+		// 	return;
+		// }
+
+		if (request.method == "GET") {
+			handle_get_request(client_fd, request, matched_location);
+		} else if (request.method == "POST") {
+			handle_post_request(client_fd, request, matched_location);
+		} else if (request.method == "DELETE") {
+			handle_post_request(client_fd, request, matched_location);
+		} else {
+			send_error_response(client_fd, 405, "Method Not Allowed");
+		}
+
+
+	} catch (const std::exception& e) {
+		send_error_response(client_fd, 500, "Internal Server Error");
+	}
+
+	close(client_fd);
+
+}
+
+void TestServer::handle_get_request(int client_fd, const HttpRequest& request, const std::string& location)
+{
+	try {
+		if(!is_method_allowed("GET", location)) {
+			send_error_response(client_fd, 405, "Method Not Allowed");
+			return;
+		}
+
+		std::string file_path = server_config.root + request.path;
+
+		struct stat path_stat;
+		if (stat(file_path.c_str(), &path_stat) == 0) {
+			if (S_ISDIR(path_stat.st_mode)) {
+				for (size_t = 0; i < server_config.index_files.size(); i++) {
+					std::string index_path = file_path + "/" + server_config.index_files[i];
+					if (access(index_path.c_str(), F_OK) == 0) {
+						send_file_response(client_fd, index_path);
+						return;
+					}
+				}
+
+				bool autoindex = false;
+				for (size_t i = 0; i < server_config.locations.size(); i++) {
+					if (server_config.locations[i].path == location) {
+						autoindex = server_config.locations[i].auto_index;
+						break;
+					}
+				}
+				if (autoindex) {
+					send_directory_listing(client_fd, file_path, request.path);
+	
+				} else {
+					send_error_response(client_fd, 403, "Forbidden");
+				}
+			} else {
+				send_file_response(client_fd, file_path);
+			}
+		} else {
+			send_error_response(client_fd, 404, "Not Found");
+		}
+	} catch (const std::exception& e) {
+		send_error_response(client_fd, 500, "Internal Server Error");
+	}
+}
+
+void TestServer::handle_post_request(int client_fd, const HttpRequest& request, const std::string& location)
+{
+	try {
+		if (!is_method_allowed("POST", location)) {
+			send_error_response(client_fd, 405, "Method Not Allowed");
+			return;
+		}
+
+        std::string response = "HTTP/1.1 200 OK\r\n"
+                              "Content-Type: text/html\r\n"
+                              "Content-Length: 23\r\n\r\n"
+                              "<h1>POST Received!</h1>";		
+		write(client_fd, response.c_str(), response.length());						
+	} catch (const std::exception& e) {
+		send_error_response(client_fd, 500, "Internal Server Error");
+	}
+}
+
+void TestServer::handle_delete_request(int client_fd, const HttpRequest& request, const std::string& location)
+{
+	
+}
+
+std::string TestServer::find_matching_location(const std::string& path)
+{
+	std::string best_match = "/";
+	size_t best_match_length = 0;
+	bool found_root = false;
+
+	for (size_t i = 0; i < server_config.locations.size(); i++) {
+		const Location& loc = server_config.locations[i];
+
+		if (path.find(loc.path) == 0) {
+			bool is_exact_match = (path.length() == loc.path.length());
+			bool is_subpath_match = (loc.path == "/" || (path.length() > loc.path.length() && path[loc.path.length()] == '/'));
+			if (is_exact_match || is_subpath_match) {
+				if (loc.path.length() > best_match_length) {
+					best_match = loc.path;
+					best_match_length = loc.path.length();
+				}
+				if (loc.path == "/") {
+					found_root = true;
+				}
+			}
+		}
+	}
+	if (server_config.locations.empty() || (!found_root && best_match_length == 0)) {
+		best_match = "/";
+	}
+	return best_match;
 }
 // Tambah temporary vector
 /*
@@ -156,7 +332,6 @@ void TestServer::launch()
 				else
 				{
 					handler();
-					responder();
 					pfds.erase(pfds.begin() + i);
 				}
 			}
