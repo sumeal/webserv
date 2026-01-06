@@ -10,6 +10,11 @@
  #include <vector>
  #include <map>
  #include <fstream>
+ #include <sys/stat.h>
+ #include <sys/types.h>
+ #include <errno.h>
+ #include <dirent.h>
+ 
 
 	class Parse;
  	class TestServer;  // Forward declaration
@@ -85,12 +90,16 @@ class TestServer: public SimpleServer
 		void responder(int client_fd);
 		Server server_config;
 		Location temp_location;
+	    int new_socket;
 		void handle_get_request(int client_fd, const HttpRequest& request, const std::string& location);
 		void handle_post_request(int client_fd, const HttpRequest& request, const std::string& location);
 		void handle_delete_request(int client_fd, const HttpRequest& request, const std::string& location);
 		void send_error_response(int client_fd, int error_code, const std::string& message);
 		void send_file_response(int client_fd, const std::string& file_path);
 		bool is_method_allowed(const std::string& method, const std::string& location_path);
+		void send_directory_listing(int client_fd,const std::string& file_path, const std::string& request_path);
+		static bool has_path_travelsal(const std::string& p);
+
 	public:
 		std::vector<pollfd> pfds;
 		void parse_http_request(const std::string &raw_req, int client_fd);

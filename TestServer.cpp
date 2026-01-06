@@ -96,9 +96,11 @@ int TestServer::set_non_blocking(int fd)
 
 void TestServer::accepter()
 {
-	struct sockaddr_in address = get_socket()->get_address();
-	int addrlen = sizeof(address);
-	new_socket = accept(get_socket()->get_sock(), (struct sockaddr *)&address, (socklen_t *)&addrlen);
+	struct sockaddr_in client_addr;
+	socklen_t addrlen = sizeof (client_addr);
+
+	new_socket = accept(get_socket()->get_sock(), (struct sockaddr *)&client_addr, (socklen_t *)&addrlen);
+
 	if (new_socket < 0) {
 		perror("Accept fail");
 		return;
@@ -159,7 +161,7 @@ void TestServer::parse_http_request(const std::string &raw_req, int client_fd)
 			std::string header_value = line.substr(colon_pos + 2);
 
 			if (!header_value.empty() && header_value[header_value.length() - 1] == '\r') {
-				header_value.pop_back();
+				header_value.push_back();
 			}
 			current_request.headers[header_name] = header_value;
 		}
@@ -214,7 +216,7 @@ void TestServer::handle_get_request(int client_fd, const HttpRequest& request, c
 		struct stat path_stat;
 		if (stat(file_path.c_str(), &path_stat) == 0) {
 			if (S_ISDIR(path_stat.st_mode)) {
-				for (size_t = 0; i < server_config.index_files.size(); i++) {
+				for (size_t i = 0; i < server_config.index_files.size(); i++) {
 					std::string index_path = file_path + "/" + server_config.index_files[i];
 					if (access(index_path.c_str(), F_OK) == 0) {
 						send_file_response(client_fd, index_path);
@@ -246,6 +248,81 @@ void TestServer::handle_get_request(int client_fd, const HttpRequest& request, c
 	}
 }
 
+void TestServer::send_directory_listing(int client_fd, const std::string& directory_path, const std::string& request_path)
+{
+	DIR* dir = opendir(directory_path.c_str());
+	if (!dir) {
+		send_error_response(client_fd, 403, "Forbidden");
+		return;
+	}
+
+	std::ostringstream html;
+    html << "<!DOCTYPE html>\n"
+         << "<html><head><meta charset=\"utf-8\">"
+         << "<title>Index of " << request_path << "</title>"
+         << "</head><body>"
+         << "<h1>Index of " << request_path << "</h1>"
+		 << "<hr><ul>";
+
+	if (request_path != "/") {
+		std::string parent = request_path;
+		if (!parent.empty() && parent.back() == "/")
+			parent.push_back();
+		size_t slash = parent.find_last_of('/');
+		parent = slash == std::string::npos ? "/" : parent.substr(0, slash + 1);
+		html << "<li><a href=/" << parent << "\">..</a></li>";
+	}
+
+	for (struct dirent* ent = readdir(dir); ent != NULL; ent = readdir(dir)) 
+	{
+		std::string name = ent->d_name;
+		if (name == "." || name == "..")
+			continue;
+		std::string href = request_path;
+		if (href.empty() || href[0] != '/')
+			href = "/" + href;
+		if (!href.empty() && href.back() != '/')
+			href += "/";
+		href += name;
+
+		bool is_dir = false;
+		if (ent->d_type == DT_DIR) {
+			is_dir = true;
+		} else if (ent->d_type == DT_UNKNOWN) {
+			std::string full = directory_path;
+			if (!full.empty() && full.back() != '/')
+				full += name;
+
+			struct stat st;
+			if (stat(full.c_str(), &st) == 0 && S_ISDIR(st.st_mode)) 
+				is_dir = true;
+		}
+		
+		html << "<li><a href=\"" << href;
+        if (is_dir) html << "/";
+        html << "\">" << name;
+        if (is_dir) html << "/";
+        html << "</a></li>";
+	}
+	closedir(dir);
+
+	html << "</ul><hr></body></html>";
+
+	std::string body = html.str();
+
+	std::ostringstream resp;
+	resp << "HTTP/1.1 200 OK\r\n"
+		 << "Content-Type: text/html\r\n"
+		 << "Content-Length: " << body.length() << "\r\n"
+		 << "Connection: close\r\n"
+		 << "\r\n"
+		 << body;
+	
+	std::string response = resp.str();
+	write(client_fd, response.c_str(), response.length());
+}
+
+
 void TestServer::handle_post_request(int client_fd, const HttpRequest& request, const std::string& location)
 {
 	try {
@@ -266,7 +343,54 @@ void TestServer::handle_post_request(int client_fd, const HttpRequest& request, 
 
 void TestServer::handle_delete_request(int client_fd, const HttpRequest& request, const std::string& location)
 {
-	
+	try {
+		if (!is_method_allowed("DELETE", location)) {
+			send_error_response(client_fd, 405, "Method Not Allowed");
+			return;
+		}
+
+		if (request.path.empty() || request.path == "/") {
+			send_error_response(client_fd, 400, "Bad Request");
+			return;
+		}
+
+		if (has_path_traversal(request.path)) {
+			send_error_response(client_fd, 400, "Bad Request");
+			return;
+		}
+
+		std::string file_path = server_config.root + request.path;
+
+		struct stat path_stat;
+
+		if (stat(file_path.c_str(), &path_stat) != 0 ) {
+			send_error_response(client_fd, 404, "Not Found");
+			return;
+		}
+
+		if (S_ISDIR(path_stat.st_mode)) {
+			send_error_response(client_fd, 409, "Conflict");
+			return;
+		}
+
+		if (unlink(file_path.c_str()) != 0) {
+			if (errno == EACCES || errno == EPERM) {
+				send_error_response(client_fd, 403, "Forbidden");
+			} else {
+				send_error_response(client_fd, 500, "Internal Server Error");
+			}
+			return;
+		}
+
+		std::string respond= 
+		            "HTTP/1.1 204 No Content\r\n"
+        			"Content-Length: 0\r\n"
+            		"Connection: close\r\n"
+            		"\r\n";
+		write(client_fd, respond.c_str(), respond.length());
+	} catch (const std::exception& e) {
+		send_error_response(client_fd, 500, "Internal Server Error");
+	}
 }
 
 std::string TestServer::find_matching_location(const std::string& path)
@@ -337,6 +461,11 @@ void TestServer::launch()
 			}
 		}
 	}
+}
+
+static bool has_path_travelsal(const std::string& p)
+{
+	return (p.find("..") != std::string::npos);
 }
 
 void TestServer::print_config() const
