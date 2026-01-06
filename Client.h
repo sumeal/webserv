@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:03:33 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/03 13:23:03 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/05 22:24:29 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,6 +23,7 @@ READ_REQUEST,
 EXECUTE_CGI,
 WAIT_CGI,
 SEND_RESPONSE,
+WAIT_RESPONSE,
 FINISHED,
 };
 
@@ -32,12 +33,14 @@ private:
 	Respond		_responder;
 	int			_socket;
 	int			_hasCgi;
-	// CgiRequest	_requestor;
-	// t_CGI*		_cgi;
+	//loop thingy
 public:
 	e_State state;
 	Client();
 	~Client();
+	void	procInput(int i, struct pollfd& pFd);
+	void	procOutput(int i, struct pollfd& pFd);
+	void	fdPreCleanup(struct pollfd& pFd);
 	int		getSocket();
 	void	setSocket(int socket);
 	CgiExecute* GetCgiExec();

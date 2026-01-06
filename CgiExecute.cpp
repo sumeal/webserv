@@ -126,14 +126,11 @@ char**	CgiExecute::createEnvp()
 
 void	CgiExecute::readExec()
 {
-	std::cout << "inside read" << std::endl; //debug
 	char	read_buf[8096];
 	size_t	len  = 0;
 	ssize_t	readLen;
 	if ((readLen = read(_pipeFromCgi, read_buf, sizeof(read_buf))) > 0)
 		_output.append(read_buf, readLen);
-	// int bytes_read = read(_pipeFromCgi, read_buf, 1024); //debug
-	std::cout << "DEBUG: Read " << readLen << " bytes from CGI" << std::endl; //debug
 	if (readLen == 0)
 		_readEnded = 1;
 	if (readLen == -1)
@@ -307,100 +304,3 @@ bool	CgiExecute::isWriteDone() const
 {
 	return (_writeEnded);
 }
-
-// t_CGI*	CgiExecute::getCgiStruct() const
-// {
-// 	return (_cgi);
-// }
-
-// void	CgiExecute::cgiState()
-// {
-// 	std::cout << "inside cgistate" << std::endl; //debug
-// 	if (_cgi->pid == -1)
-// 	{
-// 		if (_cgi->readEnded && _cgi->writeEnded)
-// 		{	
-// 			_client->state = SEND_RESPONSE;
-// 		}
-// 		std::cout << "readended: " << _cgi->readEnded << std::endl; //debug
-// 		std::cout << "writeended: " << _cgi->writeEnded << std::endl; //debug
-// 		std::cout << "clientstate: " << _client->state << std::endl; //debug
-// 		return ;
-// 	}
-// 	std::cout << "inside cgistate2" << std::endl; //debug
-// 	int status;
-// 	int res = waitpid(_cgi->pid, &status, WNOHANG);
-// 	if (res == 0)
-// 		return ;
-// 	if (res > 0)
-// 	{
-// 		if (WIFEXITED(status))
-// 		{
-// 			if (WEXITSTATUS(status) == 0)
-// 				_cgi->pid = -1;
-// 			else if(WEXITSTATUS(status) != 0)
-// 				throw (std::runtime_error("Waitpid WEXITSTATUS Error"));
-// 		}
-// 		else //WIFSIGNALED case
-// 			throw (std::runtime_error("Waitpid WIFSIGNALED Error"));
-// 	}
-// 	if (res == -1)
-// 		throw (std::runtime_error("Waitpid Error"));
-// 	std::cout << "inside cgistate3" << std::endl; //debug
-// 	std::cout << "readended: " << _cgi->readEnded << std::endl; //debug
-// 	std::cout << "writeended: " << _cgi->writeEnded << std::endl; //debug
-// 	if (_cgi->readEnded && _cgi->writeEnded)
-// 	{
-// 		_client->state = SEND_RESPONSE;
-// 	}
-// }
-
-// void	CgiExecute::execute()
-// {
-// 	int	pipeIn[2];
-// 	int	pipeOut[2];
-
-// 	//					PIPE & FORK
-// 	if (pipe(pipeIn) == -1)
-// 		throw (std::runtime_error("CGI: pipe error"));
-// 	if (pipe(pipeOut) == -1)
-// 	{
-// 		close(pipeIn[0]); close(pipeIn[1]);
-// 		throw (std::runtime_error("CGI: pipe error"));
-// 	}
-// 	_pid = fork();
-// 	if (_pid == -1)
-// 	{
-// 		close(pipeIn[0]); close(pipeIn[1]);
-// 		close(pipeOut[0]); close(pipeOut[1]);
-// 		throw (std::runtime_error("CGI: pipe error"));
-// 	}
-// 	//					CHILD
-// 	else if (_pid == 0)
-// 	{
-// 		dup2(pipeIn[0], STDIN_FILENO);
-// 		dup2(pipeOut[1], STDOUT_FILENO);
-// 		close(pipeIn[1]); close(pipeOut[0]);
-		
-// 		//				EXEC CGI
-// 		char*	interpreter = const_cast<char*>(_locate.cgi_path.c_str());
-// 		char*	scriptPath = const_cast<char *>(_absPath.c_str());
-// 		char*	args[] = { interpreter, scriptPath,NULL};
-// 		char**	envp = createEnvp();
-// 		execve(interpreter, args, envp);
-		
-// 		//				HANDLE ERROR     
-// 		std::cerr << "CGI: execve error" << std::endl;
-// 		for (int i = 0; envp[i]; i++)
-// 			free(envp[i]);
-// 		delete[](envp);
-// 		exit(1);
-// 	}
-// 	close(pipeIn[0]); close(pipeOut[1]);
-// 	_pipeToCgi = pipeIn[1];
-// 	_pipeFromCgi = pipeOut[0];
-	
-// 	if (fcntl(_pipeToCgi, F_SETFL, O_NONBLOCK) == -1
-// 		|| fcntl(_pipeFromCgi, F_SETFL, O_NONBLOCK) == -1)
-// 		throw(std::runtime_error("CGI: pipe nonblock error"));
-// }

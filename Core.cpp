@@ -6,21 +6,21 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/04 15:22:21 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/05 22:55:17 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Core.h"
 #include "CGI_data.h"
-#include <cstdint>
 #include <poll.h>
-#include <stdexcept>
 #include "CgiExecute.h"
 #include "Client.h"
 #include <iostream>
-#include <set>
 #include <unistd.h>
-#include <chrono> //havetodelete
+// #include <cstdint>
+// #include <stdexcept>
+// #include <set>
+// #include <chrono> //havetodelete
 // #include "CgiRequest.h"
 
 Core::Core() : _needCleanup(false)
@@ -56,137 +56,65 @@ void	Core::run( t_location& locate, t_request& request)
 		//					ACTUAL LOOP
 		for (int i = 0; i < _fds.size(); i++)
 		{
-			int	*fd = &_fds[i].fd;
-			if (*fd == -1)
+			int	oriFd = _fds[i].fd;
+			if (oriFd == -1)
 				continue ;
 			int	revents = _fds[i].revents;
-			Client* client = _clients[*fd];
-			int	pipeFromCgi = -1;
-			int pipeToCgi = -1;
-			if (client->GetCgiExec())
-			{
-				pipeFromCgi = client->GetCgiExec()->getpipeFromCgi();
-				pipeToCgi = client->GetCgiExec()->getpipeToCgi();
-			}
-			// std::cout << "a" << std::endl; //debug
-			// std::cout << "state: "<< client->state << std::endl; //debug
-			// std::cout << "revents: " << revents << std::endl; //debug
+			Client* client = _clients[oriFd];
 			// if (!revents)
 			// 	continue;
 			try
 			{
 				if (revents & POLLIN || revents & POLLHUP)
-				{
-					if (client->state == READ_REQUEST)
-					{
-						//parser/config part.used to read http
-						// if (/*read request finished*/)
-						if (!client->GetCgiExec()->isCGI())
-						{
-							client->getRespond().procNormalOutput();
-							client->getRespond().buildResponse();
-							respondRegister(client);
-							client->state = SEND_RESPONSE;
-							std::cout << "this trigger" << std::endl; //debug
-						}
-						else
-							client->state = EXECUTE_CGI;
-						//if execute CGI state
-						if (client->state == EXECUTE_CGI)
-						{
-							if (!client->GetCgiExec()->isCGI())
-							{
-								client->state = SEND_RESPONSE; //need to ask muzz
-								std::cout << "this trigger 1" << std::endl; //debug
-							}
-							launchCgi(client, locate, request);
-							client->state = WAIT_CGI;
-							// break ; //added
-						}
-					}
-					if (client->state == WAIT_CGI && *fd == pipeFromCgi)
-					{
-						client->GetCgiExec()->readExec();
-						client->GetCgiExec()->cgiState();
-						if (client->GetCgiExec()->isReadDone())
-						{
-							//removeFd(pipeFromCgi);
-							fdPreCleanup(pipeFromCgi, i);
-							if (client->GetCgiExec()->isDone())
-							{
-								client->getRespond().procCgiOutput(client->GetCgiExec()->getOutput());
-								client->getRespond().buildResponse();
-								respondRegister(client);
-								client->state = SEND_RESPONSE;
-								std::cout << "this trigger 2" << std::endl; //debug
-							}
-							// break ; //may not need to break
-						}
-					}
-				}
+					client->procInput(i, _fds[i]);
 				if (_fds[i].revents & POLLOUT || revents & POLLHUP)
-				{
-					if (client->state == WAIT_CGI && *fd == pipeToCgi)
-					{
-						client->GetCgiExec()->writeExec();
-						client->GetCgiExec()->cgiState();
-						if (client->GetCgiExec()->isWriteDone())
-						{
-							// removeFd(pipeToCgi);
-							fdPreCleanup(pipeToCgi, i);
-							if (client->GetCgiExec()->isDone())
-							{
-								client->getRespond().procCgiOutput(client->GetCgiExec()->getOutput());
-								client->getRespond().buildResponse();
-								respondRegister(client);
-								client->state = SEND_RESPONSE;
-								std::cout << "this trigger 3" << std::endl; //debug
-							}
-							// break; //may not need to break
-						}
-					}
-					if (client->state == SEND_RESPONSE /*&& *fd == client->getSocket()*/)
-					{
-						int status = client->getRespond().sendResponse();
-						if (status)
-						{
-							client->getRespond().printResponse();
-							client->state = FINISHED;
-						}
-					}
-				}
+					client->procOutput(i, _fds[i]);
 			}
 			catch (int statusCode)
 			{
-				std::cout << "statusCode: " << statusCode << std::endl; //debug
 				handleClientError(client, statusCode);
 			}
-			std::cout << "client state: " << client->state << std::endl; //debug
-			// if (client->state == FINISHED)
-				// std::cout << "clientstate:" << client->state << std::endl; //debug
-			if (client->state == SEND_RESPONSE /*&& *fd == client->getSocket()*/)
+			if (_fds[i].fd == -1)
 			{
-				int status = client->getRespond().sendResponse();
-				if (status)
-				{
-					client->getRespond().printResponse();
-					client->state = FINISHED;
-				}
+				_clients.erase(oriFd);
+				_needCleanup = true;
 			}
-			if (client->state == FINISHED) // timeout only need to trigger this
-			{
-				//clear/delete/break
-				std::cout << "this trigger" << std::endl; //debug
-				deleteClient(client);
-				// break ;
-			}
+			//clean from maps
+			handleTransition(client);
 		}
 		//delete all in the delete list
-		std::cout << "b" << std::endl; //debug
 		fdCleanup();
 		addStagedFds();
 		if(clientCount >= 10 && _clients.empty())
 			break ;
+	}
+}
+
+void	Core::handleTransition(Client* client)
+{
+	if (client->state == EXECUTE_CGI)
+	{
+		cgiRegister(client);
+		client->state = WAIT_CGI;
+	}
+	if (client->state == SEND_RESPONSE)
+	{
+		respondRegister(client);
+		client->state = WAIT_RESPONSE;
+	}
+	if (client->state == WAIT_RESPONSE /*&& *fd == client->getSocket()*/)
+	{
+		int status = client->getRespond().sendResponse();
+		if (status)
+		{
+			client->getRespond().printResponse();
+			client->state = FINISHED;
+		}
+	}
+	if (client->state == FINISHED) // timeout only need to trigger this
+	{
+		//clear/delete/break
+		deleteClient(client);
 	}
 }
 
@@ -213,15 +141,14 @@ void	Core::cgiRegister(Client* client)
 	pfdRead.fd = FromCgi;
 	pfdRead.events = POLLIN;
 	pfdRead.revents = 0;
-	// _fds.push_back(pfdRead);
 	_stagedFds.push_back(pfdRead);
 	struct pollfd pfdWrite;
 	pfdWrite.fd = ToCgi;
 	pfdWrite.events = POLLOUT;
 	pfdWrite.revents = 0;
-	// _fds.push_back(pfdWrite);
 	_stagedFds.push_back(pfdWrite);
 }
+
 
 void	Core::respondRegister(Client* client)
 {
@@ -284,26 +211,6 @@ void	Core::deleteClient(Client* client)
 	delete client;
 }
 
-// void	Core::deleteClient(Client* client)
-// {
-// 	removeFd(client->GetCgiExec()->getpipeFromCgi()); //just extra check
-// 	removeFd(client->GetCgiExec()->getpipeToCgi()); //just extra check
-// 	for (std::vector<struct pollfd>::iterator it = _fds.begin(); it != _fds.end(); ++it)
-// 	{
-// 		if (it->fd == client->getSocket())
-// 		{
-// 			_fds.erase(it);
-// 			_clients.erase(client->getSocket());
-// 			client->setSocket(-1);
-// 			break ;
-// 		}
-// 	}
-// 	//removeFd(client->getSocket());
-// 	//removefd client socket
-// 	//update server capacity?
-// 	delete client;
-// }
-
 void	Core::removeFd(int fd)
 {
 	for (std::vector<struct pollfd>::iterator it = _fds.begin(); it != _fds.end(); ++it)
@@ -351,33 +258,10 @@ void	Core::fdPreCleanup(int fd, int i)
 	}
 }
 
-// void	Core::fdPreCleanup(int fd)
-// {
-// 	for (std::vector<struct pollfd>::iterator it = _fds.begin(); it != _fds.end(); ++it)
-// 	{
-// 		if (it->fd == fd)
-// 		{
-// 			close(it->fd);
-// 			_clients.erase(fd);
-// 			_cgiMap.erase(fd);
-// 			it->fd = -1;
-// 			_needCleanup = true;
-// 			return ;
-// 		}
-// 	}
-// 	// Safety: If for some reason the FD wasn't in the poll vector, 
-//     // we still need to close it and clean the maps to avoid leaks.
-// 	close(fd);
-// 	_clients.erase(fd);
-// 	_cgiMap.erase(fd);
-// }
-
 void	Core::fdCleanup()
 {
-	std::cout << " pre needCleanup" << std::endl; //debug
 	if (!_needCleanup)
 		return ;
-	std::cout << "needCleanup dont trigger" << std::endl; //debug
 	for (size_t i = 0; i < _fds.size(); )
 	{
 		if (_fds[i].fd == -1)
@@ -407,7 +291,6 @@ void	Core::handleClientError(Client* client, int statusCode)
 	//State update
 	client->state = SEND_RESPONSE;
 	respondRegister(client);
-	std::cout << "this trigger 4" << std::endl; //debug
 	//Poll update
 	for (size_t i = 0; i < _fds.size(); i++)
 	{
@@ -429,6 +312,7 @@ void	Core::addStagedFds()
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Another way of remove instead of iterating loop
 // struct IsInvalid 
 //{
 //     // This is the "logic" remove_if uses to decide
@@ -449,85 +333,32 @@ void	Core::addStagedFds()
 // }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// void	Core::run( t_location& locate, t_request& request)
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Simplified way but maybe loss slow of preCleanup
+// void	Core::fdPreCleanup(int fd)
 // {
-// 	CgiRequest	requestor(request, locate);
-// 	Client*		client = new Client(&requestor);
-// 	CgiExecute	executor(client, request, locate);
-
-// 	auto start = std::chrono::high_resolution_clock::now(); //have todelete
-// 	int loopCount = 0;
-// 	while (1)
+// 	for (std::vector<struct pollfd>::iterator it = _fds.begin(); it != _fds.end(); ++it)
 // 	{
-// 		std::cout << "looping" << std::endl;
-// 		// usleep(1000); //debug
-// 		//if request state
-// 		if(client->state == READ_REQUEST)
+// 		if (it->fd == fd)
 // 		{
-// 			//parser/config part
-// 			client->state = EXECUTE_CGI;
+// 			close(it->fd);
+// 			_clients.erase(fd);
+// 			_cgiMap.erase(fd);
+// 			it->fd = -1;
+// 			_needCleanup = true;
+// 			return ;
 // 		}
-// 		//if execute CGI state
-// 		// std::cout << "state1: " << client->state << std::endl; //debug
-// 		// usleep(1000); //debug
-// 		if (client->state == EXECUTE_CGI)
-// 		{
-// 			if (!requestor.isCGI())
-// 				throw(std::runtime_error("CGI: request not CGI"));
-// 			launchCgi(executor, locate, request);
-// 			client->state = WAIT_CGI;
-// 		}
-// 		// std::cout << "state2: " << client->state << std::endl; //debug
-// 		// usleep(1000); //debug
-// 		int result = poll(&_fds[0], _fds.size(), 4000);
-// 		if (result > 0 && client->state == WAIT_CGI)
-// 		{
-// 			// std::cout << "insideornot" << std::endl; //debug
-// 			cgiWait(executor);
-// 		}
-// 		//if send output to client
-// 		if (client->state == SEND_RESPONSE)
-// 		{
-// 			//for now
-// 			std::cout << "output: " << executor.getOutput() << std::endl;
-// 			break; 
-// 		}		
-// 		if (client->state == FINISHED)
-// 		{
-// 			//clear/delete/break
-// 			// std::cout << "output: " << executor.getOutput() << std::endl;
-// 			delete(client);
-// 			client = NULL;
-// 			break; 
-// 		}
-// 		// std::cout << "inside6" << std::endl;//debug
-// 		// usleep(1000); //debug
-// 		std::cout << "Loop ran: " << loopCount++ << " times." << std::endl; //debug
 // 	}
-// 	auto end = std::chrono::high_resolution_clock::now(); //debug
-// 	std::chrono::duration<double, std::milli> elapsed = end - start; //debug
-// 	std::cout << "Total Time: " << elapsed.count() << " ms" << std::endl; //debug
+// 	// Safety: If for some reason the FD wasn't in the poll vector, 
+//     // we still need to close it and clean the maps to avoid leaks.
+// 	close(fd);
+// 	_clients.erase(fd);
+// 	_cgiMap.erase(fd);
 // }
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// for (std::map<int, t_CGI *>::iterator it = _cgi_map.begin(); 
-// 	it != _cgi_map.end(); it++)
-// {
-// 	delete(it->second);
-// 	it->second = NULL;
-// }
-// _cgi_map.clear();
-// std::cout << "Cleaning up CGI map..." << std::endl;
-// for (std::map<int, t_CGI *>::iterator it = _cgi_map.begin(); it != _cgi_map.end(); it++)
-// {
-//     std::cout << "Deleting CGI at address: " << it->second << std::endl;
-//     delete it->second;
-//     it->second = NULL;
-// }
-// _cgi_map.clear();
-
-//_fds.reserve(15100); //test
-
-/////////////////////////////////////////////////////////////////////////////////////////////Testing only
+/////////////////////////////////////////////////////////////////////////////////////////////
+// Testing only
 void Core::acceptMockConnections(t_location& locate, t_request& request, int& clientCount)
 {
     // Only create new clients if we are under our test limit
@@ -546,15 +377,6 @@ void Core::acceptMockConnections(t_location& locate, t_request& request, int& cl
         clientCount++;
     }
 }
-// if (clientCount < 10) //lower than 10
-// {
-// 	int dummyFd = clientCount + 200;
-// 	// CgiRequest	requestor(request, locate);
-// 	Client*		client = new Client();
-// 	client->setCgiExec(new CgiExecute(client, request, locate)); //will be after i detect there is CGI
-// 	clientRegister(dummyFd, client); //introduce to fdpoll struct
-// 	clientCount++;
-// }
 
 //Testing
 void Core::forceMockEvents()
@@ -572,11 +394,134 @@ void Core::forceMockEvents()
         }
     }
 }
-// for (size_t i = 0; i < _fds.size(); i++) //test to act as acceptor
-// {
-	// Client* c = _clients[_fds[i].fd];
-	//If this is a dummy FD we want to force into action:
-	// if (c && c->state == READ_REQUEST) 
-	    // _fds[i].revents = POLLIN; // You are doing the OS's job here!
-// }
 //////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// void	Core::run( t_location& locate, t_request& request)
+// {
+// 	int			clientCount = 0;
+// 	std::vector<Client*> activeClients;
+	
+// 	int loopCount = 0;
+// 	while (1)
+// 	{
+// 		acceptMockConnections(locate, request, clientCount);
+// 		int result = poll(&_fds[0], _fds.size(), 4000);
+// 		forceMockEvents();
+// 		//					ACTUAL LOOP
+// 		for (int i = 0; i < _fds.size(); i++)
+// 		{
+// 			int	*fd = &_fds[i].fd;
+// 			if (*fd == -1)
+// 				continue ;
+// 			int	revents = _fds[i].revents;
+// 			Client* client = _clients[*fd];
+// 			int	pipeFromCgi = -1;
+// 			int pipeToCgi = -1;
+// 			if (client->GetCgiExec())
+// 			{
+// 				pipeFromCgi = client->GetCgiExec()->getpipeFromCgi();
+// 				pipeToCgi = client->GetCgiExec()->getpipeToCgi();
+// 			}
+// 			// if (!revents)
+// 			// 	continue;
+// 			try
+// 			{
+// 				if (revents & POLLIN || revents & POLLHUP)
+// 				{
+// 					if (client->state == READ_REQUEST)
+// 					{
+// 						//parser/config part.used to read http
+// 						// if (/*read request finished*/)
+// 						if (!client->GetCgiExec()->isCGI())
+// 						{
+// 							client->getRespond().procNormalOutput();
+// 							client->getRespond().buildResponse();
+// 							respondRegister(client);
+// 							client->state = SEND_RESPONSE;
+// 						}
+// 						else
+// 							client->state = EXECUTE_CGI;
+// 						//if execute CGI state
+// 						if (client->state == EXECUTE_CGI)
+// 						{
+// 							if (!client->GetCgiExec()->isCGI())
+// 							{
+// 								client->state = SEND_RESPONSE; //need to ask muzz
+// 							}
+// 							launchCgi(client, locate, request);
+// 							client->state = WAIT_CGI;
+// 						}
+// 					}
+// 					if (client->state == WAIT_CGI && *fd == pipeFromCgi)
+// 					{
+// 						client->GetCgiExec()->readExec();
+// 						client->GetCgiExec()->cgiState();
+// 						if (client->GetCgiExec()->isReadDone())
+// 						{
+// 							//removeFd(pipeFromCgi);
+// 							fdPreCleanup(pipeFromCgi, i);
+// 							if (client->GetCgiExec()->isDone())
+// 							{
+// 								client->getRespond().procCgiOutput(client->GetCgiExec()->getOutput());
+// 								client->getRespond().buildResponse();
+// 								respondRegister(client);
+// 								client->state = SEND_RESPONSE;
+// 							}
+// 						}
+// 					}
+// 				}
+// 				if (_fds[i].revents & POLLOUT || revents & POLLHUP)
+// 				{
+// 					if (client->state == WAIT_CGI && *fd == pipeToCgi)
+// 					{
+// 						client->GetCgiExec()->writeExec();
+// 						client->GetCgiExec()->cgiState();
+// 						if (client->GetCgiExec()->isWriteDone())
+// 						{
+// 							fdPreCleanup(pipeToCgi, i);
+// 							if (client->GetCgiExec()->isDone())
+// 							{
+// 								client->getRespond().procCgiOutput(client->GetCgiExec()->getOutput());
+// 								client->getRespond().buildResponse();
+// 								respondRegister(client);
+// 								client->state = SEND_RESPONSE;
+// 							}
+// 						}
+// 					}
+// 					if (client->state == SEND_RESPONSE /*&& *fd == client->getSocket()*/)
+// 					{
+// 						int status = client->getRespond().sendResponse();
+// 						if (status)
+// 						{
+// 							client->getRespond().printResponse();
+// 							client->state = FINISHED;
+// 						}
+// 					}
+// 				}
+// 			}
+// 			catch (int statusCode)
+// 			{
+// 				handleClientError(client, statusCode);
+// 			}
+// 			if (client->state == SEND_RESPONSE /*&& *fd == client->getSocket()*/)
+// 			{
+// 				int status = client->getRespond().sendResponse();
+// 				if (status)
+// 				{
+// 					client->getRespond().printResponse();
+// 					client->state = FINISHED;
+// 				}
+// 			}
+// 			if (client->state == FINISHED) // timeout only need to trigger this
+// 			{
+// 				//clear/delete/break
+// 				deleteClient(client);
+// 			}
+// 		}
+// 		//delete all in the delete list
+// 		fdCleanup();
+// 		addStagedFds();
+// 		if(clientCount >= 10 && _clients.empty())
+// 			break ;
+// 	}
+// }

@@ -13,6 +13,7 @@
 #include <map>
 #include "CGI_data.h"
 #include "CgiExecute.h"
+#include <poll.h>
 
 class Core {
 private:
@@ -20,11 +21,11 @@ private:
 	std::map<int, Client*> _clients;
 	std::vector<struct pollfd> _fds;
 	std::vector<struct pollfd> _stagedFds;
-	std::vector<int> _deleteFds;
 	bool	_needCleanup;
 public:
 	Core();
 	~Core();
+	void	handleTransition(Client* client);
 	void	launchCgi(Client* client, t_location& locate, t_request& request);
 	void	cgiRegister(Client* client);
 	void	run(t_location& locate, t_request& request);

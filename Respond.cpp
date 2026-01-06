@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 17:17:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/03 16:45:50 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/05 22:34:44 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,7 +23,8 @@
 
 //initialize the status code
 Respond::Respond() : _statusCode(0), _contentLength(0), _serverName() /*FromMuzz*/, 
-	_connStatus(KEEP_ALIVE) /*FromMuzz*/, _socketFd(0)  /*FromMuzz*/, _protocol("FromMuzz")
+	_connStatus(KEEP_ALIVE) /*FromMuzz*/, _socketFd(0)  /*FromMuzz*/, 
+	_protocol("FromMuzz"), _bytesSent(0)
 {}
 
 Respond::~Respond()
@@ -32,7 +33,6 @@ Respond::~Respond()
 //first line check?
 void	Respond::procCgiOutput(std::string cgiOutput)
 {
-	// std::cout << cgiOutput << std::endl; //debug
 	if (cgiOutput.empty())
 	{
 		buildErrorResponse(502);
@@ -89,10 +89,8 @@ void	Respond::procCgiOutput(std::string cgiOutput)
 	else
 		_contentType = "text/html";
 	//				EXTRACT BODY	
-	// std::cout << "Pre Body: " << _body << std::endl;  //debug
 	_body = cgiOutput.substr(separatorPos + offset);
 	_contentLength = _body.length();
-	// std::cout << "Post Body: " << _body << std::endl; //debug
 }
 
 void	Respond::procNormalOutput()
