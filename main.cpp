@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/14 10:54:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/05 23:03:18 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/07 23:33:15 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,7 +27,9 @@ int main()
 
 	Core core;
 	cgitest_data(locate, request);
-
+	
+	//parse config FromMuzz
+	//create listening socket FromMuzz
 	try 
 	{
 		core.run(locate, request);
@@ -42,8 +44,8 @@ void cgitest_data(t_location& loc, t_request& req)
 {
     // --- 1. Data from the Request Parser ---
     req.method   = "POST";
-    req.uri      = "/cgi-bin/emptybody.py?user=gemini&id=42"; // The full raw URI
-    req.path     = "/cgi-bin/emptybody.py";                   // Path without query
+    req.uri      = "/cgi-bin/simple.py?user=gemini&id=42"; // The full raw URI
+    req.path     = "/cgi-bin/simple.py";                   // Path without query
     req.query    = "user=gemini&id=42";                 // The query string
     req.version  = "HTTP/1.1";
     

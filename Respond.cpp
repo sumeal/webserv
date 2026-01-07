@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 17:17:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/05 22:34:44 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/07 20:34:17 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -170,6 +170,7 @@ std::string Respond::getStatusMsg()
 		case 405: return "Method Not Allowed";
 		case 500: return "Internal Server Error";
 		case 502: return "Bad Gateway";
+		case 504: return "Gateway Timeout";
 		default: return "OK";
 	}
 }
@@ -181,6 +182,7 @@ int	Respond::sendResponse()
 	size_t		len = _fullResponse.size() - _bytesSent;
 	
 	ssize_t sent = send( _socketFd, dataToSend, len, 0);
+	//_lastActivity update
 	if (sent == -1)
 	{
 		if (errno == EAGAIN || errno == EWOULDBLOCK)
@@ -250,3 +252,15 @@ void	Respond::printResponse()
 	std::cout << "\n==========FINISH================" << std::endl;
 }
 
+void	Respond::resetResponder()
+{
+	_fullResponse.clear();
+	_statusCode = 0;
+	_protocol.clear();
+	_body.clear();
+	_contentType.clear();
+	_contentLength = 0;
+	_serverName.clear();
+	_connStatus = 0;
+	_bytesSent = 0;
+}

@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 16:58:34 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/03 16:33:01 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/07 20:25:49 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,6 +46,7 @@ public:
 	void	buildResponse();
 	std::string	getStatusMsg();
 	void	printResponse();
+	void	resetResponder();
 };
 
 #endif

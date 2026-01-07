@@ -20,7 +20,8 @@ private:
 	// std::map<int, CgiExecute*> _cgiMap;
 	std::map<int, Client*> _clients;
 	std::vector<struct pollfd> _fds;
-	std::vector<struct pollfd> _stagedFds;
+	std::vector<struct pollfd> _stagedFds; //sementara
+	// Server class (location dalam Mad version) FromMuzz
 	bool	_needCleanup;
 public:
 	Core();
@@ -37,6 +38,8 @@ public:
 	void	removeFd(int fd);//maybe not needed
 	void	respondRegister(Client* client);
 	void	handleClientError(Client* client, int statusCode);
+	void	handleTimeout();
+	void	handleSocketDc();
 	void	addStagedFds();
 	void	fdCleanup(); //delStagedFd better naming?
 

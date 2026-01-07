@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/22 00:37:30 by mbani-ya          #+#    #+#             */
-/*   Updated: 2025/12/30 14:37:27 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/06 21:59:20 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -67,6 +67,7 @@ public:
 	const std::string&	getOutput() const;
 	int		getpipeToCgi();
 	int		getpipeFromCgi();
+	int		getpid() const;
 	Client*	getClient();
 };
 

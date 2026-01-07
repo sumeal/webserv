@@ -6,12 +6,13 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/05 22:55:17 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/07 23:49:24 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Core.h"
 #include "CGI_data.h"
+#include <csignal>
 #include <poll.h>
 #include "CgiExecute.h"
 #include "Client.h"
@@ -47,12 +48,15 @@ void	Core::run( t_location& locate, t_request& request)
 	int			clientCount = 0;
 	std::vector<Client*> activeClients;
 	
+	//listening socket into _fds FromMuzz
 	int loopCount = 0;
 	while (1)
 	{
 		acceptMockConnections(locate, request, clientCount);
 		int result = poll(&_fds[0], _fds.size(), 4000);
 		forceMockEvents();
+		handleTimeout(); //better put before poll so poll dont run timeout client
+		std::cout << "a" << std::endl; //debug
 		//					ACTUAL LOOP
 		for (int i = 0; i < _fds.size(); i++)
 		{
@@ -61,17 +65,38 @@ void	Core::run( t_location& locate, t_request& request)
 				continue ;
 			int	revents = _fds[i].revents;
 			Client* client = _clients[oriFd];
+			std::cout << "b" << std::endl; //debug
 			// if (!revents)
 			// 	continue;
 			try
 			{
+				std::cout << "revents: " << revents << "state client" << client->state << " b2" << std::endl; //debug
+				std::cout << "c" << std::endl; //debug
+				// if (revents & (POLLERR | POLLNVAL))
+				// {
+				// 	std::cout << "revents: " << revents << "state client" << client->state << " d" << std::endl; //debug
+				// 	deleteClient(client); //handle disconnect
+				// 	continue ;
+				// }
+				if ((revents & POLLHUP) && oriFd == client->getSocket())
+				{
+					std::cout << "e" << std::endl; //debug
+					deleteClient(client); //handle disconnect;
+					continue ;
+				}
+				std::cout << "f" << std::endl; //debug
 				if (revents & POLLIN || revents & POLLHUP)
+				{
+					//acceptor FromMuzz
+					//create new client & struct FromMuzz
 					client->procInput(i, _fds[i]);
+				}
 				if (_fds[i].revents & POLLOUT || revents & POLLHUP)
 					client->procOutput(i, _fds[i]);
 			}
 			catch (int statusCode)
 			{
+				std::cout << "2" << std::endl; //debug
 				handleClientError(client, statusCode);
 			}
 			if (_fds[i].fd == -1)
@@ -79,12 +104,13 @@ void	Core::run( t_location& locate, t_request& request)
 				_clients.erase(oriFd);
 				_needCleanup = true;
 			}
-			//clean from maps
+			//clean from maps/fd registration queue
+			std::cout << "g" << std::endl; //debug
 			handleTransition(client);
 		}
 		//delete all in the delete list
 		fdCleanup();
-		addStagedFds();
+		addStagedFds(); //handle all sementara
 		if(clientCount >= 10 && _clients.empty())
 			break ;
 	}
@@ -102,7 +128,7 @@ void	Core::handleTransition(Client* client)
 		respondRegister(client);
 		client->state = WAIT_RESPONSE;
 	}
-	if (client->state == WAIT_RESPONSE /*&& *fd == client->getSocket()*/)
+	if (client->state == WAIT_RESPONSE /*&& *fd == client->getSocket()*/) //only for testing when no acceptor implemented
 	{
 		int status = client->getRespond().sendResponse();
 		if (status)
@@ -113,8 +139,36 @@ void	Core::handleTransition(Client* client)
 	}
 	if (client->state == FINISHED) // timeout only need to trigger this
 	{
+		if (!client->isKeepAlive())
+			deleteClient(client);
+		else
+			client->resetClient();
+		std::cout << "finished" << std::endl; //debug
+		//remove/reset all class
 		//clear/delete/break
+		// deleteClient(client);
+	}
+	if (client->state == DISCONNECTED)
+	{
 		deleteClient(client);
+	}
+}
+
+void	Core::handleTimeout()
+{
+	time_t now = time(NULL);
+	for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); )
+	{
+		Client* client = it->second;
+		
+		std::map<int, Client*>::iterator current = it++;
+		if (client->isIdle(now))
+		{
+			if (client->state == READ_REQUEST || client->state == FINISHED /*bufferRead == 0*/)
+				deleteClient(client);
+			else
+				handleClientError(client, client->GetCgiExec()->getpid() ? 504 : 408);
+		}
 	}
 }
 
@@ -149,7 +203,6 @@ void	Core::cgiRegister(Client* client)
 	_stagedFds.push_back(pfdWrite);
 }
 
-
 void	Core::respondRegister(Client* client)
 {
 	int	ClientFd = client->getSocket();
@@ -160,6 +213,7 @@ void	Core::respondRegister(Client* client)
 		if (VecFd == ClientFd)
 		{
 			_fds[i].events = POLLOUT;
+			//do i need to set revent to 0?
 			return;
 		}
 	}
@@ -192,22 +246,19 @@ void Core::clientRegister(int clientFd, Client* client)
 
 void	Core::deleteClient(Client* client)
 {
-	CgiExecute* Cgi = client->GetCgiExec();
-	int	pipeFromCgi = client->GetCgiExec()->getpipeFromCgi();
-	int	pipeToCgi	= client->GetCgiExec()->getpipeToCgi();
 	int	socketFd	= client->getSocket();
 	
-	if (client->isCgiOn()) //supposely dont need since all have closed their CGI
+	if (client->hasCgi()) //supposely dont need since all have closed their CGI
 	{
+		int	pipeFromCgi = client->GetCgiExec()->getpipeFromCgi();
+		int	pipeToCgi	= client->GetCgiExec()->getpipeToCgi();
 		fdPreCleanup(pipeFromCgi, 0);
 		fdPreCleanup(pipeToCgi, 0);
-		// _cgiMap.erase(pipeFromCgi);
-		// _cgiMap.erase(pipeToCgi);
 		// _clients.erase(pipeFromCgi);
 		// _clients.erase(pipeToCgi);
 	}
-	fdPreCleanup(socketFd, 0);
 	_clients.erase(socketFd);
+	fdPreCleanup(socketFd, 0);
 	delete client;
 }
 
@@ -281,26 +332,27 @@ void	Core::handleClientError(Client* client, int statusCode)
 	if (!errorPath.empty())
 		client->getRespond().findErrorBody(errorPath);
 	client->getRespond().buildErrorResponse(statusCode);
-	//Cleanup for CGI
-	if (client->isCgiOn())
+	//Cleanup for finished problematic CGI
+	if (client->hasCgi())
 	{
+		client->GetCgiExec()->clearCgi();
 		fdPreCleanup(client->GetCgiExec()->getpipeFromCgi(), 0);
 		fdPreCleanup(client->GetCgiExec()->getpipeToCgi(), 0);
-		client->GetCgiExec()->clearCgi();
 	}
 	//State update
 	client->state = SEND_RESPONSE;
 	respondRegister(client);
+	client->state = WAIT_RESPONSE;
 	//Poll update
-	for (size_t i = 0; i < _fds.size(); i++)
-	{
-		if (_fds[i].fd == client->getSocket())
-		{
-			_fds[i].events = POLLOUT;
-			_fds[i].revents = 0;
-			break ;
-		}
-	}
+	// for (size_t i = 0; i < _fds.size(); i++)
+	// {
+	// 	if (_fds[i].fd == client->getSocket())
+	// 	{
+	// 		_fds[i].events = POLLIN | POLLOUT;
+	// 		_fds[i].revents = 0;
+	// 		break ;
+	// 	}
+	// }
 }
 
 void	Core::addStagedFds()

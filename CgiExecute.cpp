@@ -304,3 +304,8 @@ bool	CgiExecute::isWriteDone() const
 {
 	return (_writeEnded);
 }
+
+int	CgiExecute::getpid() const
+{
+	return _pid;
+}
