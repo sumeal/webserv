@@ -1,8 +1,8 @@
 #ifndef TESTSERVER_HPP
 #define TESTSERVER_HPP
 
- #include "SimpleServer.hpp"
  #include "Parse.hpp"
+ #include "SocketUtils.hpp"
  #include <unistd.h>
  #include <string.h>
  #include <fcntl.h>
@@ -14,6 +14,7 @@
  #include <sys/types.h>
  #include <errno.h>
  #include <dirent.h>
+ #include <iomanip>
  
 
 	class Parse;
@@ -80,36 +81,37 @@ struct HttpRequest
 };
 
 
-class TestServer: public SimpleServer
+class TestServer
 {
 	private:
 		std::map<int, HttpRequest> client_req;
 		std::map<int, std::string> client_buffer;
-		void accepter();
-		void handler(int client_fd);
-		void responder(int client_fd);
 		Server server_config;
 		Location temp_location;
-	    int new_socket;
-		void handle_get_request(int client_fd, const HttpRequest& request, const std::string& location);
-		void handle_post_request(int client_fd, const HttpRequest& request, const std::string& location);
-		void handle_delete_request(int client_fd, const HttpRequest& request, const std::string& location);
-		void send_error_response(int client_fd, int error_code, const std::string& message);
-		void send_file_response(int client_fd, const std::string& file_path);
-		bool is_method_allowed(const std::string& method, const std::string& location_path);
-		void send_directory_listing(int client_fd,const std::string& file_path, const std::string& request_path);
-		static bool has_path_travelsal(const std::string& p);
+	    int server_fd;     // Main listening socket
+		int new_socket;    // New client connections
+		void print_parsed_request(const HttpRequest& request, int client_fd) const;
+		
+		void accepter();
+		void handler(int client_fd);
+		void responder(int client_fd);      // PLACEHOLDER: For teammate integration
 
 	public:
 		std::vector<pollfd> pfds;
-		void parse_http_request(const std::string &raw_req, int client_fd);
+		char buffer[42000];
+		
 		void parse_config(const std::string& filename);
-		std::string find_matching_location(const std::string& path);
-		void print_config() const;
-		TestServer();
+		
+		void initialize_server();
+		
+		void parse_http_request(const std::string &raw_req, int client_fd);
+		
 		void launch();
-		int set_non_blocking(int fd);
-
+		
+		void print_config() const;
+		
+		TestServer();
+		~TestServer();
 };
 
 #endif

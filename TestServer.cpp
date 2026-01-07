@@ -1,12 +1,17 @@
 #include "TestServer.hpp"
 #include "Parse.hpp"
 
-TestServer::TestServer() : SimpleServer(AF_INET, SOCK_STREAM, 0 ,8080, INADDR_ANY, 10)
+TestServer::TestServer()
 {	
-	// Initialize config values
-	server_config.port = 0;
-	server_config.server_name = "";
-	server_config.root = "";
+	// Initialize socket to inv// ===================================================================
+
+	server_fd = -1;
+	new_socket = -1;
+	
+	// Initialize config values to defaults
+	server_config.port = 8080;  // Default port
+	server_config.server_name = "localhost";
+	server_config.root = "./www";
 	
 	// Initialize temp_location
 	temp_location.path = "";
@@ -15,6 +20,31 @@ TestServer::TestServer() : SimpleServer(AF_INET, SOCK_STREAM, 0 ,8080, INADDR_AN
 	temp_location.allow_delete = false;
 	temp_location.cgi_path = "";
 	temp_location.auto_index = false;
+	
+	memset(buffer, 0, sizeof(buffer));
+}
+
+TestServer::~TestServer()
+{
+	// Clean up socket
+	if (server_fd >= 0) {
+		SocketUtils::close_socket(server_fd);
+	}
+}
+
+void TestServer::initialize_server()
+{
+	// Create listening socket with config port
+	server_fd = SocketUtils::create_listening_socket(server_config.port);
+	if (server_fd < 0) {
+		std::cerr << "Failed to create server socket" << std::endl;
+		return;
+	}
+	
+	std::cout << "Server initialized with:" << std::endl;
+	std::cout << "Port: " << server_config.port << std::endl;
+	std::cout << "Server Name: " << server_config.server_name << std::endl;
+	std::cout << "Root: " << server_config.root << std::endl;
 }
 
 void TestServer::parse_config(const std::string &filename)
@@ -29,34 +59,26 @@ void TestServer::parse_config(const std::string &filename)
     std::string line;
 
     while (std::getline(file, line)) {
-        // Clean the line
         line = Parse::trim_line(line);
         
-        // Skip comments and empty lines
         if (Parse::is_comment_or_empty(line))
             continue;
-            
-        std::cout << "DEBUG - State: " << current_state << " | Line: '" << line << "'" << std::endl;
         
-        // Parse based on current state
         if (current_state == OUTSIDE) {
             current_state = (ParseState)Parse::parse_outside(line, current_state);
         }
         else if (current_state == SERVER) {
             int new_state = Parse::parse_server(line, current_state, server_config);
             
-            // If entering location block, extract path
             if (new_state == LOCATION && current_state == SERVER) {
                 std::vector<std::string> tokens = Parse::split_line(line);
                 if (tokens.size() >= 2 && tokens[0] == "location") {
-                    // Reset temp_location for new location
                     temp_location = Location();
                     temp_location.path = tokens[1];
                     temp_location.allow_get = false;
                     temp_location.allow_post = false;
                     temp_location.allow_delete = false;
                     temp_location.auto_index = false;
-                    std::cout << "DEBUG - Starting location: " << temp_location.path << std::endl;
                 }
             }
             current_state = (ParseState)new_state;
@@ -64,59 +86,22 @@ void TestServer::parse_config(const std::string &filename)
         else if (current_state == LOCATION) {
             int new_state = Parse::parse_location(line, current_state, temp_location);
             
-            // If leaving location block, store the location
             if (new_state == SERVER && current_state == LOCATION) {
                 server_config.locations.push_back(temp_location);
-                std::cout << "DEBUG - Stored location: " << temp_location.path << std::endl;
             }
             current_state = (ParseState)new_state;
         }
-        
-        std::cout << "DEBUG - New State: " << current_state << std::endl;
     }
     
     file.close();
     std::cout << "Config parsing completed" << std::endl;
-    
-    // Debug output
-    std::cout << "DEBUG - Final values:" << std::endl;
-    std::cout << "Port: " << server_config.port << std::endl;
-    std::cout << "Server name: '" << server_config.server_name << "'" << std::endl;
-    std::cout << "Root: '" << server_config.root << "'" << std::endl;
-    std::cout << "Locations count: " << server_config.locations.size() << std::endl;
-}
-
-int TestServer::set_non_blocking(int fd)
-{
-	int flags = fcntl(fd, F_GETFL, 0);
-	if (flags == -1)
-		return -1;
-	return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-}
-
-void TestServer::accepter()
-{
-	struct sockaddr_in client_addr;
-	socklen_t addrlen = sizeof (client_addr);
-
-	new_socket = accept(get_socket()->get_sock(), (struct sockaddr *)&client_addr, (socklen_t *)&addrlen);
-
-	if (new_socket < 0) {
-		perror("Accept fail");
-		return;
-	}
-	if (set_non_blocking(new_socket) < 0) {
-		perror("Failed to set non-blocking");
-		return;
-	}
-	
 }
 
 void TestServer::handler(int client_fd)
 {
 	char buffer[42000];
 	memset(buffer, 0, sizeof(buffer));
-	ssize_t bytes_read = read(client_fd, buffer, sizeof(buffer - 1));
+	ssize_t bytes_read = read(client_fd, buffer, sizeof(buffer) - 1);
 	if (bytes_read <= 0) {
 		std::cout << "Client disconnected or read error" << std::endl;
 		client_req.erase(client_fd);
@@ -161,279 +146,209 @@ void TestServer::parse_http_request(const std::string &raw_req, int client_fd)
 			std::string header_value = line.substr(colon_pos + 2);
 
 			if (!header_value.empty() && header_value[header_value.length() - 1] == '\r') {
-				header_value.push_back();
+				header_value.erase(header_value.length() - 1);
 			}
 			current_request.headers[header_name] = header_value;
 		}
 	}
+	
+	// // Add simple debug output
+	// std::cout << "Parsed: " << current_request.method << " " << current_request.path << std::endl;
+
+	print_parsed_request(current_request, client_fd);
+
 }
 
+
+void TestServer::print_parsed_request(const HttpRequest& request, int client_fd) const
+{
+    std::cout << "\n╔══════════════════════════════════════════════════════════════╗" << std::endl;
+    std::cout << "║                    HTTP REQUEST PARSED                      ║" << std::endl;
+    std::cout << "╠══════════════════════════════════════════════════════════════╣" << std::endl;
+    
+    // Client Information
+    std::cout << "║ Client FD: " << std::setw(49) << std::left << client_fd << "║" << std::endl;
+    
+    // Request Line Information
+    std::cout << "╠══════════════════════════════════════════════════════════════╣" << std::endl;
+    std::cout << "║                      REQUEST LINE                           ║" << std::endl;
+    std::cout << "╠══════════════════════════════════════════════════════════════╣" << std::endl;
+    std::cout << "║ Method:        " << std::setw(45) << std::left << request.method << "║" << std::endl;
+    std::cout << "║ URI:           " << std::setw(45) << std::left << request.uri << "║" << std::endl;
+    std::cout << "║ Path:          " << std::setw(45) << std::left << request.path << "║" << std::endl;
+    std::cout << "║ Query String:  " << std::setw(45) << std::left << (request.query.empty() ? "(none)" : request.query) << "║" << std::endl;
+    std::cout << "║ HTTP Version:  " << std::setw(45) << std::left << request.http_version << "║" << std::endl;
+    
+    // Headers Information
+    std::cout << "╠══════════════════════════════════════════════════════════════╣" << std::endl;
+    std::cout << "║                         HEADERS                             ║" << std::endl;
+    std::cout << "╠══════════════════════════════════════════════════════════════╣" << std::endl;
+    
+    if (request.headers.empty()) {
+        std::cout << "║ No headers found                                            ║" << std::endl;
+    } else {
+        for (std::map<std::string, std::string>::const_iterator it = request.headers.begin(); 
+             it != request.headers.end(); ++it) {
+            std::string header_line = it->first + ": " + it->second;
+            if (header_line.length() > 58) {
+                header_line = header_line.substr(0, 55) + "...";
+            }
+            std::cout << "║ " << std::setw(59) << std::left << header_line << "║" << std::endl;
+        }
+    }
+    
+    // Body Information  
+    std::cout << "╠══════════════════════════════════════════════════════════════╣" << std::endl;
+    std::cout << "║                           BODY                              ║" << std::endl;
+    std::cout << "╠══════════════════════════════════════════════════════════════╣" << std::endl;
+    
+    if (request.body.empty()) {
+        std::cout << "║ No body content                                             ║" << std::endl;
+    } else {
+        std::cout << "║ Body Length: " << std::setw(47) << std::left << request.body.length() << "║" << std::endl;
+        
+        // Show first few lines of body (truncated for display)
+        std::istringstream body_stream(request.body);
+        std::string body_line;
+        int line_count = 0;
+        
+        while (std::getline(body_stream, body_line) && line_count < 3) {
+            if (body_line.length() > 58) {
+                body_line = body_line.substr(0, 55) + "...";
+            }
+            std::cout << "║ " << std::setw(59) << std::left << body_line << "║" << std::endl;
+            line_count++;
+        }
+        
+        if (line_count >= 3 && !body_stream.eof()) {
+            std::cout << "║ " << std::setw(59) << std::left << "(body truncated...)" << "║" << std::endl;
+        }
+    }
+    
+    // Request Analysis
+    std::cout << "╠══════════════════════════════════════════════════════════════╣" << std::endl;
+    std::cout << "║                      ANALYSIS                               ║" << std::endl;
+    std::cout << "╠══════════════════════════════════════════════════════════════╣" << std::endl;
+    
+    // Determine content type
+    std::string content_type = "Unknown";
+    if (request.path.find(".html") != std::string::npos) content_type = "HTML";
+    else if (request.path.find(".css") != std::string::npos) content_type = "CSS";
+    else if (request.path.find(".js") != std::string::npos) content_type = "JavaScript";
+    else if (request.path.find(".png") != std::string::npos) content_type = "PNG Image";
+    else if (request.path.find(".jpg") != std::string::npos) content_type = "JPEG Image";
+    else if (request.path.find(".ico") != std::string::npos) content_type = "Icon";
+    else if (request.path.find(".py") != std::string::npos) content_type = "Python CGI";
+    else if (request.path == "/") content_type = "Root/Index";
+    
+    std::cout << "║ File Type:     " << std::setw(45) << std::left << content_type << "║" << std::endl;
+    std::cout << "║ Header Count:  " << std::setw(45) << std::left << request.headers.size() << "║" << std::endl;
+    
+    // Check for specific headers
+    bool has_host = request.headers.find("Host") != request.headers.end();
+    bool has_user_agent = request.headers.find("User-Agent") != request.headers.end();
+    bool has_content_length = request.headers.find("Content-Length") != request.headers.end();
+    
+    std::cout << "║ Has Host:      " << std::setw(45) << std::left << (has_host ? "Yes" : "No") << "║" << std::endl;
+    std::cout << "║ Has User-Agent:" << std::setw(45) << std::left << (has_user_agent ? "Yes" : "No") << "║" << std::endl;
+    std::cout << "║ Has Content-Len:" << std::setw(44) << std::left << (has_content_length ? "Yes" : "No") << "║" << std::endl;
+    
+    std::cout << "╚══════════════════════════════════════════════════════════════╝" << std::endl << std::endl;
+}
+
+// ===================================================================
+// PLACEHOLDER: RESPONDER (FOR TEAMMATE INTEGRATION)
+// ===================================================================
 void TestServer::responder(int client_fd)
 {
-	try {
-		std::map<int, HttpRequest>::iterator it = client_req.find(client_fd);
-		if (it == client_req.end()) {
-			throw std::runtime_error("No request found for client");
-		}
-
-		HttpRequest& request = it->second;
-		std::string matched_location = find_matching_location(request.path);
-
-		// if (is_cgi_request(request.path,matched_location)) {
-		// 	handle_cgi_request(client_fd, request, matched_location);
-		// 	return;
-		// }
-
-		if (request.method == "GET") {
-			handle_get_request(client_fd, request, matched_location);
-		} else if (request.method == "POST") {
-			handle_post_request(client_fd, request, matched_location);
-		} else if (request.method == "DELETE") {
-			handle_post_request(client_fd, request, matched_location);
-		} else {
-			send_error_response(client_fd, 405, "Method Not Allowed");
-		}
-
-
-	} catch (const std::exception& e) {
-		send_error_response(client_fd, 500, "Internal Server Error");
-	}
-
+	// TODO: Your teammate will implement response handling here
+	// This should handle GET, POST, DELETE requests
+	// For now, just send a simple response and close connection
+	
+	std::string simple_response = "HTTP/1.1 200 OK\r\nContent-Length: 13\r\n\r\nHello World!\n";
+	write(client_fd, simple_response.c_str(), simple_response.length());
 	close(client_fd);
-
 }
 
-void TestServer::handle_get_request(int client_fd, const HttpRequest& request, const std::string& location)
-{
-	try {
-		if(!is_method_allowed("GET", location)) {
-			send_error_response(client_fd, 405, "Method Not Allowed");
-			return;
-		}
+// ===================================================================
+// PLACEHOLDER: RESPONDER (FOR TEAMMATE INTEGRATION)  
+// ===================================================================
+// void TestServer::responder(int client_fd)
+// {
+//     // Get the parsed request for this client
+//     HttpRequest& request = client_req[client_fd];
+    
+//     // Build the file path
+//     std::string file_path = server_config.root;
+//     if (request.path == "/") {
+//         file_path += "/index.html";  // Default to index.html for root
+//     } else {
+//         file_path += request.path;
+//     }
+    
+//     // Try to open and read the file
+//     std::ifstream file(file_path.c_str(), std::ios::binary);
+//     if (file.is_open()) {
+//         // Get file size
+//         file.seekg(0, std::ios::end);
+//         size_t file_size = file.tellg();
+//         file.seekg(0, std::ios::beg);
+        
+//         // Read file content
+//         std::string file_content;
+//         file_content.resize(file_size);
+//         file.read(&file_content[0], file_size);
+//         file.close();
+        
+//         // Send HTTP response with file content
+//         std::ostringstream response;
+//         response << "HTTP/1.1 200 OK\r\n";
+//         response << "Content-Type: text/html\r\n";
+//         response << "Content-Length: " << file_size << "\r\n";
+//         response << "Connection: close\r\n";
+//         response << "\r\n";
+//         response << file_content;
+        
+//         std::string response_str = response.str();
+//         write(client_fd, response_str.c_str(), response_str.length());
+        
+//         std::cout << "Served file: " << file_path << " (" << file_size << " bytes)" << std::endl;
+//     } else {
+//         // File not found - send 404 error
+//         std::string not_found = 
+//             "HTTP/1.1 404 Not Found\r\n"
+//             "Content-Type: text/html\r\n"
+//             "Content-Length: 47\r\n"
+//             "Connection: close\r\n"
+//             "\r\n"
+//             "<html><body><h1>404 Not Found</h1></body></html>";
+        
+//         write(client_fd, not_found.c_str(), not_found.length());
+//         std::cout << "File not found: " << file_path << std::endl;
+//     }
+    
+//     close(client_fd);
+// }
 
-		std::string file_path = server_config.root + request.path;
-
-		struct stat path_stat;
-		if (stat(file_path.c_str(), &path_stat) == 0) {
-			if (S_ISDIR(path_stat.st_mode)) {
-				for (size_t i = 0; i < server_config.index_files.size(); i++) {
-					std::string index_path = file_path + "/" + server_config.index_files[i];
-					if (access(index_path.c_str(), F_OK) == 0) {
-						send_file_response(client_fd, index_path);
-						return;
-					}
-				}
-
-				bool autoindex = false;
-				for (size_t i = 0; i < server_config.locations.size(); i++) {
-					if (server_config.locations[i].path == location) {
-						autoindex = server_config.locations[i].auto_index;
-						break;
-					}
-				}
-				if (autoindex) {
-					send_directory_listing(client_fd, file_path, request.path);
-	
-				} else {
-					send_error_response(client_fd, 403, "Forbidden");
-				}
-			} else {
-				send_file_response(client_fd, file_path);
-			}
-		} else {
-			send_error_response(client_fd, 404, "Not Found");
-		}
-	} catch (const std::exception& e) {
-		send_error_response(client_fd, 500, "Internal Server Error");
-	}
-}
-
-void TestServer::send_directory_listing(int client_fd, const std::string& directory_path, const std::string& request_path)
-{
-	DIR* dir = opendir(directory_path.c_str());
-	if (!dir) {
-		send_error_response(client_fd, 403, "Forbidden");
-		return;
-	}
-
-	std::ostringstream html;
-    html << "<!DOCTYPE html>\n"
-         << "<html><head><meta charset=\"utf-8\">"
-         << "<title>Index of " << request_path << "</title>"
-         << "</head><body>"
-         << "<h1>Index of " << request_path << "</h1>"
-		 << "<hr><ul>";
-
-	if (request_path != "/") {
-		std::string parent = request_path;
-		if (!parent.empty() && parent.back() == "/")
-			parent.push_back();
-		size_t slash = parent.find_last_of('/');
-		parent = slash == std::string::npos ? "/" : parent.substr(0, slash + 1);
-		html << "<li><a href=/" << parent << "\">..</a></li>";
-	}
-
-	for (struct dirent* ent = readdir(dir); ent != NULL; ent = readdir(dir)) 
-	{
-		std::string name = ent->d_name;
-		if (name == "." || name == "..")
-			continue;
-		std::string href = request_path;
-		if (href.empty() || href[0] != '/')
-			href = "/" + href;
-		if (!href.empty() && href.back() != '/')
-			href += "/";
-		href += name;
-
-		bool is_dir = false;
-		if (ent->d_type == DT_DIR) {
-			is_dir = true;
-		} else if (ent->d_type == DT_UNKNOWN) {
-			std::string full = directory_path;
-			if (!full.empty() && full.back() != '/')
-				full += name;
-
-			struct stat st;
-			if (stat(full.c_str(), &st) == 0 && S_ISDIR(st.st_mode)) 
-				is_dir = true;
-		}
-		
-		html << "<li><a href=\"" << href;
-        if (is_dir) html << "/";
-        html << "\">" << name;
-        if (is_dir) html << "/";
-        html << "</a></li>";
-	}
-	closedir(dir);
-
-	html << "</ul><hr></body></html>";
-
-	std::string body = html.str();
-
-	std::ostringstream resp;
-	resp << "HTTP/1.1 200 OK\r\n"
-		 << "Content-Type: text/html\r\n"
-		 << "Content-Length: " << body.length() << "\r\n"
-		 << "Connection: close\r\n"
-		 << "\r\n"
-		 << body;
-	
-	std::string response = resp.str();
-	write(client_fd, response.c_str(), response.length());
-}
-
-
-void TestServer::handle_post_request(int client_fd, const HttpRequest& request, const std::string& location)
-{
-	try {
-		if (!is_method_allowed("POST", location)) {
-			send_error_response(client_fd, 405, "Method Not Allowed");
-			return;
-		}
-
-        std::string response = "HTTP/1.1 200 OK\r\n"
-                              "Content-Type: text/html\r\n"
-                              "Content-Length: 23\r\n\r\n"
-                              "<h1>POST Received!</h1>";		
-		write(client_fd, response.c_str(), response.length());						
-	} catch (const std::exception& e) {
-		send_error_response(client_fd, 500, "Internal Server Error");
-	}
-}
-
-void TestServer::handle_delete_request(int client_fd, const HttpRequest& request, const std::string& location)
-{
-	try {
-		if (!is_method_allowed("DELETE", location)) {
-			send_error_response(client_fd, 405, "Method Not Allowed");
-			return;
-		}
-
-		if (request.path.empty() || request.path == "/") {
-			send_error_response(client_fd, 400, "Bad Request");
-			return;
-		}
-
-		if (has_path_traversal(request.path)) {
-			send_error_response(client_fd, 400, "Bad Request");
-			return;
-		}
-
-		std::string file_path = server_config.root + request.path;
-
-		struct stat path_stat;
-
-		if (stat(file_path.c_str(), &path_stat) != 0 ) {
-			send_error_response(client_fd, 404, "Not Found");
-			return;
-		}
-
-		if (S_ISDIR(path_stat.st_mode)) {
-			send_error_response(client_fd, 409, "Conflict");
-			return;
-		}
-
-		if (unlink(file_path.c_str()) != 0) {
-			if (errno == EACCES || errno == EPERM) {
-				send_error_response(client_fd, 403, "Forbidden");
-			} else {
-				send_error_response(client_fd, 500, "Internal Server Error");
-			}
-			return;
-		}
-
-		std::string respond= 
-		            "HTTP/1.1 204 No Content\r\n"
-        			"Content-Length: 0\r\n"
-            		"Connection: close\r\n"
-            		"\r\n";
-		write(client_fd, respond.c_str(), respond.length());
-	} catch (const std::exception& e) {
-		send_error_response(client_fd, 500, "Internal Server Error");
-	}
-}
-
-std::string TestServer::find_matching_location(const std::string& path)
-{
-	std::string best_match = "/";
-	size_t best_match_length = 0;
-	bool found_root = false;
-
-	for (size_t i = 0; i < server_config.locations.size(); i++) {
-		const Location& loc = server_config.locations[i];
-
-		if (path.find(loc.path) == 0) {
-			bool is_exact_match = (path.length() == loc.path.length());
-			bool is_subpath_match = (loc.path == "/" || (path.length() > loc.path.length() && path[loc.path.length()] == '/'));
-			if (is_exact_match || is_subpath_match) {
-				if (loc.path.length() > best_match_length) {
-					best_match = loc.path;
-					best_match_length = loc.path.length();
-				}
-				if (loc.path == "/") {
-					found_root = true;
-				}
-			}
-		}
-	}
-	if (server_config.locations.empty() || (!found_root && best_match_length == 0)) {
-		best_match = "/";
-	}
-	return best_match;
-}
-// Tambah temporary vector
-/*
-	pfds.fd = -1;
-*/
 void TestServer::launch()
 {
+	if (server_fd < 0) {
+		std::cerr << "Error: Server not initialized. Call initialize_server() first." << std::endl;
+		return;
+	}
+	
+	// Setup initial poll structure with our server socket
 	if (pfds.empty())
 	{
 		pollfd server_pfd;
-		server_pfd.fd = get_socket()->get_sock();
+		server_pfd.fd = server_fd;  // Use our simple server socket
 		server_pfd.events = POLLIN;
 		pfds.push_back(server_pfd);
 	}
+	
+	std::cout << "Server launched and listening..." << std::endl;
+	std::cout << "Max connections supported: ~1000 (limited by poll and system resources)" << std::endl;
+	
 	while (true)
 	{
 		int ready = poll(pfds.data(), pfds.size(), -1);
@@ -441,33 +356,62 @@ void TestServer::launch()
 			perror("Poll error");
 			continue;
 		}
+		
 		for(size_t i = 0; i < pfds.size(); i++)
 		{
 			if (pfds[i].revents & POLLIN)
 			{
-				if (pfds[i].fd == get_socket()->get_sock())
+				if (pfds[i].fd == server_fd)  // New connection on our server socket
 				{
+					// Basic connection limit check
+					if (pfds.size() >= 1000) {
+						std::cerr << "Warning: Max connections reached, rejecting new connections" << std::endl;
+						continue;
+					}
+					
 					accepter();
-					pollfd new_pfd;
-					new_pfd.fd = new_socket;
-					new_pfd.events = POLLIN;
-					pfds.push_back(new_pfd);
+					if (new_socket > 0) {  // Only add if accept succeeded
+						pollfd new_pfd;
+						new_pfd.fd = new_socket;
+						new_pfd.events = POLLIN;
+						pfds.push_back(new_pfd);
+					}
 				}
 				else
 				{
-					handler();
+					handler(pfds[i].fd);
 					pfds.erase(pfds.begin() + i);
+					i--;
 				}
 			}
 		}
 	}
 }
 
-static bool has_path_travelsal(const std::string& p)
+// ===================================================================
+// ACCEPTOR (NEW CLIENT CONNECTION HANDLING)
+// ===================================================================
+void TestServer::accepter()
 {
-	return (p.find("..") != std::string::npos);
+	struct sockaddr_in client_addr;
+	socklen_t addrlen = sizeof(client_addr);
+
+	new_socket = accept(server_fd, (struct sockaddr *)&client_addr, &addrlen);
+	std::cout << "New Connection " << new_socket - 3 << " Accepted" <<std::endl;
+	if (new_socket < 0) {
+		perror("Accept fail");
+		return;
+	}
+	
+	if (SocketUtils::set_non_blocking(new_socket) < 0) {
+		perror("Failed to set non-blocking");
+		return;
+	}
 }
 
+// ===================================================================
+// UTILITY FUNCTION FOR CONFIG DEBUG (OPTIONAL)
+// ===================================================================
 void TestServer::print_config() const
 {
     std::cout << "\n=============== SERVER CONFIGURATION ===============" << std::endl;

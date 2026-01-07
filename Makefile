@@ -1,11 +1,7 @@
 NAME = webserv.exe
 
-SRCS = webserv.cpp \
-	   BindingSocket.cpp \
-	   ConnectingSocket.cpp \
-	   ListeningSocket.cpp \
-	   SimpleServer.cpp \
-	   TestServer.cpp \
+SRCS = TestServer.cpp \
+	   SocketUtils.cpp \
 	   Parse.cpp \
 	   main.cpp
 

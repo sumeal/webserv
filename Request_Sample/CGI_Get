@@ -1,7 +1,1 @@
-GET /cgi-bin/hello.py?name=Ahmad HTTP/1.1
-Host: localhost:8080
-User-Agent: curl/8.0
-Accept: */*
-Connection: close
-
-#curl "http://localhost:8080/cgi-bin/hello.py?name=Ahmad"
+GET /cgi-bin/hello.py?name=Ahmad HTTP/1.1\r\nHost: localhost:8080\r\nUser-Agent: curl/8.0\r\nAccept: */*\r\nConnection: close\r\n\r\n

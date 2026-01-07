@@ -1,6 +1,6 @@
 #include "Parse.hpp"
 
-int Parse::parse_outside(const std::string& line, int current_state)
+int Parse::parse_outside(const std::string& line, int /* current_state */)
 {
     if (line.find("server") != std::string::npos && line.find("{") != std::string::npos) {
         return SERVER;
