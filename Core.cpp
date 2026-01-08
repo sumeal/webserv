@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/07 23:49:24 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/08 15:19:54 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -56,7 +56,6 @@ void	Core::run( t_location& locate, t_request& request)
 		int result = poll(&_fds[0], _fds.size(), 4000);
 		forceMockEvents();
 		handleTimeout(); //better put before poll so poll dont run timeout client
-		std::cout << "a" << std::endl; //debug
 		//					ACTUAL LOOP
 		for (int i = 0; i < _fds.size(); i++)
 		{
@@ -65,13 +64,10 @@ void	Core::run( t_location& locate, t_request& request)
 				continue ;
 			int	revents = _fds[i].revents;
 			Client* client = _clients[oriFd];
-			std::cout << "b" << std::endl; //debug
 			// if (!revents)
 			// 	continue;
 			try
 			{
-				std::cout << "revents: " << revents << "state client" << client->state << " b2" << std::endl; //debug
-				std::cout << "c" << std::endl; //debug
 				// if (revents & (POLLERR | POLLNVAL))
 				// {
 				// 	std::cout << "revents: " << revents << "state client" << client->state << " d" << std::endl; //debug
@@ -80,11 +76,9 @@ void	Core::run( t_location& locate, t_request& request)
 				// }
 				if ((revents & POLLHUP) && oriFd == client->getSocket())
 				{
-					std::cout << "e" << std::endl; //debug
 					deleteClient(client); //handle disconnect;
 					continue ;
 				}
-				std::cout << "f" << std::endl; //debug
 				if (revents & POLLIN || revents & POLLHUP)
 				{
 					//acceptor FromMuzz
@@ -96,7 +90,6 @@ void	Core::run( t_location& locate, t_request& request)
 			}
 			catch (int statusCode)
 			{
-				std::cout << "2" << std::endl; //debug
 				handleClientError(client, statusCode);
 			}
 			if (_fds[i].fd == -1)
@@ -105,13 +98,12 @@ void	Core::run( t_location& locate, t_request& request)
 				_needCleanup = true;
 			}
 			//clean from maps/fd registration queue
-			std::cout << "g" << std::endl; //debug
 			handleTransition(client);
 		}
 		//delete all in the delete list
 		fdCleanup();
 		addStagedFds(); //handle all sementara
-		if(clientCount >= 10 && _clients.empty())
+		if(clientCount >= 2 && _clients.empty())
 			break ;
 	}
 }
@@ -123,12 +115,12 @@ void	Core::handleTransition(Client* client)
 		cgiRegister(client);
 		client->state = WAIT_CGI;
 	}
-	if (client->state == SEND_RESPONSE)
+	else if (client->state == SEND_RESPONSE)
 	{
 		respondRegister(client);
 		client->state = WAIT_RESPONSE;
 	}
-	if (client->state == WAIT_RESPONSE /*&& *fd == client->getSocket()*/) //only for testing when no acceptor implemented
+	else if (client->state == WAIT_RESPONSE /*&& *fd == client->getSocket()*/) //only for testing when no acceptor implemented
 	{
 		int status = client->getRespond().sendResponse();
 		if (status)
@@ -137,18 +129,22 @@ void	Core::handleTransition(Client* client)
 			client->state = FINISHED;
 		}
 	}
-	if (client->state == FINISHED) // timeout only need to trigger this
+	else if (client->state == FINISHED) // timeout only need to trigger this
 	{
 		if (!client->isKeepAlive())
+		{
 			deleteClient(client);
+			return ;
+		}
 		else
+		{
 			client->resetClient();
-		std::cout << "finished" << std::endl; //debug
+		}
 		//remove/reset all class
 		//clear/delete/break
 		// deleteClient(client);
 	}
-	if (client->state == DISCONNECTED)
+	else if (client->state == DISCONNECTED)
 	{
 		deleteClient(client);
 	}
@@ -246,7 +242,7 @@ void Core::clientRegister(int clientFd, Client* client)
 
 void	Core::deleteClient(Client* client)
 {
-	int	socketFd	= client->getSocket();
+	int	socketFd = client->getSocket();
 	
 	if (client->hasCgi()) //supposely dont need since all have closed their CGI
 	{
@@ -414,7 +410,7 @@ void	Core::addStagedFds()
 void Core::acceptMockConnections(t_location& locate, t_request& request, int& clientCount)
 {
     // Only create new clients if we are under our test limit
-    if (clientCount < 10) 
+    if (clientCount < 2) 
     {
         int dummyFd = clientCount + 200;
         Client* client = new Client();
@@ -442,7 +438,7 @@ void Core::forceMockEvents()
         // the activity that the OS would normally detect.
         if (c && c->state == READ_REQUEST) 
         {
-            _fds[i].revents |= POLLIN; 
+            _fds[i].revents = POLLIN; 
         }
     }
 }

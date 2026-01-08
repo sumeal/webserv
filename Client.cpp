@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/07 23:40:58 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/08 15:14:17 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,7 +20,7 @@
 #include <iostream>
 
 Client::Client() : state(READ_REQUEST),  _executor(NULL), _socket(0), 
-	_hasCgi(false), _lastActivity(time(NULL)), _connStatus(KEEP_ALIVE) //FromMuzz
+	_hasCgi(false), _lastActivity(time(NULL)), _connStatus(CLOSE) //FromMuzz
 {}
 
 Client::~Client()
@@ -120,7 +120,10 @@ void	Client::resetClient()
 {
 	//reset request struct/class FromMuzz
 	if (_executor)
+	{
 		delete _executor;
+		_executor = NULL;
+	}
 	_responder.resetResponder();
 	_hasCgi = false;
 	_lastActivity = time(NULL);
