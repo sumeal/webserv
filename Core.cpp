@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/08 15:19:54 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/08 16:25:45 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -68,8 +68,9 @@ void	Core::run( t_location& locate, t_request& request)
 			// 	continue;
 			try
 			{
-				// if (revents & (POLLERR | POLLNVAL))
+				// if ((revents & (POLLERR | POLLNVAL)) && oriFd == client->getSocket()) // cause problem need to test with true socketfd
 				// {
+				// 	std::cout << "oriFd: " << oriFd << "socketFd: " << client->getSocket() << std::endl; //debug
 				// 	std::cout << "revents: " << revents << "state client" << client->state << " d" << std::endl; //debug
 				// 	deleteClient(client); //handle disconnect
 				// 	continue ;
@@ -103,7 +104,7 @@ void	Core::run( t_location& locate, t_request& request)
 		//delete all in the delete list
 		fdCleanup();
 		addStagedFds(); //handle all sementara
-		if(clientCount >= 2 && _clients.empty())
+		if(clientCount >= 10 && _clients.empty())
 			break ;
 	}
 }
@@ -140,9 +141,6 @@ void	Core::handleTransition(Client* client)
 		{
 			client->resetClient();
 		}
-		//remove/reset all class
-		//clear/delete/break
-		// deleteClient(client);
 	}
 	else if (client->state == DISCONNECTED)
 	{
@@ -410,7 +408,7 @@ void	Core::addStagedFds()
 void Core::acceptMockConnections(t_location& locate, t_request& request, int& clientCount)
 {
     // Only create new clients if we are under our test limit
-    if (clientCount < 2) 
+    if (clientCount < 10) 
     {
         int dummyFd = clientCount + 200;
         Client* client = new Client();
@@ -436,7 +434,7 @@ void Core::forceMockEvents()
 
         // If the client exists and is waiting to be read, we 'fake' 
         // the activity that the OS would normally detect.
-        if (c && c->state == READ_REQUEST) 
+        if (c && c->state == READ_REQUEST && !c->revived) 
         {
             _fds[i].revents = POLLIN; 
         }

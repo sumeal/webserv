@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/08 15:14:17 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/08 16:06:11 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,7 +20,8 @@
 #include <iostream>
 
 Client::Client() : state(READ_REQUEST),  _executor(NULL), _socket(0), 
-	_hasCgi(false), _lastActivity(time(NULL)), _connStatus(CLOSE) //FromMuzz
+	_hasCgi(false), _lastActivity(time(NULL)), _connStatus(KEEP_ALIVE), //FromMuzz
+	revived(false) //testing
 {}
 
 Client::~Client()
@@ -36,8 +37,8 @@ Client::~Client()
 //if POLLHUP for socket means socket disconnected
 void	Client::procInput(int i, struct pollfd& pFd)
 {
-	int pipeFromCgi = GetCgiExec()->getpipeFromCgi();
-
+	// int pipeFromCgi = GetCgiExec()->getpipeFromCgi();
+	
 	if (state == READ_REQUEST)
 	{
 		//check client disconnect using received
@@ -45,7 +46,7 @@ void	Client::procInput(int i, struct pollfd& pFd)
 		// if (/*read request finished*/)
 		// if (state == HANDLE_REQUEST)
 		// {
-			if (!GetCgiExec()->isCGI())
+			if (!GetCgiExec() /*&& !GetCgiExec()->isCGI()*/)
 			{
 				getRespond().procNormalOutput();
 				getRespond().buildResponse();
@@ -63,7 +64,7 @@ void	Client::procInput(int i, struct pollfd& pFd)
 			}
 		// }
 	}
-	else if (state == WAIT_CGI && pFd.fd == pipeFromCgi)
+	else if (state == WAIT_CGI && pFd.fd == GetCgiExec()->getpipeFromCgi())
 	{
 		GetCgiExec()->readExec();
 		GetCgiExec()->cgiState();
@@ -128,6 +129,8 @@ void	Client::resetClient()
 	_hasCgi = false;
 	_lastActivity = time(NULL);
 	_connStatus = KEEP_ALIVE;
+	state = READ_REQUEST;
+	revived = true; //testing
 }
 
 void	Client::fdPreCleanup(struct pollfd& pFd)

@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:03:33 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/07 23:31:34 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/08 16:06:16 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -44,6 +44,7 @@ private:
 	//loop thingy
 public:
 	e_State state;
+	bool		revived; //testing
 	Client();
 	~Client();
 	void	procInput(int i, struct pollfd& pFd);
