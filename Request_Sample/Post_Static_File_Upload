@@ -1,0 +1,6 @@
+POST /uploads/hello.txt HTTP/1.1\r\nHost: localhost:8080\r\nUser-Agent: curl/8.0\r\nContent-Type: text/plain\r\nContent-Length: 12\r\nConnection: close\r\n\r\nHello World!
+
+
+#curl -X POST http://localhost:8080/uploads/hello.txt \
+     -H "Content-Type: text/plain" \
+     --data "Hello World!"

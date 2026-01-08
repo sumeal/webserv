@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   main.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
+/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/14 10:54:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/07 23:33:15 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/08 15:34:47 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,7 +19,7 @@
 
 void	cgitest_data(t_location& _location, t_request& _request);
 
-int main()
+int main(int argc, char **argv)
 {
 	// t_data		data;
 	t_location	locate;
@@ -73,4 +73,24 @@ void cgitest_data(t_location& loc, t_request& req)
     // Usually: absolute_path = loc.root + (req.path - loc.path)
     // For this test, let's assume it's simply:
     // abs_path = "./www/cgi-bin/test.py"; 
+	if (argc != 2)
+	{
+		std::cerr << "Usage: " << argv[0] << " <config_file>" << std::endl;
+		return (1);
+	}
+	std::string config_file = argv[1];
+	TestServer t;
+	
+	// Parse config file (COMPONENT 1)
+	t.parse_config(config_file);
+	
+	// Initialize server with config values
+	t.initialize_server();
+	
+	// Debug: Print parsed config
+	t.print_config();
+	
+	// Launch server with correct port and settings
+	t.launch();
+	return (0);
 }
