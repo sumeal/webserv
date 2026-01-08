@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/08 16:06:11 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/08 17:26:43 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -35,7 +35,7 @@ Client::~Client()
 //i = index of Fds
 //if POLLHUP for waitcgi means cgi finished and disconnected
 //if POLLHUP for socket means socket disconnected
-void	Client::procInput(int i, struct pollfd& pFd)
+void	Client::procInput(int i, struct pollfd& pFd, const t_request& request, const t_location& locate)
 {
 	// int pipeFromCgi = GetCgiExec()->getpipeFromCgi();
 	
@@ -56,6 +56,7 @@ void	Client::procInput(int i, struct pollfd& pFd)
 			}
 			else
 			{
+				setCgiExec(new CgiExecute(this, request, locate));
 				GetCgiExec()->preExecute();
 				GetCgiExec()->execute();
 				state = EXECUTE_CGI;

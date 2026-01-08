@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:03:33 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/08 16:06:16 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/08 17:25:33 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -47,7 +47,7 @@ public:
 	bool		revived; //testing
 	Client();
 	~Client();
-	void	procInput(int i, struct pollfd& pFd);
+	void	procInput(int i, struct pollfd& pFd, const t_request& request, const t_location& locate);
 	void	procOutput(int i, struct pollfd& pFd);
 	void	fdPreCleanup(struct pollfd& pFd);
 	void	resetClient();

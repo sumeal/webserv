@@ -27,7 +27,7 @@ public:
 	Core();
 	~Core();
 	void	handleTransition(Client* client);
-	void	launchCgi(Client* client, t_location& locate, t_request& request);
+	// void	launchCgi(Client* client, t_location& locate, t_request& request);
 	void	cgiRegister(Client* client);
 	void	run(t_location& locate, t_request& request);
 	//Geminied. muzz part

@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/08 16:25:45 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/08 17:28:25 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -84,7 +84,7 @@ void	Core::run( t_location& locate, t_request& request)
 				{
 					//acceptor FromMuzz
 					//create new client & struct FromMuzz
-					client->procInput(i, _fds[i]);
+					client->procInput(i, _fds[i], request, locate));
 				}
 				if (_fds[i].revents & POLLOUT || revents & POLLHUP)
 					client->procOutput(i, _fds[i]);
@@ -166,14 +166,14 @@ void	Core::handleTimeout()
 	}
 }
 
-void	Core::launchCgi(Client* client, t_location& locate, t_request& request)
-{
-	client->GetCgiExec()->preExecute();
-	client->GetCgiExec()->execute();
-	//the part im trying to implement
-	cgiRegister(client); //in core because it change the struct that hold all the list
+// void	Core::launchCgi(Client* client, t_location& locate, t_request& request)
+// {
+// 	client->GetCgiExec()->preExecute();
+// 	client->GetCgiExec()->execute();
+// 	//the part im trying to implement
+// 	cgiRegister(client); //in core because it change the struct that hold all the list
 	
-}
+// }
 
 void	Core::cgiRegister(Client* client)
 {
@@ -414,7 +414,7 @@ void Core::acceptMockConnections(t_location& locate, t_request& request, int& cl
         Client* client = new Client();
         
         // Setup CGI (simulation of a CGI request)
-        client->setCgiExec(new CgiExecute(client, request, locate));
+        // client->setCgiExec(new CgiExecute(client, request, locate));
         
         // clientRegister should add the FD to your vector 
         // and set _fds[i].events = POLLIN
