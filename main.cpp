@@ -6,7 +6,7 @@
 /*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/14 10:54:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/08 15:34:47 by abin-moh         ###   ########.fr       */
+/*   Updated: 2026/01/09 15:00:52 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,14 +19,24 @@
 
 void	cgitest_data(t_location& _location, t_request& _request);
 
+
 int main(int argc, char **argv)
 {
+	if (argc != 2)
+	{
+		std::cerr << "Usage: " << argv[0] << " <config_file>" << std::endl;
+		return (1);
+	}
+	
+	std::string config_file = argv[1];
 	// t_data		data;
-	t_location	locate;
-	t_request	request;
+	// t_location	locate;
+	// t_request	request;
 
 	Core core;
-	cgitest_data(locate, request);
+	// cgitest_data(locate, request);
+	
+	core.parse_config(config_file);
 	
 	//parse config FromMuzz
 	//create listening socket FromMuzz

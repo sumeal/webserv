@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   CGI_data.h                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
+/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/16 15:03:57 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/04 15:31:38 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/09 15:00:14 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,16 @@
 #include <string>
 #include <map>
 #include <vector>
+
+typedef struct s_server
+{
+	std::string server_name;
+	int port;
+	std::string root;
+	std::vector<std::string> index_files;
+	std::map<int, std::string> error_pages;
+	std::vector<s_location> locations;
+} t_server;
 
 typedef struct s_request {
     std::string method;      // GET, POST
@@ -32,10 +42,15 @@ typedef struct s_request {
 typedef struct s_location {
     std::string path;              // "/cgi-bin"
     std::string root;              // filesystem root
-    std::vector<std::string> methods;
     bool cgi_enabled;
-    std::string cgi_extension;     // ".py"
+    //std::vector<std::string> methods;
+	//std::string cgi_extension;     // ".py"
     std::string cgi_path;          // "/usr/bin/python3". the binary
+	std::vector<std::string> cgi_extension;
+	bool allow_get;
+	bool allow_post;
+	bool allow_delete;
+	bool auto_index;
 } t_location;
 
 

@@ -14,6 +14,13 @@
 #include "CGI_data.h"
 #include "CgiExecute.h"
 #include <poll.h>
+#include "Parse.hpp"
+
+enum ParseState {
+	OUTSIDE,
+	SERVER,
+	LOCATION
+};
 
 class Core {
 private:
@@ -21,6 +28,8 @@ private:
 	std::map<int, Client*> _clients;
 	std::vector<struct pollfd> _fds;
 	std::vector<struct pollfd> _stagedFds; //sementara
+	t_server server_config;
+	t_location temp_location;
 	// Server class (location dalam Mad version) FromMuzz
 	bool	_needCleanup;
 public:
@@ -43,6 +52,10 @@ public:
 	void	addStagedFds();
 	void	fdCleanup(); //delStagedFd better naming?
 
+
+	//muzz part real
+	void	parse_config(const std::string &filename);
+	void	parse_http_request(const std::string &raw_req, int client_fd);
 	//testing
 	void	acceptMockConnections(t_location& locate, t_request& request, int& clientCount);
 	void	forceMockEvents();

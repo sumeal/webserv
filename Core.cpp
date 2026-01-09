@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Core.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
+/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/08 15:19:54 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/09 09:52:11 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -573,3 +573,95 @@ void Core::forceMockEvents()
 // 			break ;
 // 	}
 // }
+
+//muzz part real
+
+void Core::parse_config(const std::string &filename)
+{
+    std::ifstream file(filename.c_str());
+    if (!file.is_open()) {
+        std::cerr << "Error: config file failed" << std::endl;
+        return;
+    }
+    
+    ParseState current_state = OUTSIDE;
+    std::string line;
+
+    while (std::getline(file, line)) {
+        line = Parse::trim_line(line);
+        
+        if (Parse::is_comment_or_empty(line))
+            continue;
+        
+        if (current_state == OUTSIDE) {
+            current_state = (ParseState)Parse::parse_outside(line, current_state);
+        }
+        else if (current_state == SERVER) {
+            int new_state = Parse::parse_server(line, current_state, server_config);
+            
+            if (new_state == LOCATION && current_state == SERVER) {
+                std::vector<std::string> tokens = Parse::split_line(line);
+                if (tokens.size() >= 2 && tokens[0] == "location") {
+                    temp_location = Location();
+                    temp_location.path = tokens[1];
+                    temp_location.allow_get = false;
+                    temp_location.allow_post = false;
+                    temp_location.allow_delete = false;
+                    temp_location.auto_index = false;
+                }
+            }
+            current_state = (ParseState)new_state;
+        }
+        else if (current_state == LOCATION) {
+            int new_state = Parse::parse_location(line, current_state, temp_location);
+            
+            if (new_state == SERVER && current_state == LOCATION) {
+                server_config.locations.push_back(temp_location);
+            }
+            current_state = (ParseState)new_state;
+        }
+    }
+    
+    file.close();
+    std::cout << "Config parsing completed" << std::endl;
+}
+
+void Core::parse_http_request(const std::string &raw_req, int client_fd)
+{
+	HttpRequest& current_request = client_req[client_fd];
+	std::istringstream request_stream(raw_req);
+	std::string line;
+
+	if (std::getline(request_stream, line)) {
+		std::istringstream req_line(line);
+		req_line >> current_request.method >> current_request.uri >> current_request.http_version;
+
+		size_t query_pos = current_request.uri.find('?');
+		if (query_pos != std::string::npos) {
+			current_request.path = current_request.uri.substr(0, query_pos);
+			current_request.query = current_request.uri.substr(query_pos +1);
+		}
+		else {
+			current_request.path = current_request.uri;
+		}
+	}
+
+	while (std::getline(request_stream, line) && line != "\r" && !line.empty()) {
+		size_t colon_pos = line.find(':');
+		if (colon_pos != std::string::npos) {
+			std::string header_name = line.substr(0, colon_pos);
+			std::string header_value = line.substr(colon_pos + 2);
+
+			if (!header_value.empty() && header_value[header_value.length() - 1] == '\r') {
+				header_value.erase(header_value.length() - 1);
+			}
+			current_request.headers[header_name] = header_value;
+		}
+	}
+	
+	// // Add simple debug output
+	// std::cout << "Parsed: " << current_request.method << " " << current_request.path << std::endl;
+
+	print_parsed_request(current_request, client_fd);
+
+}
