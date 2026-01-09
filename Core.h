@@ -30,15 +30,20 @@ private:
 	std::vector<struct pollfd> _stagedFds; //sementara
 	t_server server_config;
 	t_location temp_location;
+	std::vector<Client*> activeClients;
 	// Server class (location dalam Mad version) FromMuzz
 	bool	_needCleanup;
+	int server_fd;
+	int new_client_fd;
+	void initialize_server();
+
 public:
 	Core();
 	~Core();
 	void	handleTransition(Client* client);
 	void	launchCgi(Client* client, t_location& locate, t_request& request);
 	void	cgiRegister(Client* client);
-	void	run(t_location& locate, t_request& request);
+	void	run();
 	//Geminied. muzz part
 	void 	serverRegister(int serverFd);
 	void 	clientRegister(int clientFd, Client* client);

@@ -6,7 +6,7 @@
 /*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/09 09:52:11 by abin-moh         ###   ########.fr       */
+/*   Updated: 2026/01/09 15:48:19 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -43,16 +43,15 @@ Core::~Core()
 	// _cgiMap.clear();//redundant as this only being used when we clear vector but keep the heap object. now the heap object already gone no use
 }
 
-void	Core::run( t_location& locate, t_request& request)
+void	Core::run()
 {
 	int			clientCount = 0;
-	std::vector<Client*> activeClients;
 	
 	//listening socket into _fds FromMuzz
 	int loopCount = 0;
 	while (1)
 	{
-		acceptMockConnections(locate, request, clientCount);
+
 		int result = poll(&_fds[0], _fds.size(), 4000);
 		forceMockEvents();
 		handleTimeout(); //better put before poll so poll dont run timeout client
@@ -602,12 +601,16 @@ void Core::parse_config(const std::string &filename)
             if (new_state == LOCATION && current_state == SERVER) {
                 std::vector<std::string> tokens = Parse::split_line(line);
                 if (tokens.size() >= 2 && tokens[0] == "location") {
-                    temp_location = Location();
+                    temp_location = t_location();
                     temp_location.path = tokens[1];
+					temp_location.root = "";
                     temp_location.allow_get = false;
                     temp_location.allow_post = false;
                     temp_location.allow_delete = false;
                     temp_location.auto_index = false;
+					temp_location.cgi_enabled = false;
+					temp_location.cgi_path = "";
+					temp_location.cgi_extension.clear();
                 }
             }
             current_state = (ParseState)new_state;
@@ -664,4 +667,19 @@ void Core::parse_http_request(const std::string &raw_req, int client_fd)
 
 	print_parsed_request(current_request, client_fd);
 
+}
+
+void Core::initialize_server()
+{
+	// Create listening socket with config port
+	server_fd = SocketUtils::create_listening_socket(server_config.port);
+	if (server_fd < 0) {
+		std::cerr << "Failed to create server socket" << std::endl;
+		return;
+	}
+	
+	std::cout << "Server initialized with:" << std::endl;
+	std::cout << "Port: " << server_config.port << std::endl;
+	std::cout << "Server Name: " << server_config.server_name << std::endl;
+	std::cout << "Root: " << server_config.root << std::endl;
 }
