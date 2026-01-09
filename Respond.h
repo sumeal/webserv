@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 16:58:34 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/07 20:25:49 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/09 16:43:55 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,7 @@
 
 #include <cstddef>
 #include <string>
+#include "CGI_data.h"
 
 enum e_connectionStatus {
 	CLOSE,
@@ -32,6 +33,7 @@ private:
 	int			_contentLength;//
 	std::string	_serverName;
 	int			_connStatus;//
+	std::string	_filePath;
 	//send data
 	int			_socketFd;
 	size_t		_bytesSent;
@@ -40,8 +42,9 @@ public:
 	~Respond();
 	void	buildErrorResponse(int statusCode);
 	void	procCgiOutput(std::string cgiOutput);
-	void	procNormalOutput();
+	void	procNormalOutput(const t_request& request, const t_location& locate);
 	void	findErrorBody(std::string errorPath);
+	void	setContentType();
 	int		sendResponse();
 	void	buildResponse();
 	std::string	getStatusMsg();

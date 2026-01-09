@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/08 17:26:43 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/10 00:00:54 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,9 +46,9 @@ void	Client::procInput(int i, struct pollfd& pFd, const t_request& request, cons
 		// if (/*read request finished*/)
 		// if (state == HANDLE_REQUEST)
 		// {
-			if (!GetCgiExec() /*&& !GetCgiExec()->isCGI()*/)
+			if (!isCGI(request, locate))
 			{
-				getRespond().procNormalOutput();
+				getRespond().procNormalOutput(request, locate);
 				getRespond().buildResponse();
 				state = SEND_RESPONSE;
 				// respondRegister(client);//
@@ -116,6 +116,41 @@ void	Client::procOutput(int i, struct pollfd& pFd)
 			state = FINISHED;
 		}
 	}
+}
+
+//check 2 things
+//1. cgi enabled? is the location for script to be run have permission for script
+//2. executable name/suffix is correct? and can be execute?
+bool	Client::isCGI(const t_request& request, const t_location& locate) const
+{
+	return (locate.cgi_enabled && isCGIextOK(request, locate));
+}
+
+//should at least support one. which we focus on .py
+bool	Client::isCGIextOK(const t_request& request, const t_location& locate) const
+{
+	const std::string	path		= request.path;
+	const std::string	cgi_path	= locate.cgi_path;
+	
+	//manually without taking from config cgi_ext
+	//use rfind to detect the last dot
+	size_t lastDot = path.rfind(".");
+	if (lastDot == std::string::npos) //how to check npos
+		return false; 
+	//use path.substr and check
+	std::string ext = path.substr(lastDot);
+	if (ext != ".cgi" && ext != ".php" && ext != ".py"
+		&& ext != ".sh" && ext != ".pl")
+		return false;
+	//1 case may need to handle but idk necessary or not.
+	//./../../../etc/passwd.
+	//but still considering to do this right after location matching or now.
+	//bcus if now it might be redundant since static also may need it.
+	//this will causes the user to go outside of root & get private info
+	//if want to handle, use list and every node is separated by /. 
+	//lets say meet .. pop back the last node.
+	//then we create a string and compare with "var/www/html"
+	return true;
 }
 
 void	Client::resetClient()

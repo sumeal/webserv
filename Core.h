@@ -42,6 +42,7 @@ public:
 	void	handleSocketDc();
 	void	addStagedFds();
 	void	fdCleanup(); //delStagedFd better naming?
+	void	pathCheck(std::string path);
 
 	//testing
 	void	acceptMockConnections(t_location& locate, t_request& request, int& clientCount);

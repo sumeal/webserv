@@ -6,13 +6,14 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/08 17:28:25 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/10 00:01:07 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Core.h"
 #include "CGI_data.h"
 #include <csignal>
+#include <cstddef>
 #include <poll.h>
 #include "CgiExecute.h"
 #include "Client.h"
@@ -84,7 +85,7 @@ void	Core::run( t_location& locate, t_request& request)
 				{
 					//acceptor FromMuzz
 					//create new client & struct FromMuzz
-					client->procInput(i, _fds[i], request, locate));
+					client->procInput(i, _fds[i], request, locate);
 				}
 				if (_fds[i].revents & POLLOUT || revents & POLLHUP)
 					client->procOutput(i, _fds[i]);
@@ -440,6 +441,68 @@ void Core::forceMockEvents()
         }
     }
 }
+
+void	Core::pathCheck(std::string path)
+{
+	std::string rootPath = "/home/user/42/webserv/www";
+	
+	size_t start	= 1;
+	size_t end		= rootPath.find("/", 1);
+	std::vector<std::string>	rootPathVec;
+	
+	while (end != std::string::npos)
+	{
+		std::string name = rootPath.substr(start, end - start);
+		if (!name.empty())
+		{
+			if (name == "..")
+				rootPathVec.pop_back();
+			else if (name != ".")
+				rootPathVec.push_back(name);
+		}
+		start = end + 1;
+		end = rootPath.find("/", start);
+	}
+	std::string name = rootPath.substr(start);
+	if (!name.empty())
+		rootPathVec.push_back(name);
+
+	size_t	startPath	= 0;
+	size_t	endPath		= path.find("/");
+	size_t	rootFloor	= rootPathVec.size();
+	while(endPath != std::string::npos)
+	{
+		std::string name2 = path.substr(startPath, endPath - startPath); 
+		if (!name2.empty() && name2 != ".")
+		{
+			if (name2 == "..")
+			{
+				if (rootPathVec.empty())
+					throw("error");
+				else if (rootPathVec.size() > rootFloor)
+					rootPathVec.pop_back();
+			}
+			else
+				rootPathVec.push_back(name2);
+		}
+		startPath = endPath + 1;
+		endPath = path.find("/", startPath); 
+	}
+	std::string name2 = path.substr(startPath);
+	if (!name2.empty() && name2 != "." && name2 != "..")
+		rootPathVec.push_back(name2);
+	else if (name2 == "..")
+		rootPathVec.pop_back();
+
+	std::string fullPath = "/";
+	for (int i = 0; i < rootPathVec.size(); i++)
+	{
+		fullPath = fullPath + rootPathVec[i];
+		if (i < rootPathVec.size() - 1)
+			fullPath = fullPath + "/";
+	}
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // void	Core::run( t_location& locate, t_request& request)

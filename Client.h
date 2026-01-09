@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:03:33 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/08 17:25:33 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/09 19:03:51 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -61,6 +61,8 @@ public:
 	void	setHasCgi(bool status);
 	bool	isIdle(time_t now);
 	bool	isKeepAlive();
+	bool	isCGI(const t_request& request, const t_location& locate) const;
+	bool	isCGIextOK(const t_request& request, const t_location& locate) const;
 	// CgiRequest* GetCgiReq();
 	// t_CGI*	getCgi();
 	// void	setCgi(t_CGI* cgi);

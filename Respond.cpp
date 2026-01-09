@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 17:17:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/07 20:34:17 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/10 00:01:37 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -93,24 +93,59 @@ void	Respond::procCgiOutput(std::string cgiOutput)
 	_contentLength = _body.length();
 }
 
-void	Respond::procNormalOutput()
+void	Respond::procNormalOutput(const t_request& request, const t_location& locate)
 {
-	std::string filePath = "FromMuzz";
-	//read file and take path
-	std::ifstream file(filePath);
-	if (!file.is_open())
-		throw(404);
-	std::stringstream ss;
-	ss << file.rdbuf();
-	_body = ss.str();
-	_contentLength = _body.size();
-	//set status and body
-	_statusCode = 200;
-	//set content type based on the file extension
-	size_t pos = filePath.rfind(".");
+	std::string script_name = request.path.substr(locate.path.size()); 
+	std::string	root 		= locate.root;
+
+	//script_name should be /test.py. locate.root should be ./www.
+	//					SCRIPT START W /
+	if (script_name[0] != '/')
+		script_name = "/" + script_name;
+	std::string absPath = root + script_name; 
+	//					ROOT END NOT /
+	if (!root.empty() && root[root.size() - 1] == '/')
+		root.erase(root.size() - 1,  1);
+	
+	_filePath = absPath; //FromMuzz
+	if (request.method == "POST")
+	{
+		std::ofstream outfile(_filePath.c_str(), std::ios::out | std::ios::trunc);
+		if (!outfile.is_open())
+			throw (500);
+		outfile << request.body;
+		outfile.close();
+		_statusCode = 201;
+		_body = "<html><head><title>201 Created</title></head><body>"
+        "<h1>File Created Successfully</h1><p>The resource has been uploaded.</p>"
+        "<hr><address>Webserv/1.0</address></body></html>";
+		_contentLength = _body.size();
+		_contentType = "text/html";
+	}
+	else if (request.method == "GET")
+	{
+		//read file and take path
+		std::ifstream file(_filePath.c_str());
+		if (!file.is_open())
+			throw(404);
+		std::stringstream ss;
+		ss << file.rdbuf();
+		//set status
+		_statusCode = 200;
+		//set body
+		_body = ss.str();
+		_contentLength = _body.size();
+		//set content type based on the file extension
+		setContentType();
+	}
+}
+
+void	Respond::setContentType()
+{
+	size_t pos = _filePath.rfind(".");
 	if (pos != std::string::npos)
 	{
-		std::string ext = filePath.substr(pos);
+		std::string ext = _filePath.substr(pos);
 		if (ext == ".html")
 			_contentType = "text/html";
 		else if (ext == ".css")
