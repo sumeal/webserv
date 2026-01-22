@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Respond.h                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
+/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 16:58:34 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/07 20:25:49 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/21 11:03:15 by muzz             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,6 +16,8 @@
 #include <cstddef>
 #include <string>
 
+class Client; // Forward declaration
+
 enum e_connectionStatus {
 	CLOSE,
 	KEEP_ALIVE,
@@ -24,6 +26,7 @@ enum e_connectionStatus {
 
 class Respond {
 private:
+    Client* _client;
 	std::string	_fullResponse;
 	int			_statusCode;
 	std::string	_protocol;
@@ -40,13 +43,21 @@ public:
 	~Respond();
 	void	buildErrorResponse(int statusCode);
 	void	procCgiOutput(std::string cgiOutput);
-	void	procNormalOutput();
+	void	procNormalOutput(std::string protocol);
 	void	findErrorBody(std::string errorPath);
 	int		sendResponse();
 	void	buildResponse();
 	std::string	getStatusMsg();
 	void	printResponse();
 	void	resetResponder();
+	void	setContentType(const std::string& filePath);
+	std::string getRequestPath();
+	void	setClient(Client* client);
+	void	setSocketFd(int socketFd);
+	void	setServerName(const std::string& serverName);
+	void	setProtocol(const std::string& protocol);
+	void	handleError(int statusCode);  // 🎯 NEW: Central error handler
+	std::string getServerRoot();
 };
 
 #endif

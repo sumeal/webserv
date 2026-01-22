@@ -11,14 +11,10 @@
 class SocketUtils
 {
 public:
-    // Create a listening socket with given port
     static int create_listening_socket(int port);
-    
-    // Set socket to non-blocking mode
     static int set_non_blocking(int fd);
     
-    // Close socket safely
-    static void close_socket(int fd);
+    // static void close_socket(int fd);
 };
 
 #endif

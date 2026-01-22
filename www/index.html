@@ -30,6 +30,48 @@
             padding: 10px;
             font-size: 14px;
         }
+
+        .nav-buttons, .test-buttons {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        .btn:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-get { background-color: #28a745; }
+        .btn-get:hover { background-color: #1e7e34; }
+        
+        .btn-post { background-color: #ffc107; color: #000; }
+        .btn-post:hover { background-color: #d39e00; }
+        
+        .btn-delete { background-color: #dc3545; }
+        .btn-delete:hover { background-color: #a71e2a; }
+
+        #response-area {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            min-height: 50px;
+        }
     </style>
 </head>
 <body>
@@ -46,17 +88,104 @@
             Perfect as a starting point for learning or small projects.
         </p>
 
+        <h2>Navigation & Testing</h2>
+        <div class="nav-buttons">
+            <a href="/about.html" class="btn">About Page</a>
+            <a href="/contact.html" class="btn">Contact Page</a>
+            <a href="/gallery.html" class="btn">Gallery Page</a>
+            <a href="/test.html" class="btn">Test Page</a>
+            <a href="/uploads/" class="btn">📁 Uploads</a>
+        </div>
+
+        <h2>HTTP Method Testing</h2>
+        <div class="test-buttons">
+            <button onclick="testGet()" class="btn btn-get">🔍 Test GET</button>
+            <button onclick="testPost()" class="btn btn-post">📤 Test POST</button>
+            <button onclick="testDelete()" class="btn btn-delete">🗑️ Test DELETE</button>
+            <button onclick="testError(404)" class="btn" style="background: #e74c3c;">Test 404</button>
+            <button onclick="testError(403)" class="btn" style="background: #e67e22;">Test 403</button>
+        </div>
+        <div id="response-area"></div>
+
         <h2>Next Steps</h2>
         <ul>
-            <li>Add more pages</li>
-            <li>Move CSS into a separate file</li>
-            <li>Add JavaScript</li>
+            <li>✅ Multiple HTML pages created</li>
+            <li>✅ Navigation system implemented</li>
+            <li>✅ HTTP method testing added</li>
         </ul>
     </main>
 
     <footer>
-        © 2026     42Anonymous
+        © 2026     42Anonymous - Enhanced with Navigation & HTTP Testing
     </footer>
+
+    <script>
+        function updateResponse(method, url, status, data) {
+            const responseArea = document.getElementById('response-area');
+            responseArea.innerHTML = `${method} ${url}\nStatus: ${status}\nResponse: ${data}`;
+        }
+
+        function testGet() {
+            fetch('/test.html')
+                .then(response => {
+                    updateResponse('GET', '/test.html', response.status, 'Success - Page loaded');
+                    return response.text();
+                })
+                .catch(error => {
+                    updateResponse('GET', '/test.html', 'ERROR', error.message);
+                });
+        }
+
+        function testPost() {
+            fetch('/uploads/test-post', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message: 'Hello from POST request', timestamp: new Date().toISOString() })
+            })
+                .then(response => {
+                    updateResponse('POST', '/uploads/test-post', response.status, `POST request sent - ${response.statusText}`);
+                    return response.text();
+                })
+                .catch(error => {
+                    updateResponse('POST', '/uploads/test-post', 'ERROR', error.message);
+                });
+        }
+
+        function testDelete() {
+            fetch('/uploads/test-delete', {
+                method: 'DELETE'
+            })
+                .then(response => {
+                    updateResponse('DELETE', '/uploads/test-delete', response.status, `DELETE request sent - ${response.statusText}`);
+                    return response.text();
+                })
+                .catch(error => {
+                    updateResponse('DELETE', '/uploads/test-delete', 'ERROR', error.message);
+                });
+        }
+
+        function testError(errorCode) {
+            let testUrl = '';
+            if (errorCode === 404) {
+                testUrl = '/nonexistent-page.html';
+            } else if (errorCode === 403) {
+                testUrl = '/restricted-access.html';
+            }
+            
+            fetch(testUrl)
+                .then(response => {
+                    updateResponse('GET', testUrl, response.status, `Error test: ${errorCode} - ${response.statusText}`);
+                    if (errorCode === 404 && response.status === 404) {
+                        window.open(testUrl, '_blank');
+                    }
+                })
+                .catch(error => {
+                    updateResponse('GET', testUrl, 'ERROR', error.message);
+                });
+        }
+    </script>
 
 </body>
 </html>

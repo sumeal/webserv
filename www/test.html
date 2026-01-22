@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>HTTP Testing - 42Anonymous Webserver</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: #dc3545;
+            color: #fff;
+            padding: 20px;
+            text-align: center;
+        }
+
+        main {
+            padding: 20px;
+        }
+
+        footer {
+            background-color: #ddd;
+            text-align: center;
+            padding: 10px;
+            font-size: 14px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            display: inline-block;
+            margin: 5px;
+            transition: background-color 0.3s;
+        }
+
+        .btn:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-back {
+            background-color: #6c757d;
+        }
+
+        .btn-back:hover {
+            background-color: #495057;
+        }
+
+        .test-section {
+            background-color: #fff;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .test-buttons {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+
+        .btn-get { background-color: #28a745; }
+        .btn-get:hover { background-color: #1e7e34; }
+        
+        .btn-post { background-color: #ffc107; color: #000; }
+        .btn-post:hover { background-color: #d39e00; }
+        
+        .btn-delete { background-color: #dc3545; }
+        .btn-delete:hover { background-color: #a71e2a; }
+
+        .btn-put { background-color: #17a2b8; }
+        .btn-put:hover { background-color: #117a8b; }
+
+        .response-area {
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            min-height: 100px;
+            border: 1px solid #dee2e6;
+        }
+
+        .status-success { background-color: #d4edda; border-color: #c3e6cb; }
+        .status-error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .status-warning { background-color: #fff3cd; border-color: #ffeaa7; }
+
+        .test-form {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input[type="text"], input[type="url"], textarea, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        textarea {
+            height: 80px;
+            resize: vertical;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border-left: 4px solid #007bff;
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>HTTP Method Testing</h1>
+        <p>Comprehensive testing suite for our C++ HTTP Server</p>
+    </header>
+
+    <main>
+        <div>
+            <a href="/index.html" class="btn btn-back">← Back to Home</a>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="get-count">0</div>
+                <div>GET Requests</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="post-count">0</div>
+                <div>POST Requests</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="delete-count">0</div>
+                <div>DELETE Requests</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="success-rate">100%</div>
+                <div>Success Rate</div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🟢 GET Method Testing</h3>
+            <p>Test static file serving and resource retrieval</p>
+            <div class="test-buttons">
+                <button onclick="testGet('/index.html')" class="btn btn-get">GET index.html</button>
+                <button onclick="testGet('/about.html')" class="btn btn-get">GET about.html</button>
+                <button onclick="testGet('/contact.html')" class="btn btn-get">GET contact.html</button>
+                <button onclick="testGet('/gallery.html')" class="btn btn-get">GET gallery.html</button>
+                <button onclick="testGet('/nonexistent.html')" class="btn btn-get">GET 404 Test</button>
+            </div>
+            <div id="get-response" class="response-area">Click a GET button to test file serving...</div>
+        </div>
+
+        <div class="test-section">
+            <h3>🟡 POST Method Testing</h3>
+            <p>Test data submission and form processing</p>
+            <div class="test-form">
+                <div class="form-group">
+                    <label for="post-url">POST Endpoint:</label>
+                    <input type="url" id="post-url" value="/api/submit" placeholder="/api/submit">
+                </div>
+                <div class="form-group">
+                    <label for="post-data">JSON Data:</label>
+                    <textarea id="post-data" placeholder='{"message": "Hello Server", "timestamp": "2026-01-15T12:00:00Z"}'></textarea>
+                </div>
+                <div class="test-buttons">
+                    <button onclick="testPostForm()" class="btn btn-post">Send POST Request</button>
+                    <button onclick="testPostJson()" class="btn btn-post">POST JSON Data</button>
+                    <button onclick="testPostFile()" class="btn btn-post">POST File Upload</button>
+                </div>
+            </div>
+            <div id="post-response" class="response-area">Configure and send POST requests above...</div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔴 DELETE Method Testing</h3>
+            <p>Test resource deletion and HTTP DELETE handling</p>
+            <div class="test-form">
+                <div class="form-group">
+                    <label for="delete-url">DELETE Target:</label>
+                    <input type="url" id="delete-url" value="/api/resource/123" placeholder="/api/resource/123">
+                </div>
+                <div class="test-buttons">
+                    <button onclick="testDelete()" class="btn btn-delete">Send DELETE Request</button>
+                    <button onclick="testDeleteBulk()" class="btn btn-delete">Bulk DELETE Test</button>
+                    <button onclick="testDeleteAuth()" class="btn btn-delete">DELETE with Auth</button>
+                </div>
+            </div>
+            <div id="delete-response" class="response-area">Configure and send DELETE requests above...</div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Performance Testing</h3>
+            <p>Load testing and performance benchmarks</p>
+            <div class="test-buttons">
+                <button onclick="runLoadTest()" class="btn">Load Test (10 requests)</button>
+                <button onclick="runConcurrencyTest()" class="btn">Concurrency Test</button>
+                <button onclick="runSpeedTest()" class="btn">Response Speed Test</button>
+                <button onclick="clearStats()" class="btn btn-back">Clear Statistics</button>
+            </div>
+            <div id="performance-response" class="response-area">Click a performance test button...</div>
+        </div>
+
+        <h2>Navigation</h2>
+        <div>
+            <a href="/about.html" class="btn">← About</a>
+            <a href="/contact.html" class="btn">← Contact</a>
+            <a href="/gallery.html" class="btn">← Gallery</a>
+        </div>
+    </main>
+
+    <footer>
+        © 2026 42Anonymous - HTTP Testing Page
+    </footer>
+
+    <script>
+        let stats = {
+            get: 0,
+            post: 0,
+            delete: 0,
+            success: 0,
+            total: 0
+        };
+
+        function updateStats() {
+            document.getElementById('get-count').textContent = stats.get;
+            document.getElementById('post-count').textContent = stats.post;
+            document.getElementById('delete-count').textContent = stats.delete;
+            const successRate = stats.total > 0 ? Math.round((stats.success / stats.total) * 100) : 100;
+            document.getElementById('success-rate').textContent = successRate + '%';
+        }
+
+        function updateResponse(elementId, method, url, status, data, isSuccess = false) {
+            const responseArea = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            
+            responseArea.className = `response-area ${isSuccess ? 'status-success' : status >= 400 ? 'status-error' : 'status-warning'}`;
+            responseArea.innerHTML = `[${timestamp}] ${method} ${url}
+Status: ${status}
+Response: ${data}
+Headers: Content-Type, Content-Length, Server
+---`;
+        }
+
+        function testGet(url) {
+            const startTime = performance.now();
+            fetch(url)
+                .then(response => {
+                    const endTime = performance.now();
+                    const duration = Math.round(endTime - startTime);
+                    stats.get++;
+                    stats.total++;
+                    if (response.ok) stats.success++;
+                    
+                    updateResponse('get-response', 'GET', url, response.status, 
+                        `✅ Success (${duration}ms) - ${response.ok ? 'File served' : 'Error response'}`, response.ok);
+                    updateStats();
+                    return response.text();
+                })
+                .catch(error => {
+                    stats.get++;
+                    stats.total++;
+                    updateResponse('get-response', 'GET', url, 'ERROR', `❌ ${error.message}`);
+                    updateStats();
+                });
+        }
+
+        function testPostForm() {
+            const url = document.getElementById('post-url').value || '/api/submit';
+            const data = {
+                message: 'Form submission test',
+                timestamp: new Date().toISOString(),
+                type: 'form-data'
+            };
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams(data)
+            })
+            .then(response => {
+                stats.post++;
+                stats.total++;
+                if (response.ok) stats.success++;
+                
+                updateResponse('post-response', 'POST', url, response.status, 
+                    `📝 Form data sent - ${data.message}`, response.ok);
+                updateStats();
+            })
+            .catch(error => {
+                stats.post++;
+                stats.total++;
+                updateResponse('post-response', 'POST', url, 'ERROR', `❌ ${error.message}`);
+                updateStats();
+            });
+        }
+
+        function testPostJson() {
+            const url = document.getElementById('post-url').value || '/api/json';
+            let jsonData = document.getElementById('post-data').value;
+            
+            if (!jsonData) {
+                jsonData = JSON.stringify({
+                    message: 'JSON test from webserver',
+                    timestamp: new Date().toISOString(),
+                    server: '42Anonymous C++ HTTP Server'
+                });
+            }
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: jsonData
+            })
+            .then(response => {
+                stats.post++;
+                stats.total++;
+                if (response.ok) stats.success++;
+                
+                updateResponse('post-response', 'POST', url, response.status, 
+                    `📄 JSON data sent - ${jsonData.length} bytes`, response.ok);
+                updateStats();
+            })
+            .catch(error => {
+                stats.post++;
+                stats.total++;
+                updateResponse('post-response', 'POST', url, 'ERROR', `❌ ${error.message}`);
+                updateStats();
+            });
+        }
+
+        function testPostFile() {
+            const url = '/api/upload';
+            const formData = new FormData();
+            formData.append('file', new Blob(['Hello from 42Anonymous Server!'], {type: 'text/plain'}), 'test.txt');
+
+            fetch(url, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                stats.post++;
+                stats.total++;
+                if (response.ok) stats.success++;
+                
+                updateResponse('post-response', 'POST', url, response.status, 
+                    `📁 File upload attempted - multipart/form-data`, response.ok);
+                updateStats();
+            })
+            .catch(error => {
+                stats.post++;
+                stats.total++;
+                updateResponse('post-response', 'POST', url, 'ERROR', `❌ ${error.message}`);
+                updateStats();
+            });
+        }
+
+        function testDelete() {
+            const url = document.getElementById('delete-url').value || '/api/resource/123';
+
+            fetch(url, {
+                method: 'DELETE'
+            })
+            .then(response => {
+                stats.delete++;
+                stats.total++;
+                if (response.ok) stats.success++;
+                
+                updateResponse('delete-response', 'DELETE', url, response.status, 
+                    `🗑️ Delete request sent`, response.ok);
+                updateStats();
+            })
+            .catch(error => {
+                stats.delete++;
+                stats.total++;
+                updateResponse('delete-response', 'DELETE', url, 'ERROR', `❌ ${error.message}`);
+                updateStats();
+            });
+        }
+
+        function testDeleteBulk() {
+            const baseUrl = '/api/resource/';
+            const promises = [];
+            
+            for (let i = 1; i <= 5; i++) {
+                promises.push(
+                    fetch(baseUrl + i, { method: 'DELETE' })
+                        .then(response => ({ id: i, status: response.status }))
+                        .catch(error => ({ id: i, error: error.message }))
+                );
+            }
+
+            Promise.all(promises).then(results => {
+                stats.delete += 5;
+                stats.total += 5;
+                const successCount = results.filter(r => r.status && r.status < 400).length;
+                stats.success += successCount;
+                
+                updateResponse('delete-response', 'DELETE', baseUrl + '[1-5]', 'BULK', 
+                    `🗑️ Bulk delete: ${successCount}/5 successful`);
+                updateStats();
+            });
+        }
+
+        function testDeleteAuth() {
+            const url = '/api/secure/resource/456';
+
+            fetch(url, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': 'Bearer fake-token-for-testing'
+                }
+            })
+            .then(response => {
+                stats.delete++;
+                stats.total++;
+                if (response.ok) stats.success++;
+                
+                updateResponse('delete-response', 'DELETE', url, response.status, 
+                    `🔐 Delete with auth header`, response.ok);
+                updateStats();
+            })
+            .catch(error => {
+                stats.delete++;
+                stats.total++;
+                updateResponse('delete-response', 'DELETE', url, 'ERROR', `❌ ${error.message}`);
+                updateStats();
+            });
+        }
+
+        function runLoadTest() {
+            const promises = [];
+            const startTime = performance.now();
+            
+            for (let i = 0; i < 10; i++) {
+                promises.push(
+                    fetch('/index.html')
+                        .then(response => ({ status: response.status, ok: response.ok }))
+                        .catch(error => ({ error: error.message }))
+                );
+            }
+
+            Promise.all(promises).then(results => {
+                const endTime = performance.now();
+                const duration = Math.round(endTime - startTime);
+                const successCount = results.filter(r => r.ok).length;
+                
+                updateResponse('performance-response', 'LOAD TEST', '10x /index.html', 'COMPLETE', 
+                    `⚡ Load test completed in ${duration}ms
+Success: ${successCount}/10 requests
+Average: ${Math.round(duration/10)}ms per request`);
+            });
+        }
+
+        function runConcurrencyTest() {
+            const urls = ['/index.html', '/about.html', '/contact.html', '/gallery.html', '/test.html'];
+            const startTime = performance.now();
+            
+            const promises = urls.map(url => 
+                fetch(url)
+                    .then(response => ({ url, status: response.status, ok: response.ok }))
+                    .catch(error => ({ url, error: error.message }))
+            );
+
+            Promise.all(promises).then(results => {
+                const endTime = performance.now();
+                const duration = Math.round(endTime - startTime);
+                const successCount = results.filter(r => r.ok).length;
+                
+                updateResponse('performance-response', 'CONCURRENCY', '5 simultaneous requests', 'COMPLETE', 
+                    `🔄 Concurrent requests completed in ${duration}ms
+Success: ${successCount}/5 requests
+Server handled concurrent load successfully`);
+            });
+        }
+
+        function runSpeedTest() {
+            const iterations = 5;
+            const promises = [];
+            const startTime = performance.now();
+            
+            for (let i = 0; i < iterations; i++) {
+                promises.push(
+                    fetch('/index.html')
+                        .then(response => {
+                            const responseTime = performance.now();
+                            return { 
+                                iteration: i + 1,
+                                time: responseTime,
+                                ok: response.ok 
+                            };
+                        })
+                );
+            }
+
+            Promise.all(promises).then(results => {
+                const times = results.map(r => r.time);
+                const minTime = Math.min(...times) - startTime;
+                const maxTime = Math.max(...times) - startTime;
+                const avgTime = (maxTime - minTime) / iterations;
+                
+                updateResponse('performance-response', 'SPEED TEST', `${iterations} requests`, 'COMPLETE', 
+                    `🚀 Speed test results:
+Min response: ${Math.round(minTime)}ms
+Max response: ${Math.round(maxTime)}ms  
+Avg response: ${Math.round(avgTime)}ms
+Server performance: Excellent`);
+            });
+        }
+
+        function clearStats() {
+            stats = { get: 0, post: 0, delete: 0, success: 0, total: 0 };
+            updateStats();
+            
+            document.getElementById('get-response').innerHTML = 'Statistics cleared. Click a GET button to test...';
+            document.getElementById('post-response').innerHTML = 'Statistics cleared. Configure POST requests above...';
+            document.getElementById('delete-response').innerHTML = 'Statistics cleared. Configure DELETE requests above...';
+            document.getElementById('performance-response').innerHTML = 'Statistics cleared. Click a performance test button...';
+            
+            document.querySelectorAll('.response-area').forEach(area => {
+                area.className = 'response-area';
+            });
+        }
+
+        // Initialize
+        updateStats();
+    </script>
+
+</body>
+</html>

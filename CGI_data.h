@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   CGI_data.h                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
+/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/16 15:03:57 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/09 15:39:31 by abin-moh         ###   ########.fr       */
+/*   Updated: 2026/01/19 10:18:14 by muzz             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,31 @@
 #include <string>
 #include <map>
 #include <vector>
+
+typedef struct s_location {
+    std::string path;              // "/cgi-bin"
+    std::string root;              // filesystem root
+    bool cgi_enabled;
+   
+    std::string cgi_path;          // "/usr/bin/python3". the binary
+	std::vector<std::string> cgi_extension;
+	bool allow_get;
+	bool allow_post;
+	bool allow_delete;
+	bool auto_index;
+	//std::vector<std::string> methods;
+	//std::string cgi_extension;     // ".py"
+} t_location;
+
+typedef struct s_server
+{
+	std::string server_name;
+	int port;
+	std::string root;
+	std::vector<std::string> index_files;
+	std::map<int, std::string> error_pages;
+	std::vector<t_location> locations;
+} t_server;
 
 typedef struct s_HttpRequest
 {
@@ -45,16 +70,6 @@ typedef struct s_HttpRequest
     bool is_cgi;
 } t_HttpRequest;
 
-typedef struct s_server
-{
-	std::string server_name;
-	int port;
-	std::string root;
-	std::vector<std::string> index_files;
-	std::map<int, std::string> error_pages;
-	std::vector<s_location> locations;
-} t_server;
-
 typedef struct s_request {
     std::string method;      // GET, POST
     std::string uri;         // /cgi-bin/test.py?x=1
@@ -65,19 +80,5 @@ typedef struct s_request {
     std::string body;
 } t_request;
 
-typedef struct s_location {
-    std::string path;              // "/cgi-bin"
-    std::string root;              // filesystem root
-    bool cgi_enabled;
-   
-    std::string cgi_path;          // "/usr/bin/python3". the binary
-	std::vector<std::string> cgi_extension;
-	bool allow_get;
-	bool allow_post;
-	bool allow_delete;
-	bool auto_index;
-	//std::vector<std::string> methods;
-	//std::string cgi_extension;     // ".py"
-} t_location;
 
 #endif

@@ -15,12 +15,7 @@
 #include "CgiExecute.h"
 #include <poll.h>
 #include "Parse.hpp"
-
-enum ParseState {
-	OUTSIDE,
-	SERVER,
-	LOCATION
-};
+#include "SocketUtils.hpp"
 
 class Core {
 private:
@@ -34,8 +29,8 @@ private:
 	// Server class (location dalam Mad version) FromMuzz
 	bool	_needCleanup;
 	int server_fd;
-	int new_client_fd;
-	void initialize_server();
+	int new_socket;
+
 
 public:
 	Core();
@@ -46,7 +41,6 @@ public:
 	void	run();
 	//Geminied. muzz part
 	void 	serverRegister(int serverFd);
-	void 	clientRegister(int clientFd, Client* client);
 	void	deleteClient(Client* client);
 	void	fdPreCleanup(int fd, int index);
 	void	removeFd(int fd);//maybe not needed
@@ -60,8 +54,16 @@ public:
 
 	//muzz part real
 	void	parse_config(const std::string &filename);
-	void	parse_http_request(const std::string &raw_req, int client_fd);
+	void	parse_http_request(Client* current_client, std::string raw_request);
+	void initialize_server();
+	void accepter();
+	void 	clientRegister(int clientFd, Client* client);
+
+
+
 	//testing
 	void	acceptMockConnections(t_location& locate, t_request& request, int& clientCount);
 	void	forceMockEvents();
+    void	print_location_config(const t_location& location, int index = 0);
+    void	print_all_locations();
 };

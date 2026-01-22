@@ -27,8 +27,8 @@
 #include <fcntl.h>
 #include "Client.h"
 
-CgiExecute::CgiExecute(Client* client, const t_request& request, const t_location& locate)
-	: _client(client), _request(request), _locate(locate), _pid(-1), _pipeToCgi(-1), 
+CgiExecute::CgiExecute(Client* client, const t_location& locate, const t_request& request)
+	: _request(request), _locate(locate), _client(client), _pid(-1), _pipeToCgi(-1), 
 	_pipeFromCgi(-1), _bodySizeSent(0), _writeEnded(false), _readEnded(false), 
 	_exitStatus(0)
 {}
@@ -128,6 +128,7 @@ void	CgiExecute::readExec()
 {
 	char	read_buf[8096];
 	size_t	len  = 0;
+	(void)len;
 	ssize_t	readLen;
 	if ((readLen = read(_pipeFromCgi, read_buf, sizeof(read_buf))) > 0)
 		_output.append(read_buf, readLen);

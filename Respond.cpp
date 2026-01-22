@@ -3,14 +3,15 @@
 /*                                                        :::      ::::::::   */
 /*   Respond.cpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
+/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 17:17:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/07 20:34:17 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/21 17:06:28 by muzz             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Respond.h"
+#include "Client.h"
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
@@ -22,9 +23,9 @@
 #include <iostream>
 
 //initialize the status code
-Respond::Respond() : _statusCode(0), _contentLength(0), _serverName() /*FromMuzz*/, 
-	_connStatus(KEEP_ALIVE) /*FromMuzz*/, _socketFd(0)  /*FromMuzz*/, 
-	_protocol("FromMuzz"), _bytesSent(0)
+Respond::Respond() : _client(NULL), _statusCode(0), _protocol("HTTP/1.1"), _contentLength(0), _serverName("localhost"), 
+	_connStatus(KEEP_ALIVE), _socketFd(0), 
+	_bytesSent(0)
 {}
 
 Respond::~Respond()
@@ -54,7 +55,7 @@ void	Respond::procCgiOutput(std::string cgiOutput)
 	//				EXTRACT HEADER		
 	std::string	header = cgiOutput.substr(0, separatorPos);
 	std::string headerLow = header;
-	for (int i = 0; i < headerLow.length(); i++)
+	for (size_t i = 0; i < headerLow.length(); i++)
 		headerLow[i] = std::tolower(headerLow[i]);
 	//				FIND STATUS
 	size_t	statusPos = headerLow.find("status");
@@ -92,52 +93,129 @@ void	Respond::procCgiOutput(std::string cgiOutput)
 	_body = cgiOutput.substr(separatorPos + offset);
 	_contentLength = _body.length();
 }
-
-void	Respond::procNormalOutput()
+//chatgpt
+void Respond::setSocketFd(int socketFd)
 {
-	std::string filePath = "FromMuzz";
-	//read file and take path
-	std::ifstream file(filePath);
-	if (!file.is_open())
-		throw(404);
-	std::stringstream ss;
-	ss << file.rdbuf();
-	_body = ss.str();
-	_contentLength = _body.size();
-	//set status and body
-	_statusCode = 200;
-	//set content type based on the file extension
-	size_t pos = filePath.rfind(".");
-	if (pos != std::string::npos)
-	{
-		std::string ext = filePath.substr(pos);
-		if (ext == ".html")
-			_contentType = "text/html";
-		else if (ext == ".css")
-			_contentType = "text/css";
-		else if (ext == ".js")
-			_contentType = "application/javascript";
-		else if (ext == ".jpeg")
-			_contentType = "image/jpeg";
-		else if (ext == ".png")
-			_contentType = "image/png";
-		else
-		 	_contentType = "text/plain"; //it wouldnt try to execute
-	}
-	else
-	{
-		//trigger to save/downlaod the file only
-		_contentType = "application/octet-stream";
-		//throw (404);
-	}
+	_socketFd = socketFd;
 }
+
+void Respond::setClient(Client* client)
+{
+	_client = client;
+}
+
+std::string Respond::getRequestPath() {
+	if (_client)
+		return (_client->getRequest().path);
+	return ("/");
+}
+
+void Respond::setContentType(const std::string& filePath)
+{
+    size_t pos = filePath.rfind(".");
+    if (pos != std::string::npos) {
+        std::string ext = filePath.substr(pos);
+        
+        if (ext == ".html" || ext == ".htm") {
+            _contentType = "text/html";
+        } else if (ext == ".css") {
+            _contentType = "text/css";
+        } else if (ext == ".js") {
+            _contentType = "application/javascript";
+        } else if (ext == ".json") {
+            _contentType = "application/json";
+        } else if (ext == ".png") {
+            _contentType = "image/png";
+        } else if (ext == ".jpg" || ext == ".jpeg") {
+            _contentType = "image/jpeg";
+        } else if (ext == ".gif") {
+            _contentType = "image/gif";
+        } else if (ext == ".txt") {
+            _contentType = "text/plain";
+        } else {
+            _contentType = "application/octet-stream"; // Default binary
+        }
+    } else {
+        _contentType = "text/plain"; // No extension
+    }
+}
+
+void	Respond::procNormalOutput(std::string protocol)
+{
+    std::string requestPath = getRequestPath();
+    std::string documentRoot = getServerRoot();
+    std::string filePath;
+    
+    if (requestPath == "/" || requestPath.empty()) {
+        filePath = documentRoot + "/index.html";
+    } else {
+        filePath = documentRoot + requestPath;
+    }
+    
+    std::ifstream file(filePath.c_str());
+    if (!file.is_open()) {
+        handleError(404);
+        return;
+    }
+    
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    file.close();
+
+
+    _body = buffer.str();
+    _statusCode = 200;
+    _protocol = protocol;
+    _contentLength = _body.size();
+    
+    setContentType(filePath);
+    
+    std::cout << "✅ " <<  filePath << " served"  << std::endl;
+
+}
+
+	
+	// std::string filePath = "FromMuzz";
+	// //read file and take path
+	// std::ifstream file(filePath.c_str());
+	// if (!file.is_open())
+	// 	throw(404);
+	// std::stringstream ss;
+	// ss << file.rdbuf();
+	// _body = ss.str();
+	// _contentLength = _body.size();
+	// //set status and body
+	// _statusCode = 200;
+	// //set content type based on the file extension
+	// size_t pos = filePath.rfind(".");
+	// if (pos != std::string::npos)
+	// {
+	// 	std::string ext = filePath.substr(pos);
+	// 	if (ext == ".html")
+	// 		_contentType = "text/html";
+	// 	else if (ext == ".css")
+	// 		_contentType = "text/css";
+	// 	else if (ext == ".js")
+	// 		_contentType = "application/javascript";
+	// 	else if (ext == ".jpeg")
+	// 		_contentType = "image/jpeg";
+	// 	else if (ext == ".png")
+	// 		_contentType = "image/png";
+	// 	else
+	// 	 	_contentType = "text/plain"; //it wouldnt try to execute
+	// }
+	// else
+	// {
+	// 	//trigger to save/downlaod the file only
+	// 	_contentType = "application/octet-stream";
+	// 	//throw (404);
+	// }
+
 
 void	Respond::buildResponse()
 {
 	std::stringstream ss;
 
-	// How you build it:
-	
 	// Status Line: HTTP/1.1 + parsedCode + OK + \r\n
 	ss << _protocol << " " << _statusCode << " " << getStatusMsg() << "\r\n";
 	// Server Header: Server: Webserv/1.0\r\n
@@ -175,7 +253,6 @@ std::string Respond::getStatusMsg()
 	}
 }
 
-//should i store in class for the return value or just implement this way?
 int	Respond::sendResponse()
 {	
 	const char* dataToSend = _fullResponse.c_str() + _bytesSent;
@@ -193,8 +270,12 @@ int	Respond::sendResponse()
 		return -1;
 	//updates byteSent
 	_bytesSent += sent;
-	if (_bytesSent == _fullResponse.size())
+	if (_bytesSent == _fullResponse.size()) {
+		if (!_client->isKeepAlive()) {
+			_client->state = FINISHED;
+		}
 		return 1;
+	}
 	return 0;
 }
 
@@ -263,4 +344,67 @@ void	Respond::resetResponder()
 	_serverName.clear();
 	_connStatus = 0;
 	_bytesSent = 0;
+}
+
+void Respond::setServerName(const std::string& serverName)
+{
+	_serverName = serverName;
+}
+
+void Respond::setProtocol(const std::string& protocol)
+{
+	_protocol = protocol;
+}
+
+void Respond::handleError(int statusCode)
+{	
+	_statusCode = statusCode;
+	
+	if (_protocol.empty()) {
+		_protocol = "HTTP/1.1";
+	}
+	
+	std::string errorPath;
+	switch(statusCode) {
+		case 403:
+			errorPath = "./www/errors/403.html";
+			break;
+		case 404:
+			errorPath = "./www/errors/404.html";
+			break;
+		case 500:
+			errorPath = "./www/errors/500.html";
+			break;
+		default:
+			errorPath = "";
+			break;
+	}
+
+	if (!errorPath.empty()) {
+		findErrorBody(errorPath);
+	}
+	
+	if (_body.empty()) {
+		std::stringstream bodySs;
+		bodySs << "<!DOCTYPE html>\n";
+		bodySs << "<html>\n";
+		bodySs << "<head><title>" << statusCode << " " << getStatusMsg() << "</title></head>\n";
+		bodySs << "<body>\n";
+		bodySs << "<center><h1>" << statusCode << " " << getStatusMsg() << "</h1></center>\n";
+		bodySs << "<hr><center>" << _serverName << "</center>\n";
+		bodySs << "</body>\n";
+		bodySs << "</html>\n";
+		_body = bodySs.str();
+	}
+	
+	_contentType = "text/html";
+	_contentLength = _body.size();
+	std::cout << "✅ [ERROR] Error " << statusCode << " handling complete" << std::endl;
+}
+
+std::string Respond::getServerRoot() {
+	if (_client) {
+		return (_client->getRoot());
+	}
+	return ("./www");
 }

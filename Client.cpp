@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Client.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
+/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/08 15:14:17 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/21 16:50:50 by muzz             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,10 +18,16 @@
 #include <unistd.h>
 #include <poll.h>
 #include <iostream>
+#include <cstdio>
 
-Client::Client() : state(READ_REQUEST),  _executor(NULL), _socket(0), 
-	_hasCgi(false), _lastActivity(time(NULL)), _connStatus(CLOSE) //FromMuzz
-{}
+Client::Client(t_server server_config) :  _executor(NULL), _socket(0), _hasCgi(false), _lastActivity(time(NULL)),
+	 _connStatus(CLOSE) //FromMuzz
+{
+	state = READ_REQUEST;
+	_responder = new Respond();
+	_responder->setClient(this);
+	_serverConfig = server_config;
+}
 
 Client::~Client()
 {
@@ -29,6 +35,8 @@ Client::~Client()
 	// 	delete _requestor;
 	if (_executor)
 		delete _executor;
+	if (_responder)
+		delete _responder;
 }
 
 //i = index of Fds
@@ -36,32 +44,32 @@ Client::~Client()
 //if POLLHUP for socket means socket disconnected
 void	Client::procInput(int i, struct pollfd& pFd)
 {
-	int pipeFromCgi = GetCgiExec()->getpipeFromCgi();
+	(void)i;
+	(void)pFd;
+	int pipeFromCgi = 0; // Initialize to avoid accessing NULL executor
+	if (_executor) {
+		pipeFromCgi = GetCgiExec()->getpipeFromCgi();
+	}
 
-	if (state == READ_REQUEST)
+	if (state == HANDLE_REQUEST)
 	{
-		//check client disconnect using received
-		//READ REQUEST fromMuzz
-		// if (/*read request finished*/)
-		// if (state == HANDLE_REQUEST)
-		// {
-			if (!GetCgiExec()->isCGI())
-			{
-				getRespond().procNormalOutput();
-				getRespond().buildResponse();
-				state = SEND_RESPONSE;
-				// respondRegister(client);//
-				// state = WAIT_RESPONSE;
-			}
-			else
-			{
-				GetCgiExec()->preExecute();
-				GetCgiExec()->execute();
-				state = EXECUTE_CGI;
-				// cgiRegister(client);//
-				// state = WAIT_CGI;
-			}
-		// }
+		if (!_hasCgi)
+		{
+			// Set protocol from the parsed request - add safety check
+			std::string protocol = request.http_version.empty() ? "HTTP/1.1" : request.http_version;
+			getRespond().procNormalOutput(protocol);
+			getRespond().buildResponse();
+			state = SEND_RESPONSE;
+		}
+		else
+		{
+			// For CGI requests, we would need to create and configure the CGI executor
+			// For now, just serve as normal file
+			std::string protocol = request.http_version.empty() ? "HTTP/1.1" : request.http_version;
+			getRespond().procNormalOutput(protocol);
+			getRespond().buildResponse();
+			state = SEND_RESPONSE;
+		}
 	}
 	else if (state == WAIT_CGI && pFd.fd == pipeFromCgi)
 	{
@@ -73,6 +81,7 @@ void	Client::procInput(int i, struct pollfd& pFd)
 			fdPreCleanup(pFd);
 			if (GetCgiExec()->isDone())
 			{
+				getRespond().setProtocol(request.http_version);
 				getRespond().procCgiOutput(GetCgiExec()->getOutput());
 				getRespond().buildResponse();
 				state = SEND_RESPONSE;
@@ -83,20 +92,25 @@ void	Client::procInput(int i, struct pollfd& pFd)
 
 void	Client::procOutput(int i, struct pollfd& pFd)
 {
-	int pipeToCgi = GetCgiExec()->getpipeToCgi();
+	(void)i;
+	(void)pFd;
 	
-	if (state == WAIT_CGI && pFd.fd == pipeToCgi)
+	if (state == WAIT_CGI && _executor)
 	{
-		GetCgiExec()->writeExec();
-		GetCgiExec()->cgiState();
-		if (GetCgiExec()->isWriteDone())
-		{
-			fdPreCleanup(pFd);
-			if (GetCgiExec()->isDone())
+		int pipeToCgi = GetCgiExec()->getpipeToCgi();
+		if (pFd.fd == pipeToCgi) {
+			GetCgiExec()->writeExec();
+			GetCgiExec()->cgiState();
+			if (GetCgiExec()->isWriteDone())
 			{
-				getRespond().procCgiOutput(GetCgiExec()->getOutput());
-				getRespond().buildResponse();
-				state = SEND_RESPONSE;
+				fdPreCleanup(pFd);
+				if (GetCgiExec()->isDone())
+				{
+					getRespond().setProtocol(request.http_version);
+					getRespond().procCgiOutput(GetCgiExec()->getOutput());
+					getRespond().buildResponse();
+					state = SEND_RESPONSE;
+				}
 			}
 		}
 	}
@@ -110,7 +124,7 @@ void	Client::procOutput(int i, struct pollfd& pFd)
 		}
 		else if (status)
 		{
-			getRespond().printResponse(); //important debug
+			//getRespond().printResponse(); //important debug
 			state = FINISHED;
 		}
 	}
@@ -124,7 +138,7 @@ void	Client::resetClient()
 		delete _executor;
 		_executor = NULL;
 	}
-	_responder.resetResponder();
+	_responder->resetResponder();
 	_hasCgi = false;
 	_lastActivity = time(NULL);
 	_connStatus = KEEP_ALIVE;
@@ -162,9 +176,9 @@ CgiExecute*		Client::GetCgiExec()
 	return _executor;
 }
 
-Respond&		Client::getRespond()
+Respond&	Client::getRespond()
 {
-	return _responder;
+	return* _responder;
 }
 
 bool	Client::hasCgi()
@@ -192,4 +206,32 @@ bool	Client::isIdle(time_t now)
 bool	Client::isKeepAlive()
 {
 	return _connStatus;
+}
+
+std::string Client::readRawRequest()
+{
+	char buffer[10000];
+	ssize_t bytes_read = read(_socket, buffer, sizeof(buffer) - 1);
+
+	if (bytes_read > 0) {
+		buffer[bytes_read] = '\0';
+		_lastActivity = time(NULL);
+		return (std::string(buffer));
+	}
+	else if (bytes_read == 0) {
+		std::cout << "Client closed connection (FD: " << _socket << ")" << std::endl;
+		return ("");
+	}
+	else {
+		perror("Read error");
+		return ("");
+	}
+}
+
+s_HttpRequest& Client::getRequest() {
+	return (request);
+}
+
+std::string Client::getRoot() {
+	return (_serverConfig.root);
 }

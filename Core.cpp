@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Core.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
+/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/09 15:48:19 by abin-moh         ###   ########.fr       */
+/*   Updated: 2026/01/21 17:09:59 by muzz             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,7 @@
 #include "Client.h"
 #include <iostream>
 #include <unistd.h>
+#include "Respond.h"
 // #include <cstdint>
 // #include <stdexcept>
 // #include <set>
@@ -47,63 +48,81 @@ void	Core::run()
 {
 	int			clientCount = 0;
 	
-	//listening socket into _fds FromMuzz
 	int loopCount = 0;
 	while (1)
 	{
 
 		int result = poll(&_fds[0], _fds.size(), 4000);
-		forceMockEvents();
+		if (result < 0) {
+			perror("Poll error");
+			continue;
+		}
+		//forceMockEvents();
 		handleTimeout(); //better put before poll so poll dont run timeout client
-		//					ACTUAL LOOP
-		for (int i = 0; i < _fds.size(); i++)
+		// ACTUAL LOOP
+		for (long unsigned int i = 0; i < _fds.size(); i++)
 		{
 			int	oriFd = _fds[i].fd;
 			if (oriFd == -1)
 				continue ;
 			int	revents = _fds[i].revents;
-			Client* client = _clients[oriFd];
-			// if (!revents)
-			// 	continue;
+			if (!revents)
+				continue;
 			try
 			{
-				// if (revents & (POLLERR | POLLNVAL))
-				// {
-				// 	std::cout << "revents: " << revents << "state client" << client->state << " d" << std::endl; //debug
-				// 	deleteClient(client); //handle disconnect
-				// 	continue ;
-				// }
-				if ((revents & POLLHUP) && oriFd == client->getSocket())
-				{
-					deleteClient(client); //handle disconnect;
-					continue ;
+				if (oriFd == server_fd) {
+					if (revents & POLLIN)
+						accepter();
 				}
-				if (revents & POLLIN || revents & POLLHUP)
-				{
-					//acceptor FromMuzz
-					//create new client & struct FromMuzz
-					client->procInput(i, _fds[i]);
+				else {
+					
+					Client* client = _clients[oriFd];
+
+					if (!client) {
+						std::cout << "No client found for FD " << oriFd << std::endl;
+						continue;
+					}
+					// Only for client socket (not cgi socket)
+					if ((revents & POLLHUP) && oriFd == client->getSocket())
+					{
+						deleteClient(client); //handle disconnect;
+						continue ;
+					}
+					if (revents & POLLIN || revents & POLLHUP) {
+						std::string raw_request = client->readRawRequest();
+						if (!raw_request.empty()) {
+							parse_http_request(client, raw_request);
+						}
+						else {
+							client->state = DISCONNECTED;
+						}
+						client->procInput(i, _fds[i]);
+					}
+					if (_fds[i].revents & POLLOUT || revents & POLLHUP)
+						client->procOutput(i, _fds[i]);
+					//clean from maps/fd registration queue
+					handleTransition(client);
 				}
-				if (_fds[i].revents & POLLOUT || revents & POLLHUP)
-					client->procOutput(i, _fds[i]);
 			}
 			catch (int statusCode)
 			{
-				handleClientError(client, statusCode);
+				Client* client = _clients[oriFd];
+				if (client) {
+					handleClientError(client, statusCode);
+				}
 			}
 			if (_fds[i].fd == -1)
 			{
 				_clients.erase(oriFd);
 				_needCleanup = true;
 			}
-			//clean from maps/fd registration queue
-			handleTransition(client);
 		}
 		//delete all in the delete list
 		fdCleanup();
 		addStagedFds(); //handle all sementara
 		if(clientCount >= 2 && _clients.empty())
 			break ;
+		loopCount++;
 	}
 }
 
@@ -119,15 +138,7 @@ void	Core::handleTransition(Client* client)
 		respondRegister(client);
 		client->state = WAIT_RESPONSE;
 	}
-	else if (client->state == WAIT_RESPONSE /*&& *fd == client->getSocket()*/) //only for testing when no acceptor implemented
-	{
-		int status = client->getRespond().sendResponse();
-		if (status)
-		{
-			client->getRespond().printResponse();
-			client->state = FINISHED;
-		}
-	}
+	// Note: Removed the immediate WAIT_RESPONSE check - response will be sent when POLLOUT triggers
 	else if (client->state == FINISHED) // timeout only need to trigger this
 	{
 		if (!client->isKeepAlive())
@@ -148,33 +159,50 @@ void	Core::handleTransition(Client* client)
 		deleteClient(client);
 	}
 }
-
 void	Core::handleTimeout()
 {
 	time_t now = time(NULL);
-	for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); )
-	{
-		Client* client = it->second;
-		
-		std::map<int, Client*>::iterator current = it++;
-		if (client->isIdle(now))
-		{
-			if (client->state == READ_REQUEST || client->state == FINISHED /*bufferRead == 0*/)
-				deleteClient(client);
-			else
-				handleClientError(client, client->GetCgiExec()->getpid() ? 504 : 408);
-		}
-	}
+    std::vector<int> clients_to_delete; // Store FDs to delete
+    //chatgpt
+    // First pass: identify clients to delete
+    for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it)
+    {
+        Client* client = it->second;
+        
+        if (client && client->isIdle(now))
+        {
+            if (client->state == READ_REQUEST || client->state == FINISHED)
+            {
+                clients_to_delete.push_back(it->first);
+            }
+            else
+            {
+                handleClientError(client, client->GetCgiExec() && client->GetCgiExec()->getpid() ? 504 : 408);
+            }
+        }
+    }
+    
+    // Second pass: delete clients
+    for (size_t i = 0; i < clients_to_delete.size(); i++)
+    {
+        int fd = clients_to_delete[i];
+        Client* client = _clients[fd];
+        if (client) {
+            deleteClient(client);
+        }
+    }
 }
 
-void	Core::launchCgi(Client* client, t_location& locate, t_request& request)
-{
-	client->GetCgiExec()->preExecute();
-	client->GetCgiExec()->execute();
-	//the part im trying to implement
-	cgiRegister(client); //in core because it change the struct that hold all the list
+
+//comment jap ada error
+// void	Core::launchCgi(Client* client, t_location& locate, t_request& request)
+// {
+// 	client->GetCgiExec()->preExecute();
+// 	client->GetCgiExec()->execute();
+// 	//the part im trying to implement
+// 	cgiRegister(client); //in core because it change the struct that hold all the list
 	
-}
+// }
 
 void	Core::cgiRegister(Client* client)
 {
@@ -202,7 +230,7 @@ void	Core::respondRegister(Client* client)
 {
 	int	ClientFd = client->getSocket();
 
-	for (int i = 0; i < _fds.size(); i++)
+	for (long unsigned int i = 0; i < _fds.size(); i++)
 	{
 		int VecFd = _fds[i].fd;
 		if (VecFd == ClientFd)
@@ -214,27 +242,11 @@ void	Core::respondRegister(Client* client)
 	}
 }
 
-//Geminied socket listening
-void Core::serverRegister(int serverFd) //GPTed  muzz part
+void Core::serverRegister(int serverFd)
 {
     struct pollfd pfd;
     pfd.fd = serverFd;
-    pfd.events = POLLIN; // Listen for new incoming connections
-    pfd.revents = 0;
-    _fds.push_back(pfd);
-    
-    // Note: You don't usually need a map entry for the listener 
-    // unless you have multiple ports/servers.
-}
-
-//Geminied Client Socket
-void Core::clientRegister(int clientFd, Client* client)
-{
-    _clients[clientFd] = client; // Map the socket to the Client object
-	client->setSocket(clientFd);
-    struct pollfd pfd;
-    pfd.fd = clientFd;
-    pfd.events = POLLIN; // Listen for HTTP request data
+    pfd.events = POLLIN;
     pfd.revents = 0;
     _fds.push_back(pfd);
 }
@@ -252,6 +264,7 @@ void	Core::deleteClient(Client* client)
 		// _clients.erase(pipeFromCgi);
 		// _clients.erase(pipeToCgi);
 	}
+	std::cout << "Client " << socketFd - 3 << " deleted from poll" << std::endl;
 	_clients.erase(socketFd);
 	fdPreCleanup(socketFd, 0);
 	delete client;
@@ -405,42 +418,42 @@ void	Core::addStagedFds()
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-// Testing only
-void Core::acceptMockConnections(t_location& locate, t_request& request, int& clientCount)
-{
-    // Only create new clients if we are under our test limit
-    if (clientCount < 2) 
-    {
-        int dummyFd = clientCount + 200;
-        Client* client = new Client();
+// // Testing only
+// void Core::acceptMockConnections(t_location& locate, t_request& request, int& clientCount)
+// {
+//     // Only create new clients if we are under our test limit
+//     if (clientCount < 2) 
+//     {
+//         int dummyFd = clientCount + 200;
+//         Client* client = new Client();
         
-        // Setup CGI (simulation of a CGI request)
-        client->setCgiExec(new CgiExecute(client, request, locate));
+//         // Setup CGI (simulation of a CGI request)
+//         client->setCgiExec(new CgiExecute(client, request, locate));
         
-        // clientRegister should add the FD to your vector 
-        // and set _fds[i].events = POLLIN
-        clientRegister(dummyFd, client); 
+//         // clientRegister should add the FD to your vector 
+//         // and set _fds[i].events = POLLIN
+//         clientRegister(dummyFd, client); 
         
-        clientCount++;
-    }
-}
+//         clientCount++;
+//     }
+// }
 
-//Testing
-void Core::forceMockEvents()
-{
-    for (size_t i = 0; i < _fds.size(); i++)
-    {
-        // We look up the client associated with this specific FD
-        Client* c = _clients[_fds[i].fd];
+// //Testing
+// void Core::forceMockEvents()
+// {
+//     for (size_t i = 0; i < _fds.size(); i++)
+//     {
+//         // We look up the client associated with this specific FD
+//         Client* c = _clients[_fds[i].fd];
 
-        // If the client exists and is waiting to be read, we 'fake' 
-        // the activity that the OS would normally detect.
-        if (c && c->state == READ_REQUEST) 
-        {
-            _fds[i].revents = POLLIN; 
-        }
-    }
-}
+//         // If the client exists and is waiting to be read, we 'fake' 
+//         // the activity that the OS would normally detect.
+//         if (c && c->state == READ_REQUEST) 
+//         {
+//             _fds[i].revents = POLLIN; 
+//         }
+//     }
+// }
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // void	Core::run( t_location& locate, t_request& request)
@@ -582,7 +595,7 @@ void Core::parse_config(const std::string &filename)
         std::cerr << "Error: config file failed" << std::endl;
         return;
     }
-    
+
     ParseState current_state = OUTSIDE;
     std::string line;
 
@@ -597,41 +610,34 @@ void Core::parse_config(const std::string &filename)
         }
         else if (current_state == SERVER) {
             int new_state = Parse::parse_server(line, current_state, server_config);
-            
-            if (new_state == LOCATION && current_state == SERVER) {
-                std::vector<std::string> tokens = Parse::split_line(line);
-                if (tokens.size() >= 2 && tokens[0] == "location") {
-                    temp_location = t_location();
-                    temp_location.path = tokens[1];
-					temp_location.root = "";
-                    temp_location.allow_get = false;
-                    temp_location.allow_post = false;
-                    temp_location.allow_delete = false;
-                    temp_location.auto_index = false;
-					temp_location.cgi_enabled = false;
-					temp_location.cgi_path = "";
-					temp_location.cgi_extension.clear();
-                }
-            }
-            current_state = (ParseState)new_state;
+			if (new_state == LOCATION && current_state == SERVER) {
+				temp_location = Parse::location_init(line);
+			}
+			current_state = (ParseState)new_state;
         }
         else if (current_state == LOCATION) {
             int new_state = Parse::parse_location(line, current_state, temp_location);
-            
             if (new_state == SERVER && current_state == LOCATION) {
+				if (temp_location.root.empty()) {
+					temp_location.root = server_config.root;
+				}
                 server_config.locations.push_back(temp_location);
             }
             current_state = (ParseState)new_state;
         }
     }
-    
+
     file.close();
     std::cout << "Config parsing completed" << std::endl;
 }
 
-void Core::parse_http_request(const std::string &raw_req, int client_fd)
+void Core::parse_http_request(Client* current_client, const std::string raw_req)
 {
-	HttpRequest& current_request = client_req[client_fd];
+	if (!current_client) {
+		std::cerr << "Error: null client pointer in parse_http_request" <<std::endl;
+		return;
+	}
+	s_HttpRequest& current_request = current_client->getRequest();
 	std::istringstream request_stream(raw_req);
 	std::string line;
 
@@ -639,6 +645,15 @@ void Core::parse_http_request(const std::string &raw_req, int client_fd)
 		std::istringstream req_line(line);
 		req_line >> current_request.method >> current_request.uri >> current_request.http_version;
 
+		/*
+		uri = "/cgi-bin/hello.py?name=John&age=25"
+
+		query_pos = 18  // Position of '?'
+
+		path = "/cgi-bin/hello.py"     // Everything before '?'
+		query = "name=John&age=25"     // Everything after '?'
+		*/
+	
 		size_t query_pos = current_request.uri.find('?');
 		if (query_pos != std::string::npos) {
 			current_request.path = current_request.uri.substr(0, query_pos);
@@ -649,6 +664,7 @@ void Core::parse_http_request(const std::string &raw_req, int client_fd)
 		}
 	}
 
+	// while std::getline return something and doesnot end with "\r" and is not empty
 	while (std::getline(request_stream, line) && line != "\r" && !line.empty()) {
 		size_t colon_pos = line.find(':');
 		if (colon_pos != std::string::npos) {
@@ -662,11 +678,25 @@ void Core::parse_http_request(const std::string &raw_req, int client_fd)
 		}
 	}
 	
-	// // Add simple debug output
-	// std::cout << "Parsed: " << current_request.method << " " << current_request.path << std::endl;
+    std::string path = current_request.path;
+    
+    if (path.find("/cgi-bin/") == 0 || 
+        path.find(".py") != std::string::npos ||
+        path.find(".pl") != std::string::npos ||
+        path.find(".php") != std::string::npos) {
+        
+        current_client->setHasCgi(true);
+        std::cout << "CGI request: " << path << std::endl;
+    } else {
+        current_client->setHasCgi(false);
+        std::cout << "Normal file request: " << path << std::endl;
+    }
+	
+	std::cout << "Parsed: " << current_request.method << " " << current_request.path << std::endl;
 
-	print_parsed_request(current_request, client_fd);
+	current_client->state = HANDLE_REQUEST;
 
+	//print_parsed_request(current_request, client_fd);
 }
 
 void Core::initialize_server()
@@ -677,9 +707,102 @@ void Core::initialize_server()
 		std::cerr << "Failed to create server socket" << std::endl;
 		return;
 	}
-	
+	// Add the listening socket to the fd
+	serverRegister(server_fd);
 	std::cout << "Server initialized with:" << std::endl;
 	std::cout << "Port: " << server_config.port << std::endl;
-	std::cout << "Server Name: " << server_config.server_name << std::endl;
-	std::cout << "Root: " << server_config.root << std::endl;
+}
+
+void Core::accepter()
+{
+	struct sockaddr_in client_addr;
+	socklen_t addrlen = sizeof(client_addr);
+
+	new_socket = accept(server_fd, (struct sockaddr *)&client_addr, &addrlen);
+	std::cout << "New Connection " << new_socket - 3 << " Accepted" <<std::endl;
+	if (new_socket < 0) {
+		perror("Accept fail");
+		return;
+	}
+	
+	if (SocketUtils::set_non_blocking(new_socket) < 0) {
+		perror("Failed to set non-blocking");
+		return;
+	}
+	
+	Client* new_client = new Client(server_config);
+	clientRegister(new_socket, new_client);
+	
+	std::cout << "Client registered seccessfully !" << std::endl;
+}
+
+
+void Core::clientRegister(int clientFD, Client* client)
+{
+	_clients[clientFD] = client;
+	client->setSocket(clientFD);
+	client->state = READ_REQUEST;
+
+	// Configure the Respond object with server settings
+	client->getRespond().setServerName(server_config.server_name);
+	client->getRespond().setSocketFd(clientFD);
+
+	struct pollfd pfd;
+	pfd.fd = clientFD;
+	pfd.events = POLLIN;
+	pfd.revents = 0;
+	_stagedFds.push_back(pfd);
+}
+
+
+void Core::print_location_config(const t_location& location, int index)
+{
+    std::cout << "=== Location Block " << index << " ===" << std::endl;
+    std::cout << "Path: " << location.path << std::endl;
+    std::cout << "Root: " << (location.root.empty() ? "[not set]" : location.root) << std::endl;
+    std::cout << "CGI Enabled: " << (location.cgi_enabled ? "YES" : "NO") << std::endl;
+    
+    if (location.cgi_enabled) {
+        std::cout << "CGI Path: " << (location.cgi_path.empty() ? "[not set]" : location.cgi_path) << std::endl;
+        std::cout << "CGI Extensions: ";
+        if (location.cgi_extension.empty()) {
+            std::cout << "[none]";
+        } else {
+            for (size_t i = 0; i < location.cgi_extension.size(); i++) {
+                std::cout << location.cgi_extension[i];
+                if (i < location.cgi_extension.size() - 1) std::cout << ", ";
+            }
+        }
+        std::cout << std::endl;
+    }
+    
+    std::cout << "HTTP Methods: ";
+    if (!location.allow_get && !location.allow_post && !location.allow_delete) {
+        std::cout << "[none allowed]";
+    } else {
+        if (location.allow_get) std::cout << "GET ";
+        if (location.allow_post) std::cout << "POST ";
+        if (location.allow_delete) std::cout << "DELETE ";
+    }
+    std::cout << std::endl;
+    
+    std::cout << "Auto Index: " << (location.auto_index ? "ON" : "OFF") << std::endl;
+    std::cout << "=========================" << std::endl;
+}
+
+void Core::print_all_locations()
+{
+    std::cout << std::endl << "📍 PARSED LOCATION CONFIGURATION:" << std::endl;
+    
+    if (server_config.locations.empty()) {
+        std::cout << "❌ No locations found in configuration" << std::endl;
+        return;
+    }
+    
+    for (size_t i = 0; i < server_config.locations.size(); i++) {
+        print_location_config(server_config.locations[i], i + 1);
+        std::cout << std::endl;
+    }
+    
+    std::cout << "📊 Total locations parsed: " << server_config.locations.size() << std::endl;
 }

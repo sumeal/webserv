@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Contact - 42Anonymous Webserver</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: #28a745;
+            color: #fff;
+            padding: 20px;
+            text-align: center;
+        }
+
+        main {
+            padding: 20px;
+        }
+
+        footer {
+            background-color: #ddd;
+            text-align: center;
+            padding: 10px;
+            font-size: 14px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            display: inline-block;
+            margin: 5px;
+            transition: background-color 0.3s;
+        }
+
+        .btn:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-back {
+            background-color: #6c757d;
+        }
+
+        .btn-back:hover {
+            background-color: #495057;
+        }
+
+        .contact-form {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input[type="text"], input[type="email"], textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+
+        .btn-submit {
+            background-color: #28a745;
+        }
+
+        .btn-submit:hover {
+            background-color: #1e7e34;
+        }
+
+        .info-card {
+            background-color: #fff;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+            border-left: 4px solid #28a745;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Contact Us</h1>
+        <p>Get in touch with the 42Anonymous team</p>
+    </header>
+
+    <main>
+        <div>
+            <a href="/index.html" class="btn btn-back">← Back to Home</a>
+        </div>
+
+        <h2>Contact Information</h2>
+        
+        <div class="info-card">
+            <h3>📧 Development Team</h3>
+            <p><strong>Email:</strong> dev@42anonymous.edu</p>
+            <p><strong>GitHub:</strong> <a href="#">github.com/42anonymous/webserv</a></p>
+        </div>
+
+        <div class="info-card">
+            <h3>🏫 42 School</h3>
+            <p><strong>Campus:</strong> 42 Network</p>
+            <p><strong>Project:</strong> Webserv (HTTP Server Implementation)</p>
+        </div>
+
+        <div class="info-card">
+            <h3>⚡ Server Status</h3>
+            <p><strong>Status:</strong> <span style="color: #28a745;">✅ Online</span></p>
+            <p><strong>Uptime:</strong> <span id="uptime">Calculating...</span></p>
+            <p><strong>Version:</strong> 1.0.0-dev</p>
+        </div>
+
+        <div class="contact-form">
+            <h3>Send us a message</h3>
+            <form onsubmit="sendMessage(event)">
+                <div class="form-group">
+                    <label for="name">Name:</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="subject">Subject:</label>
+                    <input type="text" id="subject" name="subject" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="message">Message:</label>
+                    <textarea id="message" name="message" required></textarea>
+                </div>
+                
+                <button type="submit" class="btn btn-submit">Send Message via POST</button>
+            </form>
+            <div id="form-response"></div>
+        </div>
+
+        <div>
+            <a href="/about.html" class="btn">← About</a>
+            <a href="/gallery.html" class="btn">Gallery →</a>
+            <a href="/test.html" class="btn">Testing →</a>
+        </div>
+    </main>
+
+    <footer>
+        © 2026 42Anonymous - Contact Page
+    </footer>
+
+    <script>
+        // Update uptime display
+        const startTime = new Date();
+        function updateUptime() {
+            const now = new Date();
+            const uptime = Math.floor((now - startTime) / 1000);
+            const hours = Math.floor(uptime / 3600);
+            const minutes = Math.floor((uptime % 3600) / 60);
+            const seconds = uptime % 60;
+            document.getElementById('uptime').textContent = `${hours}h ${minutes}m ${seconds}s`;
+        }
+        setInterval(updateUptime, 1000);
+
+        function sendMessage(event) {
+            event.preventDefault();
+            
+            const formData = new FormData(event.target);
+            const data = {
+                name: formData.get('name'),
+                email: formData.get('email'),
+                subject: formData.get('subject'),
+                message: formData.get('message'),
+                timestamp: new Date().toISOString()
+            };
+
+            fetch('/contact-submit', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => {
+                document.getElementById('form-response').innerHTML = 
+                    `<p style="color: #28a745; margin-top: 10px;">✅ Message sent! Status: ${response.status}</p>`;
+                event.target.reset();
+            })
+            .catch(error => {
+                document.getElementById('form-response').innerHTML = 
+                    `<p style="color: #dc3545; margin-top: 10px;">❌ Error: ${error.message}</p>`;
+            });
+        }
+    </script>
+
+</body>
+</html>

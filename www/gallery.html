@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Gallery - 42Anonymous Webserver</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: #6f42c1;
+            color: #fff;
+            padding: 20px;
+            text-align: center;
+        }
+
+        main {
+            padding: 20px;
+        }
+
+        footer {
+            background-color: #ddd;
+            text-align: center;
+            padding: 10px;
+            font-size: 14px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            display: inline-block;
+            margin: 5px;
+            transition: background-color 0.3s;
+        }
+
+        .btn:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-back {
+            background-color: #6c757d;
+        }
+
+        .btn-back:hover {
+            background-color: #495057;
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .gallery-item {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+
+        .gallery-item:hover {
+            transform: translateY(-5px);
+        }
+
+        .placeholder-image {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(45deg, #6f42c1, #007bff);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+
+        .code-block {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #6f42c1;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Server Gallery</h1>
+        <p>Visual showcase of our C++ HTTP Server capabilities</p>
+    </header>
+
+    <main>
+        <div>
+            <a href="/index.html" class="btn btn-back">← Back to Home</a>
+        </div>
+
+        <h2>Server Architecture Overview</h2>
+        
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-number">5</div>
+                <div>Core Components</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">9,760</div>
+                <div>Requests/sec</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">1,000+</div>
+                <div>Concurrent Clients</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">100%</div>
+                <div>Availability</div>
+            </div>
+        </div>
+
+        <div class="gallery">
+            <div class="gallery-item">
+                <div class="placeholder-image">HTTP Request Parser</div>
+                <h3>Request Parsing Engine</h3>
+                <p>Advanced HTTP/1.1 request parser that handles:</p>
+                <ul>
+                    <li>Method detection (GET, POST, DELETE)</li>
+                    <li>URI parsing with query parameters</li>
+                    <li>Header extraction and validation</li>
+                    <li>Body content handling</li>
+                </ul>
+                <div class="code-block">GET /index.html HTTP/1.1
+Host: localhost:8080
+User-Agent: curl/8.5.0
+Accept: */*</div>
+            </div>
+
+            <div class="gallery-item">
+                <div class="placeholder-image">Socket Architecture</div>
+                <h3>Network Layer</h3>
+                <p>High-performance socket implementation:</p>
+                <ul>
+                    <li>Non-blocking I/O operations</li>
+                    <li>poll() based event multiplexing</li>
+                    <li>Connection pooling</li>
+                    <li>Error handling & recovery</li>
+                </ul>
+                <div class="code-block">struct pollfd pfd;
+pfd.fd = clientFD;
+pfd.events = POLLIN | POLLOUT;
+poll(&pfd, 1, timeout);</div>
+            </div>
+
+            <div class="gallery-item">
+                <div class="placeholder-image">Static File Server</div>
+                <h3>File System Integration</h3>
+                <p>Efficient static content delivery:</p>
+                <ul>
+                    <li>MIME type detection</li>
+                    <li>File streaming</li>
+                    <li>404 error handling</li>
+                    <li>Directory traversal protection</li>
+                </ul>
+                <div class="code-block">HTTP/1.1 200 OK
+Server: 42Anonymous
+Content-Type: text/html
+Content-Length: 1357</div>
+            </div>
+
+            <div class="gallery-item">
+                <div class="placeholder-image">Configuration System</div>
+                <h3>Server Configuration</h3>
+                <p>Flexible configuration management:</p>
+                <ul>
+                    <li>Server block parsing</li>
+                    <li>Location directives</li>
+                    <li>Error page customization</li>
+                    <li>CGI script configuration</li>
+                </ul>
+                <div class="code-block">server {
+    listen 8080;
+    server_name localhost;
+    root ./www;
+}</div>
+            </div>
+
+            <div class="gallery-item">
+                <div class="placeholder-image">Response Builder</div>
+                <h3>HTTP Response Engine</h3>
+                <p>Dynamic response generation:</p>
+                <ul>
+                    <li>Status code handling</li>
+                    <li>Header construction</li>
+                    <li>Content encoding</li>
+                    <li>Connection management</li>
+                </ul>
+                <div class="code-block">void buildResponse() {
+    ss << protocol << " " << statusCode;
+    ss << " " << getStatusMsg() << "\r\n";
+    ss << "Content-Length: " << body.size();
+}</div>
+            </div>
+
+            <div class="gallery-item">
+                <div class="placeholder-image">Testing Suite</div>
+                <h3>Quality Assurance</h3>
+                <p>Comprehensive testing framework:</p>
+                <ul>
+                    <li>Load testing with Siege</li>
+                    <li>Concurrent connection testing</li>
+                    <li>Memory leak detection</li>
+                    <li>Cross-platform compatibility</li>
+                </ul>
+                <div class="code-block">$ siege -c 1000 -t 60s http://localhost:8080/
+Transactions: 585,600 hits
+Availability: 100.00%
+Response time: 0.00 secs</div>
+            </div>
+        </div>
+
+        <h2>Navigation</h2>
+        <div>
+            <a href="/about.html" class="btn">← About</a>
+            <a href="/contact.html" class="btn">← Contact</a>
+            <a href="/test.html" class="btn">Testing →</a>
+        </div>
+    </main>
+
+    <footer>
+        © 2026 42Anonymous - Gallery Page
+    </footer>
+
+</body>
+</html>

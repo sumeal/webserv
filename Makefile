@@ -1,9 +1,12 @@
 NAME = anonymous.exe
 
-SRCS = TestServer.cpp \
-	   SocketUtils.cpp \
+SRCS = SocketUtils.cpp \
 	   Parse.cpp \
-	   main.cpp
+	   main.cpp \
+	   Core.cpp \
+	   Client.cpp \
+	   CgiExecute.cpp \
+	   Respond.cpp
 
 OBJS = $(SRCS:.cpp=.o)
 CXX = g++

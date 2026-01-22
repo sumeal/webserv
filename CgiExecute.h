@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   CgiExecute.h                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
+/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/22 00:37:30 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/06 21:59:20 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/15 09:52:13 by muzz             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -45,7 +45,7 @@ private:
 	int			_exitStatus;
 	//execve.CGI script(eg. py)
 public:
-	CgiExecute(Client* client, const t_request& request, const t_location& locate);
+	CgiExecute(Client* client, const t_location& locate, const t_request& request);
 	~CgiExecute();
 
 	void	preExecute();

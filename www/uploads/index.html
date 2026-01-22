@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Uploads - Webserv</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .btn {
+            background: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin: 5px;
+        }
+        
+        .btn:hover {
+            background: #0056b3;
+        }
+        
+        .back-btn {
+            background: #6c757d;
+        }
+        
+        .back-btn:hover {
+            background: #545b62;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📁 File Upload Area</h1>
+        
+        <div class="upload-area">
+            <h3>Upload Files Here</h3>
+            <p>This directory supports GET, POST, and DELETE methods according to your webserv configuration.</p>
+            <p><strong>Supported Operations:</strong></p>
+            <ul style="text-align: left; display: inline-block;">
+                <li>📤 <strong>POST:</strong> Upload files</li>
+                <li>📥 <strong>GET:</strong> View files</li>
+                <li>🗑️ <strong>DELETE:</strong> Remove files</li>
+            </ul>
+        </div>
+        
+        <div style="text-align: center;">
+            <a href="/" class="btn back-btn">← Back to Home</a>
+            <button class="btn" onclick="testUpload()">Test Upload</button>
+            <button class="btn" onclick="listFiles()">List Files</button>
+        </div>
+        
+        <div id="file-list" style="margin-top: 20px;"></div>
+    </div>
+
+    <script>
+        function testUpload() {
+            alert('Upload functionality requires server-side implementation of POST handling.');
+        }
+        
+        function listFiles() {
+            // This would typically make an AJAX request to list files
+            document.getElementById('file-list').innerHTML = 
+                '<p><strong>📂 Current Files:</strong></p>' +
+                '<p><em>File listing requires server implementation...</em></p>';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>About - 42Anonymous Webserver</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: #17a2b8;
+            color: #fff;
+            padding: 20px;
+            text-align: center;
+        }
+
+        main {
+            padding: 20px;
+        }
+
+        footer {
+            background-color: #ddd;
+            text-align: center;
+            padding: 10px;
+            font-size: 14px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            display: inline-block;
+            margin: 5px;
+            transition: background-color 0.3s;
+        }
+
+        .btn:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-back {
+            background-color: #6c757d;
+        }
+
+        .btn-back:hover {
+            background-color: #495057;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>About Our Webserver</h1>
+        <p>Learn about the 42Anonymous C++ HTTP Server</p>
+    </header>
+
+    <main>
+        <div>
+            <a href="/index.html" class="btn btn-back">← Back to Home</a>
+        </div>
+
+        <h2>Project Overview</h2>
+        <p>
+            This is a custom HTTP web server built in C++98 as part of the 42 School curriculum.
+            It implements core web server functionality including:
+        </p>
+
+        <h3>Features</h3>
+        <ul>
+            <li>✅ HTTP/1.1 Protocol Support</li>
+            <li>✅ Static File Serving</li>
+            <li>✅ Multiple HTTP Methods (GET, POST, DELETE)</li>
+            <li>✅ Socket-based Architecture with poll()</li>
+            <li>✅ Configuration File Parsing</li>
+            <li>✅ Error Handling (404, 500, etc.)</li>
+            <li>✅ MIME Type Detection</li>
+            <li>🔄 CGI Support (In Development)</li>
+        </ul>
+
+        <h3>Technical Stack</h3>
+        <ul>
+            <li><strong>Language:</strong> C++98</li>
+            <li><strong>Networking:</strong> BSD Sockets</li>
+            <li><strong>I/O Multiplexing:</strong> poll()</li>
+            <li><strong>Architecture:</strong> Event-driven, non-blocking</li>
+        </ul>
+
+        <h3>Performance</h3>
+        <p>
+            The server has been tested to handle:
+        </p>
+        <ul>
+            <li>📈 9,760+ requests per second</li>
+            <li>🔗 1,000+ concurrent connections</li>
+            <li>📊 100% availability under load</li>
+            <li>⚡ Sub-millisecond response times</li>
+        </ul>
+
+        <div>
+            <a href="/contact.html" class="btn">Contact →</a>
+            <a href="/gallery.html" class="btn">Gallery →</a>
+            <a href="/test.html" class="btn">Testing →</a>
+        </div>
+    </main>
+
+    <footer>
+        © 2026 42Anonymous - About Page
+    </footer>
+
+</body>
+</html>

@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Client.h                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
+/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:03:33 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/07 23:31:34 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/21 11:01:24 by muzz             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,9 +17,10 @@
 
 #include "CGI_data.h"
 // #include "CgiRequest.h"
-#include "CgiExecute.h"
-#include "Respond.h"
 #include <ctime>
+
+class CgiExecute;
+class Respond;
 
 enum e_State {
 READ_REQUEST,
@@ -35,16 +36,17 @@ DISCONNECTED,
 class Client {
 private:
 	CgiExecute* _executor;
-	//HttpRequest	; FromMuzz
-	Respond		_responder;
+	s_HttpRequest request;
+	Respond*		_responder;
 	int			_socket; //FromMuzz
 	bool		_hasCgi;
 	time_t		_lastActivity;
 	int			_connStatus;
+	t_server	_serverConfig;
 	//loop thingy
 public:
 	e_State state;
-	Client();
+	Client(t_server server_config);
 	~Client();
 	void	procInput(int i, struct pollfd& pFd);
 	void	procOutput(int i, struct pollfd& pFd);
@@ -60,6 +62,9 @@ public:
 	void	setHasCgi(bool status);
 	bool	isIdle(time_t now);
 	bool	isKeepAlive();
+	std::string readRawRequest();
+	s_HttpRequest& getRequest();
+	std::string getRoot();
 	// CgiRequest* GetCgiReq();
 	// t_CGI*	getCgi();
 	// void	setCgi(t_CGI* cgi);

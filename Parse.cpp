@@ -1,7 +1,8 @@
 #include "Parse.hpp"
 
-int Parse::parse_outside(const std::string& line, int /* current_state */)
+int Parse::parse_outside(const std::string& line, int  current_state)
 {
+	(void)current_state;
     if (line.find("server") != std::string::npos && line.find("{") != std::string::npos) {
         return SERVER;
     }
@@ -45,6 +46,11 @@ int Parse::parse_location(const std::string& line, int current_state, Location& 
 
 	if (tokens.empty())
 		return current_state;
+	else if (tokens[0] == "root" && tokens.size() >= 2)
+		temp_location.root = tokens[1];
+	else if (tokens[0] == "cgi_enabled" && tokens.size() >= 2) {
+		temp_location.cgi_enabled = (tokens[1] == "true");
+	}
 	else if (tokens[0] == "allow_methods") {
 		for (size_t i = 1; i < tokens.size(); i++) {
 			if (tokens[i] == "GET")
@@ -55,7 +61,15 @@ int Parse::parse_location(const std::string& line, int current_state, Location& 
 				temp_location.allow_delete = true;
 		}
 	}
+	else if (tokens[0] == "cgi_ext") {
+		for (size_t i = 1; i < tokens.size(); i++) {
+			temp_location.cgi_extension.push_back(tokens[i]);
+		}
+	}
 	else if (tokens[0] == "upload_path" && tokens.size() >= 2) {
+		temp_location.cgi_path = tokens[1];
+	}
+	else if (tokens[0] == "cgi_path" && tokens.size() >= 2) {
 		temp_location.cgi_path = tokens[1];
 	}
 	else if (tokens[0] == "autoindex" && tokens.size() >= 2) {
@@ -93,4 +107,27 @@ std::vector<std::string> Parse::split_line(const std::string& line)
     }
     
     return tokens;
+}
+
+t_location Parse::location_init(const std::string& line)
+{
+    t_location new_location;
+    
+    std::vector<std::string> tokens = split_line(line);
+    if (tokens.size() >= 2 && tokens[0] == "location") {
+        new_location.path = tokens[1];
+    } else {
+        new_location.path = "/";
+    }
+    
+    new_location.root = "";
+    new_location.allow_get = false;
+    new_location.allow_post = false;
+    new_location.allow_delete = false;
+    new_location.auto_index = false;
+    new_location.cgi_enabled = false;
+    new_location.cgi_path = "";
+    new_location.cgi_extension.clear();
+    
+    return (new_location);
 }
