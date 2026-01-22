@@ -6,7 +6,7 @@
 /*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/21 17:09:59 by muzz             ###   ########.fr       */
+/*   Updated: 2026/01/22 15:24:39 by muzz             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -58,7 +58,7 @@ void	Core::run()
 			continue;
 		}
 		//forceMockEvents();
-		handleTimeout(); //better put before poll so poll dont run timeout client
+		//handleTimeout(); //better put before poll so poll dont run timeout client
 		// ACTUAL LOOP
 		for (long unsigned int i = 0; i < _fds.size(); i++)
 		{
@@ -149,6 +149,8 @@ void	Core::handleTransition(Client* client)
 		else
 		{
 			client->resetClient();
+			client->state = READ_REQUEST;
+			return ;
 		}
 		//remove/reset all class
 		//clear/delete/break
@@ -678,6 +680,8 @@ void Core::parse_http_request(Client* current_client, const std::string raw_req)
 		}
 	}
 	
+    parseConnectionHeader(current_client, current_request);
+	
     std::string path = current_request.path;
     
     if (path.find("/cgi-bin/") == 0 || 
@@ -805,4 +809,43 @@ void Core::print_all_locations()
     }
     
     std::cout << "📊 Total locations parsed: " << server_config.locations.size() << std::endl;
+}
+
+void Core::parseConnectionHeader(Client* client, const s_HttpRequest& request)
+{
+    bool keepAlive = false;
+    
+    if (request.http_version == "HTTP/1.1") {
+        keepAlive = true;
+    } else {
+        keepAlive = false;
+    }
+    
+    std::map<std::string, std::string>::const_iterator conn_it = request.headers.find("Connection");
+    if (conn_it == request.headers.end()) {
+        conn_it = request.headers.find("connection");
+    }
+    
+    if (conn_it != request.headers.end()) {
+        std::string conn_value = conn_it->second;
+        
+        for (size_t i = 0; i < conn_value.length(); i++) {
+            conn_value[i] = std::tolower(conn_value[i]);
+        }
+        
+        if (conn_value.find("keep-alive") != std::string::npos) {
+            keepAlive = true;
+            std::cout << "🔄 Keep-Alive requested by client" << std::endl;
+        } else if (conn_value.find("close") != std::string::npos) {
+            keepAlive = false;
+            std::cout << "❌ Connection close requested by client" << std::endl;
+        }
+    }
+    
+    if (keepAlive) {
+        client->setConnStatus(KEEP_ALIVE);
+        std::cout << "✅ Connection will be kept alive (" << request.http_version << ")" << std::endl;
+    } else {
+        client->setConnStatus(CLOSE);
+    }
 }

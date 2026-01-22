@@ -15,6 +15,7 @@
 #include "CgiExecute.h"
 #include <poll.h>
 #include "Parse.hpp"
+#include <cctype> 
 #include "SocketUtils.hpp"
 
 class Core {
@@ -29,6 +30,7 @@ private:
 	// Server class (location dalam Mad version) FromMuzz
 	bool	_needCleanup;
 	int server_fd;
+    void parseConnectionHeader(Client* client, const s_HttpRequest& request);
 	int new_socket;
 
 

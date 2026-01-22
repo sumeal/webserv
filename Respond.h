@@ -6,7 +6,7 @@
 /*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 16:58:34 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/21 11:03:15 by muzz             ###   ########.fr       */
+/*   Updated: 2026/01/22 15:01:23 by muzz             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,7 +16,7 @@
 #include <cstddef>
 #include <string>
 
-class Client; // Forward declaration
+class Client;
 
 enum e_connectionStatus {
 	CLOSE,

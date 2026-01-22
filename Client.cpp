@@ -6,7 +6,7 @@
 /*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/21 16:50:50 by muzz             ###   ########.fr       */
+/*   Updated: 2026/01/22 15:00:05 by muzz             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -208,6 +208,11 @@ bool	Client::isKeepAlive()
 	return _connStatus;
 }
 
+void Client::setConnStatus(bool status)
+{
+    _connStatus = status;
+}
+
 std::string Client::readRawRequest()
 {
 	char buffer[10000];
@@ -216,10 +221,13 @@ std::string Client::readRawRequest()
 	if (bytes_read > 0) {
 		buffer[bytes_read] = '\0';
 		_lastActivity = time(NULL);
+		std::cout << std::endl << "📥 Received " << bytes_read << " bytes from FD " << _socket << ":" << std::endl;
+        std::cout << "\"" << std::string(buffer) << "\"" << std::endl;
+        std::cout << "--- End Request ---" << std::endl;
 		return (std::string(buffer));
 	}
 	else if (bytes_read == 0) {
-		std::cout << "Client closed connection (FD: " << _socket << ")" << std::endl;
+		std::cout << "Client closed connection (FD: " << _socket  - 3 << ")" << std::endl;
 		return ("");
 	}
 	else {

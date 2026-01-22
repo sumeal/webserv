@@ -6,7 +6,7 @@
 /*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:03:33 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/21 11:01:24 by muzz             ###   ########.fr       */
+/*   Updated: 2026/01/22 14:59:49 by muzz             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -62,6 +62,9 @@ public:
 	void	setHasCgi(bool status);
 	bool	isIdle(time_t now);
 	bool	isKeepAlive();
+    void	setConnStatus(bool status);
+
+	
 	std::string readRawRequest();
 	s_HttpRequest& getRequest();
 	std::string getRoot();
