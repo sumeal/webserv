@@ -6,7 +6,7 @@
 /*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/14 10:54:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/23 09:00:03 by abin-moh         ###   ########.fr       */
+/*   Updated: 2026/01/23 11:32:52 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,10 @@
 #include <iostream>
 
 void	cgitest_data(t_location& _location, t_request& _request);
+void	test_static_get(t_location& loc, t_request& req);
+void 	test_static_post(t_location& loc, t_request& req);
+void	test_cgi_get(t_location& loc, t_request& req);
+void 	test_cgi_post(t_location& loc, t_request& req);
 
 
 int main(int argc, char **argv)
@@ -47,6 +51,7 @@ int main(int argc, char **argv)
 	{
 		std::cerr << e.what() << std::endl;
 	}
+	// core.pathCheck("/index.html");
 }
 
 // void cgitest_data(t_location& loc, t_request& req)

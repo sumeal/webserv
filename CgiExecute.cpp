@@ -86,6 +86,9 @@ void	CgiExecute::execChild()
 	exit(1);
 }
 
+//may need to implement PATH_INFO if evaluator say so
+//eg."/cgi-bin/test.py/extra"
+//extra is the PATH info
 char**	CgiExecute::createEnvp()
 {
 	std::vector<std::string> envpVector;

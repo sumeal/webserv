@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Client.h                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
+/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:03:33 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/22 14:59:49 by muzz             ###   ########.fr       */
+/*   Updated: 2026/01/23 11:44:42 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -47,6 +47,7 @@ private:
 public:
 	e_State state;
 	Client(t_server server_config);
+	bool		revived; //testing
 	~Client();
 	void	procInput(int i, struct pollfd& pFd);
 	void	procOutput(int i, struct pollfd& pFd);
@@ -68,6 +69,8 @@ public:
 	std::string readRawRequest();
 	s_HttpRequest& getRequest();
 	std::string getRoot();
+	bool	isCGI(const t_request& request, const t_location& locate) const; // check
+	bool	isCGIextOK(const t_request& request, const t_location& locate) const; //check
 	// CgiRequest* GetCgiReq();
 	// t_CGI*	getCgi();
 	// void	setCgi(t_CGI* cgi);

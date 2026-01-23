@@ -38,7 +38,7 @@ public:
 	Core();
 	~Core();
 	void	handleTransition(Client* client);
-	void	launchCgi(Client* client, t_location& locate, t_request& request);
+	// void	launchCgi(Client* client, t_location& locate, t_request& request);
 	void	cgiRegister(Client* client);
 	void	run();
 	//Geminied. muzz part
@@ -52,6 +52,7 @@ public:
 	void	handleSocketDc();
 	void	addStagedFds();
 	void	fdCleanup(); //delStagedFd better naming?
+	void	pathCheck(std::string path);
 
 
 	//muzz part real

@@ -6,7 +6,7 @@
 /*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/23 09:32:10 by abin-moh         ###   ########.fr       */
+/*   Updated: 2026/01/23 11:53:47 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,7 +21,7 @@
 #include <cstdio>
 
 Client::Client(t_server server_config) :  _executor(NULL), _socket(0), _hasCgi(false), _lastActivity(time(NULL)),
-	 _connStatus(CLOSE) //FromMuzz
+	 _connStatus(CLOSE), revived(false) //FromMuzz
 {
 	state = READ_REQUEST;
 	_responder = new Respond();
@@ -51,7 +51,7 @@ void	Client::procInput(int i, struct pollfd& pFd)
 		pipeFromCgi = GetCgiExec()->getpipeFromCgi();
 	}
 
-	if (state == HANDLE_REQUEST)
+	if (state == READ_REQUEST) //check
 	{
 		if (!_hasCgi)
 		{
@@ -66,12 +66,40 @@ void	Client::procInput(int i, struct pollfd& pFd)
 			// For CGI requests, we would need to create and configure the CGI executor
 			// For now, just serve as normal file
 			std::string protocol = request.http_version.empty() ? "HTTP/1.1" : request.http_version;
-			getRespond().procNormalOutput(protocol);
-			getRespond().buildResponse();
-			state = SEND_RESPONSE;
+			setCgiExec(new CgiExecute(this, request, locate, protocol)); //change to protocol. amik request dari client attribute/member. amik location dari t_server dalam member/attribute vector
+			GetCgiExec()->preExecute();
+			GetCgiExec()->execute();
+			state = EXECUTE_CGI;
 		}
+	// // int pipeFromCgi = GetCgiExec()->getpipeFromCgi(); //my old commit
+	//
+	// if (state == READ_REQUEST)
+	// {
+	// 	//check client disconnect using received
+	// 	//READ REQUEST fromMuzz
+	// 	// if (/*read request finished*/)
+	// 	// if (state == HANDLE_REQUEST)
+	// 	// {
+	// 		if (!isCGI(request, locate))
+	// 		{
+	// 			getRespond().procNormalOutput(request, locate);
+	// 			getRespond().buildResponse();
+	// 			state = SEND_RESPONSE;
+	// 			// respondRegister(client);//
+	// 			// state = WAIT_RESPONSE;
+	// 		}
+	// 		else
+	// 		{
+	// 			setCgiExec(new CgiExecute(this, request, locate));
+	// 			GetCgiExec()->preExecute();
+	// 			GetCgiExec()->execute();
+	// 			state = EXECUTE_CGI;
+	// 			// cgiRegister(client);//
+	// 			// state = WAIT_CGI;
+	// 		}
+	// 	// }
 	}
-	else if (state == WAIT_CGI && pFd.fd == pipeFromCgi)
+	else if (state == WAIT_CGI && pFd.fd == GetCgiExec()->getpipeFromCgi())
 	{
 		GetCgiExec()->readExec();
 		GetCgiExec()->cgiState();
@@ -130,6 +158,41 @@ void	Client::procOutput(int i, struct pollfd& pFd)
 	}
 }
 
+//check 2 things
+//1. cgi enabled? is the location for script to be run have permission for script
+//2. executable name/suffix is correct? and can be execute?
+bool	Client::isCGI(const t_request& request, const t_location& locate) const
+{
+	return (locate.cgi_enabled && isCGIextOK(request, locate));
+}
+
+//should at least support one. which we focus on .py
+bool	Client::isCGIextOK(const t_request& request, const t_location& locate) const
+{
+	const std::string	path		= request.path;
+	const std::string	cgi_path	= locate.cgi_path;
+	
+	//manually without taking from config cgi_ext
+	//use rfind to detect the last dot
+	size_t lastDot = path.rfind(".");
+	if (lastDot == std::string::npos) //how to check npos
+		return false; 
+	//use path.substr and check
+	std::string ext = path.substr(lastDot);
+	if (ext != ".cgi" && ext != ".php" && ext != ".py"
+		&& ext != ".sh" && ext != ".pl")
+		return false;
+	//1 case may need to handle but idk necessary or not.
+	//./../../../etc/passwd.
+	//but still considering to do this right after location matching or now.
+	//bcus if now it might be redundant since static also may need it.
+	//this will causes the user to go outside of root & get private info
+	//if want to handle, use list and every node is separated by /. 
+	//lets say meet .. pop back the last node.
+	//then we create a string and compare with "var/www/html"
+	return true;
+}
+
 void	Client::resetClient()
 {
 	//reset request struct/class FromMuzz
@@ -142,6 +205,8 @@ void	Client::resetClient()
 	_hasCgi = false;
 	_lastActivity = time(NULL);
 	_connStatus = KEEP_ALIVE;
+	state = READ_REQUEST;
+	revived = true; //testing
 }
 
 void	Client::fdPreCleanup(struct pollfd& pFd)

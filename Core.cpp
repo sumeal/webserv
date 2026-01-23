@@ -6,17 +6,19 @@
 /*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/23 10:34:43 by abin-moh         ###   ########.fr       */
+/*   Updated: 2026/01/23 11:44:02 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Core.h"
 #include "CGI_data.h"
 #include <csignal>
+#include <cstddef>
 #include <poll.h>
 #include "CgiExecute.h"
 #include "Client.h"
 #include <iostream>
+#include <sys/stat.h>
 #include <unistd.h>
 #include "Respond.h"
 // #include <cstdint>
@@ -100,6 +102,7 @@ void	Core::run()
 						if (_clients.find(oriFd) == _clients.end()) {
                         i--;
                         continue;
+						}
 					}
 					if (_fds[i].revents & POLLOUT || revents & POLLHUP)
 						client->procOutput(i, _fds[i]);
@@ -123,11 +126,12 @@ void	Core::run()
 		//delete all in the delete list
 		fdCleanup();
 		addStagedFds(); //handle all sementara
-		if(clientCount >= 2 && _clients.empty())
+		if(clientCount >= 10 && _clients.empty())
 			break ;
 		loopCount++;
 	}
 }
+
 
 void	Core::handleTransition(Client* client)
 {
@@ -165,9 +169,6 @@ void	Core::handleTransition(Client* client)
             }
 			return ;
 		}
-		//remove/reset all class
-		//clear/delete/break
-		// deleteClient(client);
 	}
 	else if (client->state == DISCONNECTED)
 	{
@@ -461,14 +462,105 @@ void	Core::addStagedFds()
 //         // We look up the client associated with this specific FD
 //         Client* c = _clients[_fds[i].fd];
 
-//         // If the client exists and is waiting to be read, we 'fake' 
-//         // the activity that the OS would normally detect.
-//         if (c && c->state == READ_REQUEST) 
+        // If the client exists and is waiting to be read, we 'fake' 
+        // the activity that the OS would normally detect.
+//         if (c && c->state == READ_REQUEST && !c->revived) 
 //         {
 //             _fds[i].revents = POLLIN; 
 //         }
 //     }
 // }
+
+void	Core::pathCheck(std::string path)
+{
+	std::string rootPath = "/home/user/42/webserv/www";
+	
+	size_t start	= 1;
+	size_t end		= rootPath.find("/", 1);
+	std::vector<std::string>	rootPathVec;
+	
+	while (end != std::string::npos)
+	{
+		std::string name = rootPath.substr(start, end - start);
+		if (!name.empty())
+		{
+			if (name == "..")
+				rootPathVec.pop_back();
+			else if (name != ".")
+				rootPathVec.push_back(name);
+		}
+		start = end + 1;
+		end = rootPath.find("/", start);
+	}
+	std::string name = rootPath.substr(start);
+	if (!name.empty())
+		rootPathVec.push_back(name);
+
+	size_t	startPath	= 0;
+	size_t	endPath		= path.find("/");
+	size_t	rootFloor	= rootPathVec.size();
+	while(endPath != std::string::npos)
+	{
+		std::string name2 = path.substr(startPath, endPath - startPath); 
+		if (!name2.empty() && name2 != ".")
+		{
+			if (name2 == "..")
+			{
+				if (rootPathVec.empty())
+					throw("error");
+				else if (rootPathVec.size() > rootFloor)
+					rootPathVec.pop_back();
+			}
+			else
+				rootPathVec.push_back(name2);
+		}
+		startPath = endPath + 1;
+		endPath = path.find("/", startPath); 
+	}
+	std::string name2 = path.substr(startPath);
+	if (!name2.empty() && name2 != "." && name2 != "..")
+		rootPathVec.push_back(name2);
+	else if (name2 == "..")
+		rootPathVec.pop_back();
+
+	std::string fullPath = "/";
+	for (int i = 0; i < rootPathVec.size(); i++)
+	{
+		fullPath = fullPath + rootPathVec[i];
+		if (i < rootPathVec.size() - 1)
+			fullPath = fullPath + "/";
+	}
+	struct stat fileInfo;
+	if (stat(fullPath.c_str(), &fileInfo) != 0)
+		throw (403);
+	if(S_ISDIR(fileInfo.st_mode))
+	{
+		//check default file usually defined in config
+		std::string defaultPath = fullPath;
+		if (!defaultPath.empty() && defaultPath[defaultPath.length() - 1] != '/')
+        	defaultPath += "/";
+		defaultPath += "index.html"; //commonly index.html
+		struct stat defaultInfo;
+		//if custom file  not there send error
+		if (stat(defaultPath.c_str(), &defaultInfo) != 0)
+			throw (403);
+		else
+		{
+			if (access(defaultPath.c_str(), R_OK) != 0)
+				throw (403);
+			fullPath = defaultPath;
+		}
+	}
+	else if(S_ISREG(fileInfo.st_mode))
+	{
+		if (access(fullPath.c_str(), F_OK) != 0)
+			throw (404);
+		if (access(fullPath.c_str(), R_OK) != 0)
+			throw (403);		
+	}
+	
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // void	Core::run( t_location& locate, t_request& request)
