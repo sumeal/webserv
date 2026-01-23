@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/10 00:01:07 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/23 10:30:29 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,7 @@
 #include "CgiExecute.h"
 #include "Client.h"
 #include <iostream>
+#include <sys/stat.h>
 #include <unistd.h>
 // #include <cstdint>
 // #include <stdexcept>
@@ -76,12 +77,12 @@ void	Core::run( t_location& locate, t_request& request)
 				// 	deleteClient(client); //handle disconnect
 				// 	continue ;
 				// }
-				if ((revents & POLLHUP) && oriFd == client->getSocket())
+				if ((revents & POLLHUP) && oriFd == client->getSocket()) //scoket fd
 				{
 					deleteClient(client); //handle disconnect;
 					continue ;
 				}
-				if (revents & POLLIN || revents & POLLHUP)
+				if (revents & POLLIN || revents & POLLHUP) //read from cgi fd
 				{
 					//acceptor FromMuzz
 					//create new client & struct FromMuzz
@@ -501,6 +502,35 @@ void	Core::pathCheck(std::string path)
 		if (i < rootPathVec.size() - 1)
 			fullPath = fullPath + "/";
 	}
+	struct stat fileInfo;
+	if (stat(fullPath.c_str(), &fileInfo) != 0)
+		throw (403);
+	if(S_ISDIR(fileInfo.st_mode))
+	{
+		//check default file usually defined in config
+		std::string defaultPath = fullPath;
+		if (!defaultPath.empty() && defaultPath[defaultPath.length() - 1] != '/')
+        	defaultPath += "/";
+		defaultPath += "index.html"; //commonly index.html
+		struct stat defaultInfo;
+		//if custom file  not there send error
+		if (stat(defaultPath.c_str(), &defaultInfo) != 0)
+			throw (403);
+		else
+		{
+			if (access(defaultPath.c_str(), R_OK) != 0)
+				throw (403);
+			fullPath = defaultPath;
+		}
+	}
+	else if(S_ISREG(fileInfo.st_mode))
+	{
+		if (access(fullPath.c_str(), F_OK) != 0)
+			throw (404);
+		if (access(fullPath.c_str(), R_OK) != 0)
+			throw (403);		
+	}
+	
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
