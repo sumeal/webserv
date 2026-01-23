@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Core.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
+/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/22 15:24:39 by muzz             ###   ########.fr       */
+/*   Updated: 2026/01/23 10:34:43 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -57,9 +57,7 @@ void	Core::run()
 			perror("Poll error");
 			continue;
 		}
-		//forceMockEvents();
 		//handleTimeout(); //better put before poll so poll dont run timeout client
-		// ACTUAL LOOP
 		for (long unsigned int i = 0; i < _fds.size(); i++)
 		{
 			int	oriFd = _fds[i].fd;
@@ -73,6 +71,7 @@ void	Core::run()
 				if (oriFd == server_fd) {
 					if (revents & POLLIN)
 						accepter();
+						continue ;
 				}
 				else {
 					
@@ -86,9 +85,10 @@ void	Core::run()
 					if ((revents & POLLHUP) && oriFd == client->getSocket())
 					{
 						deleteClient(client); //handle disconnect;
+						i--;
 						continue ;
 					}
-					if (revents & POLLIN || revents & POLLHUP) {
+					if (revents & POLLIN || revents & POLLHUP) { //POLLHUP for CGI
 						std::string raw_request = client->readRawRequest();
 						if (!raw_request.empty()) {
 							parse_http_request(client, raw_request);
@@ -97,6 +97,9 @@ void	Core::run()
 							client->state = DISCONNECTED;
 						}
 						client->procInput(i, _fds[i]);
+						if (_clients.find(oriFd) == _clients.end()) {
+                        i--;
+                        continue;
 					}
 					if (_fds[i].revents & POLLOUT || revents & POLLHUP)
 						client->procOutput(i, _fds[i]);
@@ -135,7 +138,7 @@ void	Core::handleTransition(Client* client)
 	}
 	else if (client->state == SEND_RESPONSE)
 	{
-		respondRegister(client);
+		respondRegister(client); //set POLLOUT
 		client->state = WAIT_RESPONSE;
 	}
 	// Note: Removed the immediate WAIT_RESPONSE check - response will be sent when POLLOUT triggers
@@ -150,6 +153,16 @@ void	Core::handleTransition(Client* client)
 		{
 			client->resetClient();
 			client->state = READ_REQUEST;
+			int clientFd = client->getSocket();
+            for (size_t i = 0; i < _fds.size(); i++)
+            {
+                if (_fds[i].fd == clientFd)
+                {
+                    _fds[i].events = POLLIN;
+                    _fds[i].revents = 0;
+                    break;
+                }
+            }
 			return ;
 		}
 		//remove/reset all class
@@ -266,7 +279,7 @@ void	Core::deleteClient(Client* client)
 		// _clients.erase(pipeFromCgi);
 		// _clients.erase(pipeToCgi);
 	}
-	std::cout << "Client " << socketFd - 3 << " deleted from poll" << std::endl;
+	std::cout << "Client " << socketFd << " deleted from poll" << std::endl;
 	_clients.erase(socketFd);
 	fdPreCleanup(socketFd, 0);
 	delete client;
@@ -699,7 +712,6 @@ void Core::parse_http_request(Client* current_client, const std::string raw_req)
 	std::cout << "Parsed: " << current_request.method << " " << current_request.path << std::endl;
 
 	current_client->state = HANDLE_REQUEST;
-
 	//print_parsed_request(current_request, client_fd);
 }
 
@@ -723,7 +735,7 @@ void Core::accepter()
 	socklen_t addrlen = sizeof(client_addr);
 
 	new_socket = accept(server_fd, (struct sockaddr *)&client_addr, &addrlen);
-	std::cout << "New Connection " << new_socket - 3 << " Accepted" <<std::endl;
+	std::cout << "New Connection " << new_socket << " Accepted" <<std::endl;
 	if (new_socket < 0) {
 		perror("Accept fail");
 		return;

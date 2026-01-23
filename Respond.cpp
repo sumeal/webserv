@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Respond.cpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
+/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 17:17:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/21 17:06:28 by muzz             ###   ########.fr       */
+/*   Updated: 2026/01/23 09:42:46 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -271,9 +271,10 @@ int	Respond::sendResponse()
 	//updates byteSent
 	_bytesSent += sent;
 	if (_bytesSent == _fullResponse.size()) {
-		if (!_client->isKeepAlive()) {
-			_client->state = FINISHED;
-		}
+		// if (!_client->isKeepAlive()) {
+		// 	_client->state = FINISHED;
+		// }
+		_client->state = FINISHED;
 		return 1;
 	}
 	return 0;

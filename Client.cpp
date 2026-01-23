@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Client.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
+/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/22 15:00:05 by muzz             ###   ########.fr       */
+/*   Updated: 2026/01/23 09:32:10 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -227,7 +227,7 @@ std::string Client::readRawRequest()
 		return (std::string(buffer));
 	}
 	else if (bytes_read == 0) {
-		std::cout << "Client closed connection (FD: " << _socket  - 3 << ")" << std::endl;
+		std::cout << "Client closed connection (FD: " << _socket << ")" << std::endl;
 		return ("");
 	}
 	else {
