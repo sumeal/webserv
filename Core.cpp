@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Core.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
+/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/23 11:44:02 by abin-moh         ###   ########.fr       */
+/*   Updated: 2026/01/23 12:23:42 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -72,8 +72,10 @@ void	Core::run()
 			{
 				if (oriFd == server_fd) {
 					if (revents & POLLIN)
+					{
 						accepter();
 						continue ;
+					}
 				}
 				else {
 					
@@ -522,9 +524,8 @@ void	Core::pathCheck(std::string path)
 		rootPathVec.push_back(name2);
 	else if (name2 == "..")
 		rootPathVec.pop_back();
-
 	std::string fullPath = "/";
-	for (int i = 0; i < rootPathVec.size(); i++)
+	for (size_t i = 0; i < rootPathVec.size(); i++)
 	{
 		fullPath = fullPath + rootPathVec[i];
 		if (i < rootPathVec.size() - 1)
