@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   CgiExecute.h                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
+/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/22 00:37:30 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/15 09:52:13 by muzz             ###   ########.fr       */
+/*   Updated: 2026/01/24 14:24:54 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,8 +22,9 @@ class Client;
 class CgiExecute {
 private:
 	//Client data
-	const t_request&	_request;
-	const t_location&	_locate;
+	// const t_request&	_request;
+	s_HttpRequest _request;
+	t_location _locate;
 	// t_CGI*		_cgi;
 	Client*		_client;
 	
@@ -37,6 +38,7 @@ private:
     std::string _absPath;    // /var/www/html/cgi-bin/test.py
     std::string _remoteAddr; // 192.168.1.5.  what is this for??
     int         _serverPort; // 8080
+	std::string	_protocol;
 	//CGI postresult
 	std::string	_output;
 	size_t		_bodySizeSent;
@@ -45,7 +47,7 @@ private:
 	int			_exitStatus;
 	//execve.CGI script(eg. py)
 public:
-	CgiExecute(Client* client, const t_location& locate, const t_request& request);
+	CgiExecute(Client* client, std::string protocol);
 	~CgiExecute();
 
 	void	preExecute();

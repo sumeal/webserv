@@ -27,9 +27,15 @@
 #include <fcntl.h>
 #include "Client.h"
 
-CgiExecute::CgiExecute(Client* client, const t_location& locate, const t_request& request)
-	: _request(request), _locate(locate), _client(client), _pid(-1), _pipeToCgi(-1), 
-	_pipeFromCgi(-1), _bodySizeSent(0), _writeEnded(false), _readEnded(false), 
+// CgiExecute::CgiExecute(Client* client, const t_location& locate, const t_request& request)
+// 	: _request(request), _locate(locate), _client(client), _pid(-1), _pipeToCgi(-1), 
+// 	_pipeFromCgi(-1), _bodySizeSent(0), _writeEnded(false), _readEnded(false), 
+// 	_exitStatus(0)
+// {}
+
+CgiExecute::CgiExecute(Client* client, std::string protocol)
+	: _request(client->getRequest()), _locate(client->getCgiLocation()), _client(client), _pid(-1), _pipeToCgi(-1), 
+	_pipeFromCgi(-1), _protocol(protocol), _bodySizeSent(0), _writeEnded(false), _readEnded(false), 
 	_exitStatus(0)
 {}
 
@@ -95,7 +101,7 @@ char**	CgiExecute::createEnvp()
 	envpVector.push_back("REQUEST_METHOD=" + _request.method);
 	envpVector.push_back("QUERY_STRING=" + _request.query);
 	envpVector.push_back("SCRIPT_NAME=" + _request.path);
-	envpVector.push_back("SERVER_PROTOCOL=" + _request.version); //PROTOCOL VERSION
+	envpVector.push_back("SERVER_PROTOCOL=" + _protocol); //PROTOCOL VERSION
 
 	//				FORMAT HEADER
 	//add HTTP_, upper char & push every headers from struct to the envp list

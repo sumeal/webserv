@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Client.h                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
+/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:03:33 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/23 11:44:42 by abin-moh         ###   ########.fr       */
+/*   Updated: 2026/01/24 14:20:32 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,7 +42,7 @@ private:
 	bool		_hasCgi;
 	time_t		_lastActivity;
 	int			_connStatus;
-	t_server	_serverConfig;
+	t_server	_serverConfig;//do we need to hold as reference or as copy per client?
 	//loop thingy
 public:
 	e_State state;
@@ -66,9 +66,12 @@ public:
     void	setConnStatus(bool status);
 
 	
-	std::string readRawRequest();
-	s_HttpRequest& getRequest();
-	std::string getRoot();
+	std::string 	readRawRequest();
+	s_HttpRequest& 	getRequest();
+	std::string 	getRoot();
+	t_server		getServerConfig();
+	t_location&		getCgiLocation();
+	
 	bool	isCGI(const t_request& request, const t_location& locate) const; // check
 	bool	isCGIextOK(const t_request& request, const t_location& locate) const; //check
 	// CgiRequest* GetCgiReq();

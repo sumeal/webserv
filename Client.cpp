@@ -3,14 +3,15 @@
 /*                                                        :::      ::::::::   */
 /*   Client.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
+/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/23 11:53:47 by abin-moh         ###   ########.fr       */
+/*   Updated: 2026/01/24 14:29:48 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Client.h"
+#include "CGI_data.h"
 #include "CgiExecute.h"
 #include "Respond.h"
 #include <ctime>
@@ -46,10 +47,10 @@ void	Client::procInput(int i, struct pollfd& pFd)
 {
 	(void)i;
 	(void)pFd;
-	int pipeFromCgi = 0; // Initialize to avoid accessing NULL executor
-	if (_executor) {
-		pipeFromCgi = GetCgiExec()->getpipeFromCgi();
-	}
+	// int pipeFromCgi = 0; // Initialize to avoid accessing NULL executor
+	// if (_executor) {
+	// 	pipeFromCgi = GetCgiExec()->getpipeFromCgi();
+	// }
 
 	if (state == READ_REQUEST) //check
 	{
@@ -66,7 +67,7 @@ void	Client::procInput(int i, struct pollfd& pFd)
 			// For CGI requests, we would need to create and configure the CGI executor
 			// For now, just serve as normal file
 			std::string protocol = request.http_version.empty() ? "HTTP/1.1" : request.http_version;
-			setCgiExec(new CgiExecute(this, request, locate, protocol)); //change to protocol. amik request dari client attribute/member. amik location dari t_server dalam member/attribute vector
+			setCgiExec(new CgiExecute(this, protocol)); //change to protocol. amik request dari client attribute/member. amik location dari t_server dalam member/attribute vector
 			GetCgiExec()->preExecute();
 			GetCgiExec()->execute();
 			state = EXECUTE_CGI;
@@ -307,4 +308,20 @@ s_HttpRequest& Client::getRequest() {
 
 std::string Client::getRoot() {
 	return (_serverConfig.root);
+}
+
+t_server	Client::getServerConfig()
+{
+	return (_serverConfig);
+}
+
+t_location&	Client::getCgiLocation()
+{
+	size_t i = 0;
+	for (; i < _serverConfig.locations.size(); i++)
+	{
+		if (_serverConfig.locations[i].path == "cgi-bin")
+			return _serverConfig.locations[i];
+	}
+	return _serverConfig.locations[i]; //suppose not to trigger
 }
