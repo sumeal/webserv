@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/23 18:56:31 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/24 17:04:34 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -92,18 +92,22 @@ void	Core::run()
 						i--;
 						continue ;
 					}
-					if (revents & POLLIN || revents & POLLHUP) { //POLLHUP for CGI
-						std::string raw_request = client->readRawRequest();
-						if (!raw_request.empty()) {
-							parse_http_request(client, raw_request);
-						}
-						else {
-							client->state = DISCONNECTED;
-						}
+					if (revents & POLLIN || revents & POLLHUP)  //POLLHUP for CGI
+					{
+						//askMuzz 24jan26.is it that every pollin will go in here. what if the pollin is for cgi? shouldnt it better to check the state first then implement this part? so if the state is cgi dont need to go through here?
+						if (client->state == READ_REQUEST) //mad added
+						{ //mad added
+							std::string raw_request = client->readRawRequest();
+							if (!raw_request.empty())
+								parse_http_request(client, raw_request);
+							else
+								client->state = DISCONNECTED;
+						} //mad added
 						client->procInput(i, _fds[i]);
-						if (_clients.find(oriFd) == _clients.end()) {
-                        i--;
-                        continue;
+						if (_clients.find(oriFd) == _clients.end()) 
+						{
+                        	i--;
+                        	continue;
 						}
 					}
 					if (_fds[i].revents & POLLOUT || revents & POLLHUP)

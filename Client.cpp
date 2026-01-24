@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/24 14:29:48 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/24 17:02:50 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -51,12 +51,14 @@ void	Client::procInput(int i, struct pollfd& pFd)
 	// if (_executor) {
 	// 	pipeFromCgi = GetCgiExec()->getpipeFromCgi();
 	// }
-
-	if (state == READ_REQUEST) //check
+	std::cout << "trigger here" << std::endl; //debug
+	std::cout << "state: " << state << std::endl; //debug
+	if (state == HANDLE_REQUEST) //check
 	{
 		if (!_hasCgi)
 		{
 			// Set protocol from the parsed request - add safety check
+			std::cout << "trigger here 1" << std::endl; //debug
 			std::string protocol = request.http_version.empty() ? "HTTP/1.1" : request.http_version;
 			getRespond().procNormalOutput(protocol);
 			getRespond().buildResponse();
@@ -66,6 +68,7 @@ void	Client::procInput(int i, struct pollfd& pFd)
 		{
 			// For CGI requests, we would need to create and configure the CGI executor
 			// For now, just serve as normal file
+			std::cout << "trigger here 2" << std::endl; //debug
 			std::string protocol = request.http_version.empty() ? "HTTP/1.1" : request.http_version;
 			setCgiExec(new CgiExecute(this, protocol)); //change to protocol. amik request dari client attribute/member. amik location dari t_server dalam member/attribute vector
 			GetCgiExec()->preExecute();
@@ -107,6 +110,7 @@ void	Client::procInput(int i, struct pollfd& pFd)
 		if (GetCgiExec()->isReadDone())
 		{
 			// fdPreCleanup(pipeFromCgi, i);//
+			std::cout << "cgi output: " << GetCgiExec()->getOutput() << std::endl;//debug
 			fdPreCleanup(pFd);
 			if (GetCgiExec()->isDone())
 			{
