@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   CGI_data.h                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
+/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/16 15:03:57 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/19 10:18:14 by muzz             ###   ########.fr       */
+/*   Updated: 2026/01/25 10:53:38 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,7 +24,7 @@ typedef struct s_location {
     std::string root;              // filesystem root
     bool cgi_enabled;
    
-    std::string cgi_path;          // "/usr/bin/python3". the binary
+    std::string interp;          // "/usr/bin/python3". the binary
 	std::vector<std::string> cgi_extension;
 	bool allow_get;
 	bool allow_post;

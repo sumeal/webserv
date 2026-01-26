@@ -35,7 +35,7 @@ bool	CgiRequest::isCGI() const
 bool	CgiRequest::isCGIextOK() const
 {
 	const std::string	path		= _request.path;
-	const std::string	cgi_path	= _locate.cgi_path;
+	const std::string	interp	= _locate.interp;
 	
 	//manually without taking from config cgi_ext
 	//use rfind to detect the last dot

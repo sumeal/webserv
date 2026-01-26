@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/24 17:04:34 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/26 09:32:14 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -94,7 +94,7 @@ void	Core::run()
 					}
 					if (revents & POLLIN || revents & POLLHUP)  //POLLHUP for CGI
 					{
-						//askMuzz 24jan26.is it that every pollin will go in here. what if the pollin is for cgi? shouldnt it better to check the state first then implement this part? so if the state is cgi dont need to go through here?
+						// 24jan26.is it that every pollin will go in here. what if the pollin is for cgi? shouldnt it better to check the state first then implement this part? so if the state is cgi dont need to go through here?
 						if (client->state == READ_REQUEST) //mad added
 						{ //mad added
 							std::string raw_request = client->readRawRequest();
@@ -876,7 +876,7 @@ void Core::print_location_config(const t_location& location, int index)
     std::cout << "CGI Enabled: " << (location.cgi_enabled ? "YES" : "NO") << std::endl;
     
     if (location.cgi_enabled) {
-        std::cout << "CGI Path: " << (location.cgi_path.empty() ? "[not set]" : location.cgi_path) << std::endl;
+        std::cout << "CGI Path: " << (location.interp.empty() ? "[not set]" : location.interp) << std::endl;
         std::cout << "CGI Extensions: ";
         if (location.cgi_extension.empty()) {
             std::cout << "[none]";

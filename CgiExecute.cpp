@@ -78,8 +78,11 @@ void	CgiExecute::execChild()
 	close(_pipeIn[1]); close(_pipeOut[0]);
 
 	//				EXEC CGI
-	char*	interpreter = const_cast<char*>(_locate.cgi_path.c_str());
+	// _locate.interp = "/usr/bin/python3"; //hardcode askMuzz
+	char*	interpreter = const_cast<char*>(_locate.interp.c_str());
+	std::cout << "locate interpreter path: " << _locate.interp  << std::endl; //debug
 	char*	scriptPath = const_cast<char *>(_absPath.c_str());
+	std::cout << "locate abs path: " << _absPath << std::endl; //debug
 	char*	args[] = { interpreter, scriptPath,NULL};
 	char**	envp = createEnvp();
 	execve(interpreter, args, envp);
@@ -147,29 +150,46 @@ void	CgiExecute::readExec()
 	{
 		if (errno == EAGAIN || errno == EWOULDBLOCK)
 			return ;
+		std::cout << "trigger here 4" << std::endl; //debug
 		throw(502);
 	}
 }
 
 void	CgiExecute::writeExec()
 {
+	std::cout << "trigger here 11a" << std::endl; //debug
 	if (_request.body.empty() || _writeEnded)
 	{
+		std::cout << "trigger here 11aa" << std::endl; //debug
+		if (_request.body.empty()) //debug
+		{
+			std::cout << "content_length: " << _request.content_length << std::endl; //debug
+			std::cout << "_request body empty()" << std::endl; //debug
+		}
+		else
+			std::cout << "write ended" << std::endl; //debug
 		_writeEnded = true;
 		return ;
 	}
+	std::cout << "trigger here 11b" << std::endl; //debug
 	size_t	bytesLeft = _request.body.size() - _bodySizeSent;
 	ssize_t	written = write(_pipeToCgi, _request.body.c_str() + _bodySizeSent, bytesLeft);
 	if (written > 0)
+	{
+		std::string writtenstring = _request.body.substr(_bodySizeSent, written); //debug
+		std::cout << "cgi written:  " <<  writtenstring << std::endl; //debug
 		_bodySizeSent += written;
+	}
 	if (written == -1)
 	{
+		std::cout << "trigger here 11c" << std::endl; //debug
 		if (errno == EAGAIN || errno == EWOULDBLOCK)
 			return ;
 		throw(500);
 	}
 	if (_bodySizeSent == _request.body.size())
 		_writeEnded = true;
+	std::cout << "trigger here 11d" << std::endl; //debug
 }
 
 //calculate abspath
@@ -177,13 +197,23 @@ void	CgiExecute::preExecute()
 {
 	std::string script_name = _request.path.substr(_locate.path.size()); 
 	std::string	root 		= _locate.root;
-	std::string	cgi_path	= _locate.cgi_path;
+	size_t  dotPos = script_name.find_last_of(".");
+	std::string ext = script_name.substr(dotPos);
+	if (ext == ".py")
+		_locate.interp = "/usr/bin/python3"; //hardcode askMuzz
+	else if (ext == ".php")
+		_locate.interp = "/usr/bin/php";
+	std::string	interp	= _locate.interp;
 
 	//script_name should be /test.py. locate.root should be ./www.
 	//					SCRIPT START W /
 	if (script_name[0] != '/')
 		script_name = "/" + script_name;
-	_absPath = root + script_name; 
+	_absPath = root + _locate.path + script_name; 
+	std::cout << "Abs Path: " << _absPath << std::endl; //debug
+	std::cout << "root: " << root << std::endl; //debug
+	std::cout << "interp: " << interp << std::endl; //debug
+	std::cout << "cgi path: " << _locate.path << std::endl; //debug
 	//					ROOT END NOT /
 	if (!_locate.root.empty() && _locate.root[_locate.root.size() - 1] == '/')
 		root.erase(root.size() - 1,  1);
@@ -192,9 +222,16 @@ void	CgiExecute::preExecute()
 		throw(404);
 	//					CHECK EXISTENCE & EXEC
 	if (access(_absPath.c_str(), X_OK) == -1)
+	{
+		std::cout << "trigger here 9" << std::endl; //debug
 		throw(403);
-	if (access(cgi_path.c_str(), X_OK) == -1)
+	}
+	if (access(interp.c_str(), X_OK) == -1)
+	{
+		std::cout << "interp check: " << std::endl; //debug
+		std::cout << "trigger here 8" << std::endl; //debug
 		throw(403);
+	}
 }
 
 void	CgiExecute::cgiState()
@@ -237,7 +274,7 @@ bool	CgiExecute::isCGI() const
 bool	CgiExecute::isCGIextOK() const
 {
 	const std::string	path		= _request.path;
-	const std::string	cgi_path	= _locate.cgi_path;
+	const std::string	interp	= _locate.interp;
 	
 	//manually without taking from config cgi_ext
 	//use rfind to detect the last dot

@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Respond.cpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
+/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 17:17:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/23 11:38:33 by abin-moh         ###   ########.fr       */
+/*   Updated: 2026/01/26 00:05:00 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,7 @@
 #include "Client.h"
 #include <algorithm>
 #include <cctype>
+#include <cerrno>
 #include <cstddef>
 #include <fstream>
 #include <sstream>
@@ -36,6 +37,7 @@ void	Respond::procCgiOutput(std::string cgiOutput)
 {
 	if (cgiOutput.empty())
 	{
+		std::cout << "trigger here 5" << std::endl; //debug
 		buildErrorResponse(502);
 		return ;
 	}
@@ -49,6 +51,7 @@ void	Respond::procCgiOutput(std::string cgiOutput)
 	}
 	if (separatorPos == std::string::npos)
 	{
+		std::cout << "trigger here 6" << std::endl; //debug
 		buildErrorResponse(502);
 		return ;
 	}
@@ -69,7 +72,10 @@ void	Respond::procCgiOutput(std::string cgiOutput)
 		_statusCode = std::atoi(statusStr.c_str());
 	}
 	if (_statusCode < 100 || _statusCode > 599)
+	{
+		std::cout << "trigger here 7" << std::endl; //debug
 		_statusCode = 502;
+	}
 	//				FIND CONTENT TYPE
 	size_t contentTypePos = headerLow.find("content-type");
 	if (contentTypePos != std::string::npos)
@@ -217,38 +223,70 @@ void Respond::setContentType(const std::string& filePath)
 //muzz why change
 void	Respond::procNormalOutput(std::string protocol)
 {
-    std::string requestPath = getRequestPath();
-    std::string documentRoot = getServerRoot();
-    std::string filePath;
-    
-    if (requestPath == "/" || requestPath.empty()) {
-        filePath = documentRoot + "/index.html";
-    } else {
-        filePath = documentRoot + requestPath;
-    }
-    
-    std::ifstream file(filePath.c_str());
-    if (!file.is_open()) {
-        handleError(404);
-        return;
-    }
-    
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-    file.close();
+	std::string requestPath = getRequestPath();
+	std::string documentRoot = getServerRoot();
+	std::string filePath;
 
+	if (requestPath == "/" || requestPath.empty())
+		filePath = documentRoot + "/index.html";
+	else
+		filePath = documentRoot + requestPath;
+	std::cout << _client->getRequest().method << std::endl; //debug
+	if (_client->getRequest().method == "GET")
+	{
+		std::ifstream file(filePath.c_str());
+		if (!file.is_open())
+		{
+			handleError(404);
+			return;
+		}
+		std::stringstream buffer;
+		buffer << file.rdbuf();
+		file.close();
+		
+		_body = buffer.str();
+		_statusCode = 200;
+		_protocol = protocol;
+		_contentLength = _body.size();
 
-    _body = buffer.str();
-    _statusCode = 200;
-    _protocol = protocol;
-    _contentLength = _body.size();
-    
-    setContentType(filePath);
-    
-    std::cout << "✅ " <<  filePath << " served"  << std::endl;
-
+		setContentType(filePath);
+		
+		std::cout << "✅ " <<  filePath << " served"  << std::endl;
+	} 
+	else if (_client->getRequest().method == "POST")
+	{
+		std::ofstream outfile(_filePath.c_str(), std::ios::out | std::ios::trunc);
+		if (!outfile.is_open())
+			throw (500);
+		outfile << _client->getRequest().body;
+		outfile.close();
+		_statusCode = 201;
+		_body = "<html><head><title>201 Created</title></head><body>"
+		"<h1>File Created Successfully</h1><p>The resource has been uploaded.</p>"
+		"<hr><address>Webserv/1.0</address></body></html>";
+		_contentLength = _body.size();
+		_contentType = "text/html";		
+	}
+	else if (_client->getRequest().method == "DELETE")
+	{
+		if (std::remove(filePath.c_str()) == 0)
+		{
+			_statusCode = 204;
+			_body.clear();
+			_contentLength = 0;
+			_contentType.clear();
+		}
+		else 
+		{
+			if (errno == ENOENT)
+				throw (404);
+			else if (errno == EACCES)
+				throw (403);
+			else
+				throw (500);
+		}
+	}
 }
-
 	
 	// std::string filePath = "FromMuzz";
 	// //read file and take path

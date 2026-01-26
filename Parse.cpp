@@ -67,10 +67,12 @@ int Parse::parse_location(const std::string& line, int current_state, Location& 
 		}
 	}
 	else if (tokens[0] == "upload_path" && tokens.size() >= 2) {
-		temp_location.cgi_path = tokens[1];
+		std::cout << "upload_path: " << tokens[1] << std::endl; //debug
+		temp_location.interp = tokens[1];
 	}
-	else if (tokens[0] == "cgi_path" && tokens.size() >= 2) {
-		temp_location.cgi_path = tokens[1];
+	else if (tokens[0] == "interp" && tokens.size() >= 2) {
+		std::cout << "interp: " << tokens[1] << std::endl;
+		temp_location.interp = tokens[1];
 	}
 	else if (tokens[0] == "autoindex" && tokens.size() >= 2) {
 		temp_location.auto_index = (tokens[1] == "on");
@@ -126,7 +128,7 @@ t_location Parse::location_init(const std::string& line)
     new_location.allow_delete = false;
     new_location.auto_index = false;
     new_location.cgi_enabled = false;
-    new_location.cgi_path = "";
+    new_location.interp = "";
     new_location.cgi_extension.clear();
     
     return (new_location);

@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/24 17:02:50 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/25 23:14:02 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -68,9 +68,9 @@ void	Client::procInput(int i, struct pollfd& pFd)
 		{
 			// For CGI requests, we would need to create and configure the CGI executor
 			// For now, just serve as normal file
-			std::cout << "trigger here 2" << std::endl; //debug
 			std::string protocol = request.http_version.empty() ? "HTTP/1.1" : request.http_version;
-			setCgiExec(new CgiExecute(this, protocol)); //change to protocol. amik request dari client attribute/member. amik location dari t_server dalam member/attribute vector
+			std::cout << "content length: "  << request.content_length << std::endl; //debug
+			setCgiExec(new CgiExecute(this, protocol));
 			GetCgiExec()->preExecute();
 			GetCgiExec()->execute();
 			state = EXECUTE_CGI;
@@ -105,11 +105,13 @@ void	Client::procInput(int i, struct pollfd& pFd)
 	}
 	else if (state == WAIT_CGI && pFd.fd == GetCgiExec()->getpipeFromCgi())
 	{
+		std::cout << "trigger here 13" << std::endl; //debug			
 		GetCgiExec()->readExec();
 		GetCgiExec()->cgiState();
 		if (GetCgiExec()->isReadDone())
 		{
 			// fdPreCleanup(pipeFromCgi, i);//
+			std::cout << "trigger here 14" << std::endl; //debug			
 			std::cout << "cgi output: " << GetCgiExec()->getOutput() << std::endl;//debug
 			fdPreCleanup(pFd);
 			if (GetCgiExec()->isDone())
@@ -130,12 +132,15 @@ void	Client::procOutput(int i, struct pollfd& pFd)
 	
 	if (state == WAIT_CGI && _executor)
 	{
+		std::cout << "trigger here 11" << std::endl; //debug
+		std::cout << "method: " << request.method << std::endl; //debug
 		int pipeToCgi = GetCgiExec()->getpipeToCgi();
 		if (pFd.fd == pipeToCgi) {
 			GetCgiExec()->writeExec();
 			GetCgiExec()->cgiState();
 			if (GetCgiExec()->isWriteDone())
 			{
+				std::cout << "trigger here 12" << std::endl; //debug
 				fdPreCleanup(pFd);
 				if (GetCgiExec()->isDone())
 				{
@@ -175,7 +180,7 @@ bool	Client::isCGI(const t_request& request, const t_location& locate) const
 bool	Client::isCGIextOK(const t_request& request, const t_location& locate) const
 {
 	const std::string	path		= request.path;
-	const std::string	cgi_path	= locate.cgi_path;
+	const std::string	interp	= locate.interp;
 	
 	//manually without taking from config cgi_ext
 	//use rfind to detect the last dot
@@ -324,7 +329,7 @@ t_location&	Client::getCgiLocation()
 	size_t i = 0;
 	for (; i < _serverConfig.locations.size(); i++)
 	{
-		if (_serverConfig.locations[i].path == "cgi-bin")
+		if (_serverConfig.locations[i].path == "/cgi-bin")
 			return _serverConfig.locations[i];
 	}
 	return _serverConfig.locations[i]; //suppose not to trigger
