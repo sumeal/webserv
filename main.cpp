@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   main.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
+/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/14 10:54:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/24 13:53:34 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/26 10:42:12 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,7 +31,7 @@ int main(int argc, char **argv)
 		std::cerr << "Usage: " << argv[0] << " <config_file>" << std::endl;
 		return (1);
 	}
-	
+
 	std::string config_file = argv[1];
 	// t_data		data;
 	// t_location	locate;
@@ -39,7 +39,7 @@ int main(int argc, char **argv)
 
 	Core core;
 	// cgitest_data(locate, request);
-	
+
 	core.parse_config(config_file);
 	core.print_all_locations();
 	core.initialize_server();

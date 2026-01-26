@@ -25,12 +25,15 @@ private:
 	std::map<int, Client*> _clients;
 	std::vector<struct pollfd> _fds;
 	std::vector<struct pollfd> _stagedFds; //sementara
-	t_server server_config;
+	std::vector<t_server> server_config;
+	t_server temp_server;
 	t_location temp_location;
+	std::map<int, size_t> _serverFd;
+
 	std::vector<Client*> activeClients;
+
 	// Server class (location dalam Mad version) FromMuzz
 	bool	_needCleanup;
-	int server_fd;
     void parseConnectionHeader(Client* client, const s_HttpRequest& request);
 	int new_socket;
 	void debugHttpRequest(const t_HttpRequest& request);
@@ -65,8 +68,8 @@ public:
 	void	parse_config(const std::string &filename);
 	void	parse_http_request(Client* current_client, std::string raw_request);
 	void initialize_server();
-	void accepter();
-	void 	clientRegister(int clientFd, Client* client);
+	void accepter(int server_fd, size_t server_index);
+	void 	clientRegister(int clientFd, Client* client, size_t server_index);
 
 
 

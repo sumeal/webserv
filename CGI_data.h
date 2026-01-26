@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   CGI_data.h                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
+/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/16 15:03:57 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/25 10:53:38 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/26 10:08:30 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -63,10 +63,8 @@ typedef struct s_HttpRequest
     std::string content_type;
     bool        keep_alive;
 
-    // Body
     std::string body;
 
-    // State flags
     bool is_cgi;
 } t_HttpRequest;
 

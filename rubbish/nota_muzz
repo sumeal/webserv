@@ -1,0 +1,3 @@
+1) multipart untuk http request
+2) tukar parse supaya ikut content length untuk body, kalau sama baru tukar STATE
+3) tukar getline kepada recv()

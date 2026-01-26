@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Client.h                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
+/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:03:33 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/24 14:20:32 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/26 14:24:12 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -59,7 +59,7 @@ public:
 	void	setCgiExec(CgiExecute* executor);
 	Respond&	getRespond();
 	bool	isCgiOn(); //mcm x perlu
-	bool	hasCgi();
+	bool	getHasCgi();
 	void	setHasCgi(bool status);
 	bool	isIdle(time_t now);
 	bool	isKeepAlive();

@@ -6,7 +6,7 @@
 /*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/26 09:59:08 by abin-moh         ###   ########.fr       */
+/*   Updated: 2026/01/26 14:24:23 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -253,7 +253,7 @@ Respond&	Client::getRespond()
 	return* _responder;
 }
 
-bool	Client::hasCgi()
+bool	Client::getHasCgi()
 {
 	return _hasCgi;
 }

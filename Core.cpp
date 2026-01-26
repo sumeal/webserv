@@ -6,7 +6,7 @@
 /*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/26 09:59:44 by abin-moh         ###   ########.fr       */
+/*   Updated: 2026/01/26 14:43:16 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -70,10 +70,11 @@ void	Core::run()
 				continue;
 			try
 			{
-				if (oriFd == server_fd) {
+				if (_serverFd.find(oriFd) != _serverFd.end()) {
 					if (revents & POLLIN)
 					{
-						accepter();
+						size_t server_index = _serverFd[oriFd];
+						accepter(oriFd, server_index);
 						continue ;
 					}
 				}
@@ -223,7 +224,7 @@ void	Core::handleTimeout()
 // 	client->GetCgiExec()->execute();
 // 	//the part im trying to implement
 // 	cgiRegister(client); //in core because it change the struct that hold all the list
-	
+//
 // }
 
 void	Core::cgiRegister(Client* client)
@@ -277,7 +278,7 @@ void	Core::deleteClient(Client* client)
 {
 	int	socketFd = client->getSocket();
 	
-	if (client->hasCgi()) //supposely dont need since all have closed their CGI
+	if (client->getHasCgi()) //supposely dont need since all have closed their CGI
 	{
 		int	pipeFromCgi = client->GetCgiExec()->getpipeFromCgi();
 		int	pipeToCgi	= client->GetCgiExec()->getpipeToCgi();
@@ -363,7 +364,7 @@ void	Core::handleClientError(Client* client, int statusCode)
 		client->getRespond().findErrorBody(errorPath);
 	client->getRespond().buildErrorResponse(statusCode);
 	//Cleanup for finished problematic CGI
-	if (client->hasCgi())
+	if (client->getHasCgi())
 	{
 		client->GetCgiExec()->clearCgi();
 		fdPreCleanup(client->GetCgiExec()->getpipeFromCgi(), 0);
@@ -392,90 +393,6 @@ void	Core::addStagedFds()
 	_fds.insert(_fds.end(), _stagedFds.begin(), _stagedFds.end());
 	_stagedFds.clear();
 }
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Another way of remove instead of iterating loop
-// struct IsInvalid 
-//{
-//     // This is the "logic" remove_if uses to decide
-//     bool operator()(const struct pollfd& p) const {
-//         return (p.fd == -1); 
-//     }
-// };
-//
-// void Core::fdCleanup() {
-//     // 1. Mark and move
-//     std::vector<struct pollfd>::iterator new_end = std::remove_if(
-//         _fds.begin(), 
-//         _fds.end(), 
-//         IsInvalid() // This creates a temporary instance of your rule
-//     );
-//     // 2. Actually resize
-//     _fds.erase(new_end, _fds.end());
-// }
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Simplified way but maybe loss slow of preCleanup
-// void	Core::fdPreCleanup(int fd)
-// {
-// 	for (std::vector<struct pollfd>::iterator it = _fds.begin(); it != _fds.end(); ++it)
-// 	{
-// 		if (it->fd == fd)
-// 		{
-// 			close(it->fd);
-// 			_clients.erase(fd);
-// 			_cgiMap.erase(fd);
-// 			it->fd = -1;
-// 			_needCleanup = true;
-// 			return ;
-// 		}
-// 	}
-// 	// Safety: If for some reason the FD wasn't in the poll vector, 
-//     // we still need to close it and clean the maps to avoid leaks.
-// 	close(fd);
-// 	_clients.erase(fd);
-// 	_cgiMap.erase(fd);
-// }
-///////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-// // Testing only
-// void Core::acceptMockConnections(t_location& locate, t_request& request, int& clientCount)
-// {
-//     // Only create new clients if we are under our test limit
-//     if (clientCount < 2) 
-//     {
-//         int dummyFd = clientCount + 200;
-//         Client* client = new Client();
-        
-//         // Setup CGI (simulation of a CGI request)
-//         client->setCgiExec(new CgiExecute(client, request, locate));
-        
-//         // clientRegister should add the FD to your vector 
-//         // and set _fds[i].events = POLLIN
-//         clientRegister(dummyFd, client); 
-        
-//         clientCount++;
-//     }
-// }
-
-// //Testing
-// void Core::forceMockEvents()
-// {
-//     for (size_t i = 0; i < _fds.size(); i++)
-//     {
-//         // We look up the client associated with this specific FD
-//         Client* c = _clients[_fds[i].fd];
-
-        // If the client exists and is waiting to be read, we 'fake' 
-        // the activity that the OS would normally detect.
-//         if (c && c->state == READ_REQUEST && !c->revived) 
-//         {
-//             _fds[i].revents = POLLIN; 
-//         }
-//     }
-// }
 
 void	Core::pathCheck(std::string path)
 {
@@ -566,140 +483,6 @@ void	Core::pathCheck(std::string path)
 	
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// void	Core::run( t_location& locate, t_request& request)
-// {
-// 	int			clientCount = 0;
-// 	std::vector<Client*> activeClients;
-	
-// 	int loopCount = 0;
-// 	while (1)
-// 	{
-// 		acceptMockConnections(locate, request, clientCount);
-// 		int result = poll(&_fds[0], _fds.size(), 4000);
-// 		forceMockEvents();
-// 		//					ACTUAL LOOP
-// 		for (int i = 0; i < _fds.size(); i++)
-// 		{
-// 			int	*fd = &_fds[i].fd;
-// 			if (*fd == -1)
-// 				continue ;
-// 			int	revents = _fds[i].revents;
-// 			Client* client = _clients[*fd];
-// 			int	pipeFromCgi = -1;
-// 			int pipeToCgi = -1;
-// 			if (client->GetCgiExec())
-// 			{
-// 				pipeFromCgi = client->GetCgiExec()->getpipeFromCgi();
-// 				pipeToCgi = client->GetCgiExec()->getpipeToCgi();
-// 			}
-// 			// if (!revents)
-// 			// 	continue;
-// 			try
-// 			{
-// 				if (revents & POLLIN || revents & POLLHUP)
-// 				{
-// 					if (client->state == READ_REQUEST)
-// 					{
-// 						//parser/config part.used to read http
-// 						// if (/*read request finished*/)
-// 						if (!client->GetCgiExec()->isCGI())
-// 						{
-// 							client->getRespond().procNormalOutput();
-// 							client->getRespond().buildResponse();
-// 							respondRegister(client);
-// 							client->state = SEND_RESPONSE;
-// 						}
-// 						else
-// 							client->state = EXECUTE_CGI;
-// 						//if execute CGI state
-// 						if (client->state == EXECUTE_CGI)
-// 						{
-// 							if (!client->GetCgiExec()->isCGI())
-// 							{
-// 								client->state = SEND_RESPONSE; //need to ask muzz
-// 							}
-// 							launchCgi(client, locate, request);
-// 							client->state = WAIT_CGI;
-// 						}
-// 					}
-// 					if (client->state == WAIT_CGI && *fd == pipeFromCgi)
-// 					{
-// 						client->GetCgiExec()->readExec();
-// 						client->GetCgiExec()->cgiState();
-// 						if (client->GetCgiExec()->isReadDone())
-// 						{
-// 							//removeFd(pipeFromCgi);
-// 							fdPreCleanup(pipeFromCgi, i);
-// 							if (client->GetCgiExec()->isDone())
-// 							{
-// 								client->getRespond().procCgiOutput(client->GetCgiExec()->getOutput());
-// 								client->getRespond().buildResponse();
-// 								respondRegister(client);
-// 								client->state = SEND_RESPONSE;
-// 							}
-// 						}
-// 					}
-// 				}
-// 				if (_fds[i].revents & POLLOUT || revents & POLLHUP)
-// 				{
-// 					if (client->state == WAIT_CGI && *fd == pipeToCgi)
-// 					{
-// 						client->GetCgiExec()->writeExec();
-// 						client->GetCgiExec()->cgiState();
-// 						if (client->GetCgiExec()->isWriteDone())
-// 						{
-// 							fdPreCleanup(pipeToCgi, i);
-// 							if (client->GetCgiExec()->isDone())
-// 							{
-// 								client->getRespond().procCgiOutput(client->GetCgiExec()->getOutput());
-// 								client->getRespond().buildResponse();
-// 								respondRegister(client);
-// 								client->state = SEND_RESPONSE;
-// 							}
-// 						}
-// 					}
-// 					if (client->state == SEND_RESPONSE /*&& *fd == client->getSocket()*/)
-// 					{
-// 						int status = client->getRespond().sendResponse();
-// 						if (status)
-// 						{
-// 							client->getRespond().printResponse();
-// 							client->state = FINISHED;
-// 						}
-// 					}
-// 				}
-// 			}
-// 			catch (int statusCode)
-// 			{
-// 				handleClientError(client, statusCode);
-// 			}
-// 			if (client->state == SEND_RESPONSE /*&& *fd == client->getSocket()*/)
-// 			{
-// 				int status = client->getRespond().sendResponse();
-// 				if (status)
-// 				{
-// 					client->getRespond().printResponse();
-// 					client->state = FINISHED;
-// 				}
-// 			}
-// 			if (client->state == FINISHED) // timeout only need to trigger this
-// 			{
-// 				//clear/delete/break
-// 				deleteClient(client);
-// 			}
-// 		}
-// 		//delete all in the delete list
-// 		fdCleanup();
-// 		addStagedFds();
-// 		if(clientCount >= 10 && _clients.empty())
-// 			break ;
-// 	}
-// }
-
-//muzz part real
-
 void Core::parse_config(const std::string &filename)
 {
     std::ifstream file(filename.c_str());
@@ -719,11 +502,18 @@ void Core::parse_config(const std::string &filename)
         
         if (current_state == OUTSIDE) {
             current_state = (ParseState)Parse::parse_outside(line, current_state);
+			if (current_state == SERVER) {
+				temp_server = t_server();
+			}
         }
         else if (current_state == SERVER) {
-            int new_state = Parse::parse_server(line, current_state, server_config);
+            int new_state = Parse::parse_server(line, current_state, temp_server);
 			if (new_state == LOCATION && current_state == SERVER) {
 				temp_location = Parse::location_init(line);
+			}
+			else if (new_state == OUTSIDE && current_state == SERVER) {
+				server_config.push_back(temp_server);
+				std::cout << "Parsed server block:" << std::endl;
 			}
 			current_state = (ParseState)new_state;
         }
@@ -731,9 +521,9 @@ void Core::parse_config(const std::string &filename)
             int new_state = Parse::parse_location(line, current_state, temp_location);
             if (new_state == SERVER && current_state == LOCATION) {
 				if (temp_location.root.empty()) {
-					temp_location.root = server_config.root;
+					temp_location.root = temp_server.root;
 				}
-                server_config.locations.push_back(temp_location);
+                temp_server.locations.push_back(temp_location);
             }
             current_state = (ParseState)new_state;
         }
@@ -752,7 +542,7 @@ void Core::parse_http_request(Client* current_client, const std::string raw_req)
 	s_HttpRequest& current_request = current_client->getRequest();
 	std::istringstream request_stream(raw_req);
 	std::string line;
-
+	current_request.is_cgi = false;
 	if (std::getline(request_stream, line)) {
 		std::istringstream req_line(line);
 		req_line >> current_request.method >> current_request.uri >> current_request.http_version;
@@ -798,7 +588,6 @@ void Core::parse_http_request(Client* current_client, const std::string raw_req)
     
     if (path.find("/cgi-bin/") == 0 || 
         path.find(".py") != std::string::npos ||
-        path.find(".pl") != std::string::npos ||
         path.find(".php") != std::string::npos) {
         
         current_client->setHasCgi(true);
@@ -816,29 +605,33 @@ void Core::parse_http_request(Client* current_client, const std::string raw_req)
 
 void Core::initialize_server()
 {
-	// Create listening socket with config port
-	server_fd = SocketUtils::create_listening_socket(server_config.port);
-	if (server_fd < 0) {
-		std::cerr << "Failed to create server socket" << std::endl;
-		return;
+	std::cout << std::endl;
+	for(size_t i = 0; i < server_config.size(); i++) {
+		int server_fd = SocketUtils::create_listening_socket(server_config[i].port);
+		if (server_fd < 0) {
+			std::cerr << "Failed to create server socket" << std::endl;
+			return;
+		}
+		if (SocketUtils::set_non_blocking(server_fd) < 0) {
+			perror("Failed to set non-blocking for Listening Socket");
+			close(server_fd);
+			continue;
+		}
+		_serverFd[server_fd] = i;
+		serverRegister(server_fd);
+		std::cout << "Server initialized with:" << std::endl;
+		std::cout << "Port: " << server_config[i].port << std::endl;
 	}
-	if (SocketUtils::set_non_blocking(server_fd) < 0) {
-		perror("Failed to set non-blocking for Listening Socket");
-		return;
-	}
-	// Add the listening socket to the fd
-	serverRegister(server_fd);
-	std::cout << "Server initialized with:" << std::endl;
-	std::cout << "Port: " << server_config.port << std::endl;
 }
 
-void Core::accepter()
+void Core::accepter(int server_fd, size_t server_index)
 {
 	struct sockaddr_in client_addr;
 	socklen_t addrlen = sizeof(client_addr);
 
-	new_socket = accept(server_fd, (struct sockaddr *)&client_addr, &addrlen);
-	std::cout << "New Connection " << new_socket << " Accepted" <<std::endl;
+	int new_socket = accept(server_fd, (struct sockaddr *)&client_addr, &addrlen);
+	std::cout << "New Connection " << new_socket << " Accepted from Server : " << _serverFd[server_index] << std::endl;
+	
 	if (new_socket < 0) {
 		perror("Accept fail");
 		return;
@@ -849,21 +642,21 @@ void Core::accepter()
 		return;
 	}
 	
-	Client* new_client = new Client(server_config);
-	clientRegister(new_socket, new_client);
+	Client* new_client = new Client(server_config[server_index]);
+	clientRegister(new_socket, new_client, server_index);
 	
 	std::cout << "Client registered seccessfully !" << std::endl;
 }
 
 
-void Core::clientRegister(int clientFD, Client* client)
+void Core::clientRegister(int clientFD, Client* client, size_t server_index)
 {
 	_clients[clientFD] = client;
 	client->setSocket(clientFD);
 	client->state = READ_REQUEST;
 
 	// Configure the Respond object with server settings
-	client->getRespond().setServerName(server_config.server_name);
+	client->getRespond().setServerName(server_config[server_index].server_name);
 	client->getRespond().setSocketFd(clientFD);
 
 	struct pollfd pfd;
@@ -913,17 +706,20 @@ void Core::print_all_locations()
 {
     std::cout << std::endl << "📍 PARSED LOCATION CONFIGURATION:" << std::endl;
     
-    if (server_config.locations.empty()) {
+	for (size_t i = 0; i < server_config.size(); i++) {
+	t_server server_configuration = server_config[i];
+    if (server_configuration.locations.empty()) {
         std::cout << "❌ No locations found in configuration" << std::endl;
         return;
     }
     
-    for (size_t i = 0; i < server_config.locations.size(); i++) {
-        print_location_config(server_config.locations[i], i + 1);
+    for (size_t i = 0; i < server_configuration.locations.size(); i++) {
+        print_location_config(server_configuration.locations[i], i + 1);
         std::cout << std::endl;
     }
     
-    std::cout << "📊 Total locations parsed: " << server_config.locations.size() << std::endl;
+    std::cout << "📊 Total locations parsed: " << server_configuration.locations.size() << std::endl;
+	}
 }
 
 void Core::parseConnectionHeader(Client* client, const s_HttpRequest& request)
@@ -967,29 +763,29 @@ void Core::parseConnectionHeader(Client* client, const s_HttpRequest& request)
 
 void Core::debugHttpRequest(const t_HttpRequest& request)
 {
-    std::cout << "\n" << std::string(60, '=') << std::endl;
-    std::cout << "🔍 HTTP REQUEST DEBUG INFORMATION" << std::endl;
-    std::cout << std::string(60, '=') << std::endl;
-    
-    // Request Line Information
-    std::cout << "📋 REQUEST LINE:" << std::endl;
-    std::cout << "   Method:       \"" << request.method << "\"" << std::endl;
-    std::cout << "   URI:          \"" << request.uri << "\"" << std::endl;
-    std::cout << "   Path:         \"" << request.path << "\"" << std::endl;
-    std::cout << "   Query:        \"" << request.query << "\"" << std::endl;
-    std::cout << "   HTTP Version: \"" << request.http_version << "\"" << std::endl;
-    
-    std::cout << "\n📦 HEADERS (" << request.headers.size() << " total):" << std::endl;
-    if (request.headers.empty()) {
-        std::cout << "   (No headers found)" << std::endl;
-    } else {
-        for (std::map<std::string, std::string>::const_iterator it = request.headers.begin();
+	std::cout << "\n" << std::string(60, '=') << std::endl;
+	std::cout << "🔍 HTTP REQUEST DEBUG INFORMATION" << std::endl;
+	std::cout << std::string(60, '=') << std::endl;
+
+	// Request Line Information
+	std::cout << "📋 REQUEST LINE:" << std::endl;
+	std::cout << "   Method:       \"" << request.method << "\"" << std::endl;
+	std::cout << "   URI:          \"" << request.uri << "\"" << std::endl;
+	std::cout << "   Path:         \"" << request.path << "\"" << std::endl;
+	std::cout << "   Query:        \"" << request.query << "\"" << std::endl;
+	std::cout << "   HTTP Version: \"" << request.http_version << "\"" << std::endl;
+
+	std::cout << "\n📦 HEADERS (" << request.headers.size() << " total):" << std::endl;
+	if (request.headers.empty()) {
+		std::cout << "   (No headers found)" << std::endl;
+	} else {
+		for (std::map<std::string, std::string>::const_iterator it = request.headers.begin();
              it != request.headers.end(); ++it) {
             std::cout << "   " << std::setw(20) << std::left << (it->first + ":") 
                       << " \"" << it->second << "\"" << std::endl;
         }
     }
-    
+
     std::cout << "\n🎯 PARSED HEADER CACHE:" << std::endl;
     std::cout << "   Host:           \"" << request.host << "\"" << std::endl;
     std::cout << "   Port:           " << request.port << std::endl;
@@ -1017,20 +813,20 @@ void Core::debugHttpRequest(const t_HttpRequest& request)
                 break;
             }
         }
-        
-        if (has_binary) {
-            std::cout << "   Body (Hex):     ";
-            for (size_t i = 0; i < request.body.length() && i < 32; i++) {
-                printf("%02x ", (unsigned char)request.body[i]);
-            }
-            if (request.body.length() > 32) std::cout << "...";
-            std::cout << std::endl;
-        }
-    }
-    
-    std::cout << "\n🚩 STATE FLAGS:" << std::endl;
-    std::cout << "   Is CGI:         " << (request.is_cgi ? "TRUE" : "FALSE") << std::endl;
-    
+		
+		if (has_binary) {
+			std::cout << "   Body (Hex):     ";
+			for (size_t i = 0; i < request.body.length() && i < 32; i++) {
+				printf("%02x ", (unsigned char)request.body[i]);
+			}
+			if (request.body.length() > 32) std::cout << "...";
+			std::cout << std::endl;
+		}
+	}
+
+	std::cout << "\n🚩 STATE FLAGS:" << std::endl;
+	std::cout << "   Is CGI:         " << (request.is_cgi ? "TRUE" : "FALSE") << std::endl;
+
     std::cout << std::string(60, '=') << std::endl;
     std::cout << "🔍 END HTTP REQUEST DEBUG" << std::endl;
     std::cout << std::string(60, '=') << "\n" << std::endl;
@@ -1185,3 +981,220 @@ void Core::parseRequestBody(Client* client, std::istringstream& request_stream, 
         std::cout << "   📄 Body preview: \"" << preview << "\"" << std::endl;
     }
 }
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// void	Core::run( t_location& locate, t_request& request)
+// {
+// 	int			clientCount = 0;
+// 	std::vector<Client*> activeClients;
+	
+// 	int loopCount = 0;
+// 	while (1)
+// 	{
+// 		acceptMockConnections(locate, request, clientCount);
+// 		int result = poll(&_fds[0], _fds.size(), 4000);
+// 		forceMockEvents();
+// 		//					ACTUAL LOOP
+// 		for (int i = 0; i < _fds.size(); i++)
+// 		{
+// 			int	*fd = &_fds[i].fd;
+// 			if (*fd == -1)
+// 				continue ;
+// 			int	revents = _fds[i].revents;
+// 			Client* client = _clients[*fd];
+// 			int	pipeFromCgi = -1;
+// 			int pipeToCgi = -1;
+// 			if (client->GetCgiExec())
+// 			{
+// 				pipeFromCgi = client->GetCgiExec()->getpipeFromCgi();
+// 				pipeToCgi = client->GetCgiExec()->getpipeToCgi();
+// 			}
+// 			// if (!revents)
+// 			// 	continue;
+// 			try
+// 			{
+// 				if (revents & POLLIN || revents & POLLHUP)
+// 				{
+// 					if (client->state == READ_REQUEST)
+// 					{
+// 						//parser/config part.used to read http
+// 						// if (/*read request finished*/)
+// 						if (!client->GetCgiExec()->isCGI())
+// 						{
+// 							client->getRespond().procNormalOutput();
+// 							client->getRespond().buildResponse();
+// 							respondRegister(client);
+// 							client->state = SEND_RESPONSE;
+// 						}
+// 						else
+// 							client->state = EXECUTE_CGI;
+// 						//if execute CGI state
+// 						if (client->state == EXECUTE_CGI)
+// 						{
+// 							if (!client->GetCgiExec()->isCGI())
+// 							{
+// 								client->state = SEND_RESPONSE; //need to ask muzz
+// 							}
+// 							launchCgi(client, locate, request);
+// 							client->state = WAIT_CGI;
+// 						}
+// 					}
+// 					if (client->state == WAIT_CGI && *fd == pipeFromCgi)
+// 					{
+// 						client->GetCgiExec()->readExec();
+// 						client->GetCgiExec()->cgiState();
+// 						if (client->GetCgiExec()->isReadDone())
+// 						{
+// 							//removeFd(pipeFromCgi);
+// 							fdPreCleanup(pipeFromCgi, i);
+// 							if (client->GetCgiExec()->isDone())
+// 							{
+// 								client->getRespond().procCgiOutput(client->GetCgiExec()->getOutput());
+// 								client->getRespond().buildResponse();
+// 								respondRegister(client);
+// 								client->state = SEND_RESPONSE;
+// 							}
+// 						}
+// 					}
+// 				}
+// 				if (_fds[i].revents & POLLOUT || revents & POLLHUP)
+// 				{
+// 					if (client->state == WAIT_CGI && *fd == pipeToCgi)
+// 					{
+// 						client->GetCgiExec()->writeExec();
+// 						client->GetCgiExec()->cgiState();
+// 						if (client->GetCgiExec()->isWriteDone())
+// 						{
+// 							fdPreCleanup(pipeToCgi, i);
+// 							if (client->GetCgiExec()->isDone())
+// 							{
+// 								client->getRespond().procCgiOutput(client->GetCgiExec()->getOutput());
+// 								client->getRespond().buildResponse();
+// 								respondRegister(client);
+// 								client->state = SEND_RESPONSE;
+// 							}
+// 						}
+// 					}
+// 					if (client->state == SEND_RESPONSE /*&& *fd == client->getSocket()*/)
+// 					{
+// 						int status = client->getRespond().sendResponse();
+// 						if (status)
+// 						{
+// 							client->getRespond().printResponse();
+// 							client->state = FINISHED;
+// 						}
+// 					}
+// 				}
+// 			}
+// 			catch (int statusCode)
+// 			{
+// 				handleClientError(client, statusCode);
+// 			}
+// 			if (client->state == SEND_RESPONSE /*&& *fd == client->getSocket()*/)
+// 			{
+// 				int status = client->getRespond().sendResponse();
+// 				if (status)
+// 				{
+// 					client->getRespond().printResponse();
+// 					client->state = FINISHED;
+// 				}
+// 			}
+// 			if (client->state == FINISHED) // timeout only need to trigger this
+// 			{
+// 				//clear/delete/break
+// 				deleteClient(client);
+// 			}
+// 		}
+// 		//delete all in the delete list
+// 		fdCleanup();
+// 		addStagedFds();
+// 		if(clientCount >= 10 && _clients.empty())
+// 			break ;
+// 	}
+// }
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Another way of remove instead of iterating loop
+// struct IsInvalid 
+//{
+//     // This is the "logic" remove_if uses to decide
+//     bool operator()(const struct pollfd& p) const {
+//         return (p.fd == -1); 
+//     }
+// };
+//
+// void Core::fdCleanup() {
+//     // 1. Mark and move
+//     std::vector<struct pollfd>::iterator new_end = std::remove_if(
+//         _fds.begin(), 
+//         _fds.end(), 
+//         IsInvalid() // This creates a temporary instance of your rule
+//     );
+//     // 2. Actually resize
+//     _fds.erase(new_end, _fds.end());
+// }
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Simplified way but maybe loss slow of preCleanup
+// void	Core::fdPreCleanup(int fd)
+// {
+// 	for (std::vector<struct pollfd>::iterator it = _fds.begin(); it != _fds.end(); ++it)
+// 	{
+// 		if (it->fd == fd)
+// 		{
+// 			close(it->fd);
+// 			_clients.erase(fd);
+// 			_cgiMap.erase(fd);
+// 			it->fd = -1;
+// 			_needCleanup = true;
+// 			return ;
+// 		}
+// 	}
+// 	// Safety: If for some reason the FD wasn't in the poll vector, 
+//     // we still need to close it and clean the maps to avoid leaks.
+// 	close(fd);
+// 	_clients.erase(fd);
+// 	_cgiMap.erase(fd);
+// }
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+// // Testing only
+// void Core::acceptMockConnections(t_location& locate, t_request& request, int& clientCount)
+// {
+//     // Only create new clients if we are under our test limit
+//     if (clientCount < 2) 
+//     {
+//         int dummyFd = clientCount + 200;
+//         Client* client = new Client();
+        
+//         // Setup CGI (simulation of a CGI request)
+//         client->setCgiExec(new CgiExecute(client, request, locate));
+        
+//         // clientRegister should add the FD to your vector 
+//         // and set _fds[i].events = POLLIN
+//         clientRegister(dummyFd, client); 
+        
+//         clientCount++;
+//     }
+// }
+
+// //Testing
+// void Core::forceMockEvents()
+// {
+//     for (size_t i = 0; i < _fds.size(); i++)
+//     {
+//         // We look up the client associated with this specific FD
+//         Client* c = _clients[_fds[i].fd];
+
+        // If the client exists and is waiting to be read, we 'fake' 
+        // the activity that the OS would normally detect.
+//         if (c && c->state == READ_REQUEST && !c->revived) 
+//         {
+//             _fds[i].revents = POLLIN; 
+//         }
+//     }
+// }
