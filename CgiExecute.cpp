@@ -44,6 +44,8 @@ CgiExecute::~CgiExecute()
 
 void	CgiExecute::execute()
 {
+	std::cout << "request content length in cgiexecute: " << _request.content_length << std::endl; //debug
+	std::cout << "request content body in cgiexecute: " << _request.body << std::endl; //debug
 	//				PIPE & FORK
 	if (pipe(_pipeIn) == -1)
 		throw (500);
@@ -131,7 +133,10 @@ char**	CgiExecute::createEnvp()
 	//				VECTOR to ARRAY
 	char** envp = new char*[envpVector.size() + 1];
 	for (size_t i = 0; i < envpVector.size(); i++)
+	{
 		envp[i] = strdup(envpVector[i].c_str());
+		std::cout << "envp: " << envp[i] << std::endl; //debug
+	}
 	envp[envpVector.size()] = NULL;
 	return envp;
 }
