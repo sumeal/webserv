@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Client.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
+/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/26 14:24:23 by abin-moh         ###   ########.fr       */
+/*   Updated: 2026/01/26 21:50:38 by muzz             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,11 +18,16 @@
 #include <sys/poll.h>
 #include <unistd.h>
 #include <poll.h>
+#include <sys/socket.h>
+#include <errno.h>
+#include <sstream>
 #include <iostream>
 #include <cstdio>
+#include <cctype>
 
 Client::Client(t_server server_config) :  _executor(NULL), _socket(0), _hasCgi(false), _lastActivity(time(NULL)),
-	 _connStatus(CLOSE), revived(false) //FromMuzz
+	 _connStatus(CLOSE), _headersParsed(false), _expectedBodyLength(0), _currentBodyLength(0), 
+	 _requestComplete(false), _disconnected(false), revived(false) //FromMuzz
 {
 	state = READ_REQUEST;
 	_responder = new Respond();
@@ -213,6 +218,10 @@ void	Client::resetClient()
 	_lastActivity = time(NULL);
 	_connStatus = KEEP_ALIVE;
 	state = READ_REQUEST;
+	
+	// Reset non-blocking request buffer
+	resetRequestBuffer();
+	
 	revived = true; //testing
 }
 
@@ -285,10 +294,173 @@ void Client::setConnStatus(bool status)
     _connStatus = status;
 }
 
+bool Client::readHttpRequest()
+{
+	char buffer[4096];
+	ssize_t bytes_read = recv(_socket, buffer, sizeof(buffer) - 1, MSG_DONTWAIT);
+
+	if (bytes_read > 0) {
+		buffer[bytes_read] = '\0';
+		_rawBuffer.append(buffer, bytes_read);
+		_lastActivity = time(NULL);
+		
+		std::cout << "📥 Received " << bytes_read << " bytes from FD " << _socket << std::endl;
+		
+		// Check if we have complete headers (double CRLF)
+		if (!_headersParsed) {
+			size_t header_end = _rawBuffer.find("\r\n\r\n");
+			if (header_end == std::string::npos) {
+				header_end = _rawBuffer.find("\n\n");
+				if (header_end != std::string::npos) {
+					header_end += 2;
+				}
+			} else {
+				header_end += 4;
+			}
+			
+			if (header_end != std::string::npos) {
+				_headersParsed = true;
+				
+				// ✅ NON-BLOCKING: Replace getline() with manual parsing
+				std::string headers_only = _rawBuffer.substr(0, header_end);
+				_expectedBodyLength = parseContentLength(headers_only);
+				
+				// Calculate current body length
+				_currentBodyLength = _rawBuffer.length() - header_end;
+				
+				std::cout << "📋 Headers parsed - Expected body: " << _expectedBodyLength 
+						  << " bytes, Current: " << _currentBodyLength << " bytes" << std::endl;
+			}
+		} else {
+			// Headers already parsed, just count body bytes
+			_currentBodyLength = _rawBuffer.length() - (_rawBuffer.find("\r\n\r\n") + 4);
+			if (_rawBuffer.find("\r\n\r\n") == std::string::npos) {
+				size_t header_end = _rawBuffer.find("\n\n");
+				if (header_end != std::string::npos) {
+					_currentBodyLength = _rawBuffer.length() - (header_end + 2);
+				}
+			}
+		}
+		
+		// Check if request is complete
+		if (_headersParsed && _currentBodyLength >= _expectedBodyLength) {
+			_requestComplete = true;
+			_currentRequest = _rawBuffer;
+			
+			std::cout << "✅ Complete HTTP request received (" << _rawBuffer.length() << " bytes)" << std::endl;
+			return true;
+		}
+		
+		return false; // Need more data
+	}
+	else if (bytes_read == 0) {
+		std::cout << "📤 Client closed connection (FD: " << _socket << ")" << std::endl;
+		_disconnected = true;
+		_requestComplete = false;
+		return false;
+	}
+	else {
+		if (errno == EAGAIN || errno == EWOULDBLOCK) {
+			// No more data available right now
+			return false;
+		} else {
+			perror("recv error");
+			_requestComplete = false;
+			return false;
+		}
+	}
+}
+
+bool Client::isRequestComplete()
+{
+	return _requestComplete;
+}
+
+bool Client::isDisconnected()
+{
+	return _disconnected;
+}
+
+std::string Client::getCompleteRequest()
+{
+	if (_requestComplete) {
+		return _currentRequest;
+	}
+	return "";
+}
+
+void Client::resetRequestBuffer()
+{
+	_rawBuffer.clear();
+	_currentRequest.clear();
+	_headersParsed = false;
+	_expectedBodyLength = 0;
+	_currentBodyLength = 0;
+	_requestComplete = false;
+	_disconnected = false;
+}
+
+size_t Client::parseContentLength(const std::string& headers)
+{
+	// Manual parsing without getline() - fully non-blocking
+	size_t pos = 0;
+	size_t line_start = 0;
+	
+	while (pos < headers.length()) {
+		// Find end of current line
+		size_t line_end = headers.find('\n', pos);
+		if (line_end == std::string::npos) {
+			line_end = headers.length();
+		}
+		
+		// Extract line (handle \r\n and \n)
+		std::string line = headers.substr(line_start, line_end - line_start);
+		if (!line.empty() && line[line.length() - 1] == '\r') {
+			line.erase(line.length() - 1);
+		}
+		
+		// Check for Content-Length (case insensitive)
+		if (line.length() > 14) { // "Content-Length" is 14 chars
+			std::string lower_line = line;
+			for (size_t i = 0; i < lower_line.length(); i++) {
+				lower_line[i] = std::tolower(lower_line[i]);
+			}
+			
+			if (lower_line.find("content-length:") == 0) {
+				// Extract value after colon
+				size_t colon_pos = line.find(':');
+				if (colon_pos != std::string::npos) {
+					std::string value = line.substr(colon_pos + 1);
+					
+					// Trim whitespace manually
+					size_t start = 0;
+					while (start < value.length() && 
+						   (value[start] == ' ' || value[start] == '\t')) {
+						start++;
+					}
+					
+					if (start < value.length()) {
+						std::cout << "📏 Found Content-Length: " << value.substr(start) << std::endl;
+						return static_cast<size_t>(atoi(value.substr(start).c_str()));
+					}
+				}
+				break;
+			}
+		}
+		
+		// Move to next line
+		pos = line_end + 1;
+		line_start = pos;
+	}
+	
+	return 0; // No Content-Length found
+}
+
 std::string Client::readRawRequest()
 {
+	// Legacy method for backward compatibility
 	char buffer[10000];
-	ssize_t bytes_read = read(_socket, buffer, sizeof(buffer) - 1);
+	ssize_t bytes_read = recv(_socket, buffer, sizeof(buffer) - 1, 0);
 
 	if (bytes_read > 0) {
 		buffer[bytes_read] = '\0';

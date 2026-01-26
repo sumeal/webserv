@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Core.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
+/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/26 14:43:16 by abin-moh         ###   ########.fr       */
+/*   Updated: 2026/01/26 21:50:36 by muzz             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -95,15 +95,28 @@ void	Core::run()
 					}
 					if (revents & POLLIN || revents & POLLHUP)  //POLLHUP for CGI
 					{
-						// 24jan26.is it that every pollin will go in here. what if the pollin is for cgi? shouldnt it better to check the state first then implement this part? so if the state is cgi dont need to go through here?
-						if (client->state == READ_REQUEST) //mad added
-						{ //mad added
-							std::string raw_request = client->readRawRequest();
-							if (!raw_request.empty())
-								parse_http_request(client, raw_request);
-							else
+						// Non-blocking HTTP request reading
+						if (client->state == READ_REQUEST) {
+							bool request_ready = client->readHttpRequest();
+							
+							if (client->isDisconnected()) {
+								// ✅ Client disconnected - don't wait for more data!
+								std::cout << "💀 Client disconnected, marking for cleanup" << std::endl;
 								client->state = DISCONNECTED;
-						} //mad added
+							} else if (request_ready && client->isRequestComplete()) {
+								std::string raw_request = client->getCompleteRequest();
+								if (!raw_request.empty()) {
+									std::cout << "🚀 Processing complete HTTP request..." << std::endl;
+									parse_http_request(client, raw_request);
+									client->resetRequestBuffer(); // Clear buffer for next request
+								} else {
+									client->state = DISCONNECTED;
+								}
+							} else if (!request_ready && !client->isRequestComplete() && !client->isDisconnected()) {
+								// Still reading request, continue (but only if not disconnected!)
+								std::cout << "📂 HTTP request incomplete, waiting for more data..." << std::endl;
+							}
+						}
 						client->procInput(i, _fds[i]);
 						if (_clients.find(oriFd) == _clients.end()) 
 						{
