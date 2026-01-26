@@ -16,6 +16,7 @@
 #include <poll.h>
 #include "Parse.hpp"
 #include <cctype> 
+#include <iomanip>
 #include "SocketUtils.hpp"
 
 class Core {
@@ -32,6 +33,11 @@ private:
 	int server_fd;
     void parseConnectionHeader(Client* client, const s_HttpRequest& request);
 	int new_socket;
+	void debugHttpRequest(const t_HttpRequest& request);
+    void putIntoCached(s_HttpRequest& request);
+    void parseRequestBody(Client* client, std::istringstream& request_stream, const std::string& raw_req);
+
+
 
 
 public:

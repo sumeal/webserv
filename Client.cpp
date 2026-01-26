@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Client.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
+/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/25 23:14:02 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/26 09:59:08 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -51,14 +51,11 @@ void	Client::procInput(int i, struct pollfd& pFd)
 	// if (_executor) {
 	// 	pipeFromCgi = GetCgiExec()->getpipeFromCgi();
 	// }
-	std::cout << "trigger here" << std::endl; //debug
-	std::cout << "state: " << state << std::endl; //debug
 	if (state == HANDLE_REQUEST) //check
 	{
 		if (!_hasCgi)
 		{
 			// Set protocol from the parsed request - add safety check
-			std::cout << "trigger here 1" << std::endl; //debug
 			std::string protocol = request.http_version.empty() ? "HTTP/1.1" : request.http_version;
 			getRespond().procNormalOutput(protocol);
 			getRespond().buildResponse();
