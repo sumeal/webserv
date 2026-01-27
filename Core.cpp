@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Core.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
+/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/27 10:56:25 by abin-moh         ###   ########.fr       */
+/*   Updated: 2026/01/27 20:35:40 by muzz             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -589,7 +589,23 @@ void Core::parse_http_request(Client* current_client, const std::string raw_req)
 		}
 	}
 	
-    parseRequestBody(current_client, request_stream, raw_req);
+	// ✅ SIMPLE: Extract body from raw_req directly
+	size_t body_start = raw_req.find("\r\n\r\n");
+	if (body_start == std::string::npos) {
+		body_start = raw_req.find("\n\n");
+		if (body_start != std::string::npos) {
+			body_start += 2;
+		}
+	} else {
+		body_start += 4;
+	}
+	
+	if (body_start != std::string::npos && body_start < raw_req.length()) {
+		current_request.body = raw_req.substr(body_start);
+		std::cout << "📦 Body extracted: " << current_request.body.length() << " bytes" << std::endl;
+	} else {
+		current_request.body = "";
+	}
 
     parseConnectionHeader(current_client, current_request);
 	
@@ -600,9 +616,11 @@ void Core::parse_http_request(Client* current_client, const std::string raw_req)
         path.find(".php") != std::string::npos) {
         
         current_client->setHasCgi(true);
+        current_request.is_cgi = true;  // ✅ Set the flag in request too
         std::cout << "CGI request: " << path << std::endl;
     } else {
         current_client->setHasCgi(false);
+        current_request.is_cgi = false; // ✅ Set to false for non-CGI
         std::cout << "Normal file request: " << path << std::endl;
     }
 	
@@ -909,79 +927,6 @@ void Core::putIntoCached(s_HttpRequest& request)
         }
     }
     std::cout << "   ✅ Keep-Alive: " << (request.keep_alive ? "TRUE" : "FALSE") << std::endl;
-}
-void Core::parseRequestBody(Client* client, std::istringstream& request_stream, const std::string& raw_req)
-{
-    s_HttpRequest& request = client->getRequest();
-    
-    // Get Content-Length if it exists
-    size_t content_length = 0;
-    std::map<std::string, std::string>::iterator cl_it = request.headers.find("Content-Length");
-    if (cl_it != request.headers.end()) {
-        content_length = static_cast<size_t>(atoi(cl_it->second.c_str()));
-    }
-    
-    std::cout << "🔍 Body parsing - Content-Length: " << content_length << std::endl;
-    
-    if (content_length == 0) {
-        std::cout << "   ✅ No body expected (Content-Length: 0)" << std::endl;
-        return;
-    }
-    
-    // Method 1: Parse remaining content from stream
-    std::string body_content;
-    std::string body_line;
-    
-    while (std::getline(request_stream, body_line)) {
-        body_content += body_line;
-        if (!request_stream.eof()) {
-            body_content += "\n";
-        }
-    }
-    
-    // Method 2: Alternative - find body in raw request
-    if (body_content.empty()) {
-        std::cout << "   🔄 Stream method failed, using raw request method..." << std::endl;
-        
-        // Find the end of headers (double CRLF)
-        size_t body_start = raw_req.find("\r\n\r\n");
-        if (body_start != std::string::npos) {
-            body_start += 4; // Skip past "\r\n\r\n"
-            body_content = raw_req.substr(body_start);
-        } else {
-            // Try single LF variant
-            body_start = raw_req.find("\n\n");
-            if (body_start != std::string::npos) {
-                body_start += 2; // Skip past "\n\n"
-                body_content = raw_req.substr(body_start);
-            }
-        }
-    }
-    
-    // Validate body length
-    if (body_content.length() != content_length) {
-        std::cout << "   ⚠️ Body length mismatch - Expected: " << content_length 
-                  << ", Got: " << body_content.length() << std::endl;
-        
-        // Truncate if too long, or use what we have if too short
-        if (body_content.length() > content_length) {
-            body_content = body_content.substr(0, content_length);
-            std::cout << "   🔧 Truncated body to expected length" << std::endl;
-        }
-    }
-    
-    request.body = body_content;
-    
-    std::cout << "   ✅ Body parsed successfully - " << request.body.length() << " bytes" << std::endl;
-    
-    // Debug body content (first 100 chars)
-    if (!request.body.empty()) {
-        std::string preview = request.body;
-        if (preview.length() > 100) {
-            preview = preview.substr(0, 100) + "...";
-        }
-        std::cout << "   📄 Body preview: \"" << preview << "\"" << std::endl;
-    }
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////

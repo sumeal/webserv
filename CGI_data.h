@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   CGI_data.h                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
+/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/16 15:03:57 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/26 10:08:30 by abin-moh         ###   ########.fr       */
+/*   Updated: 2026/01/27 20:27:08 by muzz             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -67,16 +67,5 @@ typedef struct s_HttpRequest
 
     bool is_cgi;
 } t_HttpRequest;
-
-typedef struct s_request {
-    std::string method;      // GET, POST
-    std::string uri;         // /cgi-bin/test.py?x=1
-    std::string path;        // /cgi-bin/test.py
-    std::string query;       // x=1
-    std::string version;     // HTTP/1.1
-    std::map<std::string, std::string> headers;
-    std::string body;
-} t_request;
-
 
 #endif

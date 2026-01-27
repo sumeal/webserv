@@ -38,7 +38,6 @@ private:
 	int new_socket;
 	void debugHttpRequest(const t_HttpRequest& request);
     void putIntoCached(s_HttpRequest& request);
-    void parseRequestBody(Client* client, std::istringstream& request_stream, const std::string& raw_req);
 
 
 
@@ -73,8 +72,7 @@ public:
 
 
 
-	//testing
-	void	acceptMockConnections(t_location& locate, t_request& request, int& clientCount);
+	// void	acceptMockConnections(t_location& locate, t_request& request, int& clientCount);
 	void	forceMockEvents();
     void	print_location_config(const t_location& location, int index = 0);
     void	print_all_locations();

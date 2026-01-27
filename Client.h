@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Client.h                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
+/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:03:33 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/27 10:59:34 by abin-moh         ###   ########.fr       */
+/*   Updated: 2026/01/27 20:41:26 by muzz             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -89,8 +89,8 @@ public:
 	t_server		getServerConfig();
 	t_location&		getCgiLocation();
 	
-	bool	isCGI(const t_request& request, const t_location& locate) const; // check
-	bool	isCGIextOK(const t_request& request, const t_location& locate) const; //check
+	bool	isCGI(const s_HttpRequest& request, const t_location& locate) const; // check
+	bool	isCGIextOK(const s_HttpRequest& request, const t_location& locate) const; //check
 	// CgiRequest* GetCgiReq();
 	// t_CGI*	getCgi();
 	// void	setCgi(t_CGI* cgi);

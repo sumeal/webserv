@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Client.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
+/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/27 10:28:50 by abin-moh         ###   ########.fr       */
+/*   Updated: 2026/01/27 20:41:35 by muzz             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -173,13 +173,13 @@ void	Client::procOutput(int i, struct pollfd& pFd)
 //check 2 things
 //1. cgi enabled? is the location for script to be run have permission for script
 //2. executable name/suffix is correct? and can be execute?
-bool	Client::isCGI(const t_request& request, const t_location& locate) const
+bool	Client::isCGI(const s_HttpRequest& request, const t_location& locate) const
 {
 	return (locate.cgi_enabled && isCGIextOK(request, locate));
 }
 
 //should at least support one. which we focus on .py
-bool	Client::isCGIextOK(const t_request& request, const t_location& locate) const
+bool	Client::isCGIextOK(const s_HttpRequest& request, const t_location& locate) const
 {
 	const std::string	path		= request.path;
 	const std::string	interp	= locate.interp;
@@ -396,24 +396,18 @@ void Client::resetRequestBuffer()
 
 size_t Client::parseContentLength(const std::string& headers)
 {
-	// Manual parsing without getline() - fully non-blocking
 	size_t pos = 0;
 	size_t line_start = 0;
 	
 	while (pos < headers.length()) {
-		// Find end of current line
 		size_t line_end = headers.find('\n', pos);
 		if (line_end == std::string::npos) {
 			line_end = headers.length();
 		}
-		
-		// Extract line (handle \r\n and \n)
 		std::string line = headers.substr(line_start, line_end - line_start);
 		if (!line.empty() && line[line.length() - 1] == '\r') {
 			line.erase(line.length() - 1);
 		}
-		
-		// Check for Content-Length (case insensitive)
 		if (line.length() > 14) { // "Content-Length" is 14 chars
 			std::string lower_line = line;
 			for (size_t i = 0; i < lower_line.length(); i++) {

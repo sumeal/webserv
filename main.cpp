@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   main.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
+/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/14 10:54:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/26 10:42:12 by abin-moh         ###   ########.fr       */
+/*   Updated: 2026/01/27 20:41:23 by muzz             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,11 +17,12 @@
 #include <exception>
 #include <iostream>
 
-void	cgitest_data(t_location& _location, t_request& _request);
-void	test_static_get(t_location& loc, t_request& req);
-void 	test_static_post(t_location& loc, t_request& req);
-void	test_cgi_get(t_location& loc, t_request& req);
-void 	test_cgi_post(t_location& loc, t_request& req);
+// Testing functions (commented out - using new s_HttpRequest struct)
+// void	cgitest_data(t_location& _location, s_HttpRequest& _request);
+// void	test_static_get(t_location& loc, s_HttpRequest& req);
+// void 	test_static_post(t_location& loc, s_HttpRequest& req);
+// void	test_cgi_get(t_location& loc, s_HttpRequest& req);
+// void 	test_cgi_post(t_location& loc, s_HttpRequest& req);
 
 
 int main(int argc, char **argv)
