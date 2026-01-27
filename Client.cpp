@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Client.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
+/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/26 21:50:38 by muzz             ###   ########.fr       */
+/*   Updated: 2026/01/27 10:28:50 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -306,7 +306,6 @@ bool Client::readHttpRequest()
 		
 		std::cout << "📥 Received " << bytes_read << " bytes from FD " << _socket << std::endl;
 		
-		// Check if we have complete headers (double CRLF)
 		if (!_headersParsed) {
 			size_t header_end = _rawBuffer.find("\r\n\r\n");
 			if (header_end == std::string::npos) {
@@ -321,18 +320,15 @@ bool Client::readHttpRequest()
 			if (header_end != std::string::npos) {
 				_headersParsed = true;
 				
-				// ✅ NON-BLOCKING: Replace getline() with manual parsing
 				std::string headers_only = _rawBuffer.substr(0, header_end);
 				_expectedBodyLength = parseContentLength(headers_only);
 				
-				// Calculate current body length
 				_currentBodyLength = _rawBuffer.length() - header_end;
 				
 				std::cout << "📋 Headers parsed - Expected body: " << _expectedBodyLength 
 						  << " bytes, Current: " << _currentBodyLength << " bytes" << std::endl;
 			}
 		} else {
-			// Headers already parsed, just count body bytes
 			_currentBodyLength = _rawBuffer.length() - (_rawBuffer.find("\r\n\r\n") + 4);
 			if (_rawBuffer.find("\r\n\r\n") == std::string::npos) {
 				size_t header_end = _rawBuffer.find("\n\n");
@@ -342,7 +338,6 @@ bool Client::readHttpRequest()
 			}
 		}
 		
-		// Check if request is complete
 		if (_headersParsed && _currentBodyLength >= _expectedBodyLength) {
 			_requestComplete = true;
 			_currentRequest = _rawBuffer;
@@ -351,7 +346,7 @@ bool Client::readHttpRequest()
 			return true;
 		}
 		
-		return false; // Need more data
+		return false;
 	}
 	else if (bytes_read == 0) {
 		std::cout << "📤 Client closed connection (FD: " << _socket << ")" << std::endl;
@@ -361,7 +356,6 @@ bool Client::readHttpRequest()
 	}
 	else {
 		if (errno == EAGAIN || errno == EWOULDBLOCK) {
-			// No more data available right now
 			return false;
 		} else {
 			perror("recv error");

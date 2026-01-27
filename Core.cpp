@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Core.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
+/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/26 21:50:36 by muzz             ###   ########.fr       */
+/*   Updated: 2026/01/27 10:56:25 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -95,12 +95,9 @@ void	Core::run()
 					}
 					if (revents & POLLIN || revents & POLLHUP)  //POLLHUP for CGI
 					{
-						// Non-blocking HTTP request reading
 						if (client->state == READ_REQUEST) {
 							bool request_ready = client->readHttpRequest();
-							
 							if (client->isDisconnected()) {
-								// ✅ Client disconnected - don't wait for more data!
 								std::cout << "💀 Client disconnected, marking for cleanup" << std::endl;
 								client->state = DISCONNECTED;
 							} else if (request_ready && client->isRequestComplete()) {
@@ -108,12 +105,11 @@ void	Core::run()
 								if (!raw_request.empty()) {
 									std::cout << "🚀 Processing complete HTTP request..." << std::endl;
 									parse_http_request(client, raw_request);
-									client->resetRequestBuffer(); // Clear buffer for next request
+									client->resetRequestBuffer();
 								} else {
 									client->state = DISCONNECTED;
 								}
 							} else if (!request_ready && !client->isRequestComplete() && !client->isDisconnected()) {
-								// Still reading request, continue (but only if not disconnected!)
 								std::cout << "📂 HTTP request incomplete, waiting for more data..." << std::endl;
 							}
 						}
@@ -731,7 +727,7 @@ void Core::print_all_locations()
         std::cout << std::endl;
     }
     
-    std::cout << "📊 Total locations parsed: " << server_configuration.locations.size() << std::endl;
+    std::cout << "📊 Total locations parsed: " << server_configuration.locations.size() << std::endl << std::endl;
 	}
 }
 
@@ -862,7 +858,6 @@ void Core::putIntoCached(s_HttpRequest& request)
             request.port = atoi(port_str.c_str());
         } else {
             request.host = host_header;
-            // Default port based on protocol (HTTP = 80, HTTPS = 443)
             request.port = 80;  // Default for HTTP
         }
         std::cout << "   ✅ Host: \"" << request.host << ":" << request.port << "\"" << std::endl;
@@ -872,7 +867,6 @@ void Core::putIntoCached(s_HttpRequest& request)
         std::cout << "   ⚠️ No Host header found" << std::endl;
     }
     
-    // 2. Cache Content-Length header
     std::map<std::string, std::string>::iterator cl_it = request.headers.find("Content-Length");
     if (cl_it != request.headers.end()) {
         request.content_length = static_cast<size_t>(atoi(cl_it->second.c_str()));
@@ -884,7 +878,6 @@ void Core::putIntoCached(s_HttpRequest& request)
         }
     }
     
-    // 3. Cache Content-Type header
     std::map<std::string, std::string>::iterator ct_it = request.headers.find("Content-Type");
     if (ct_it != request.headers.end()) {
         request.content_type = ct_it->second;
@@ -896,7 +889,6 @@ void Core::putIntoCached(s_HttpRequest& request)
         }
     }
     
-    // 4. Cache Keep-Alive status (set by parseConnectionHeader)
     request.keep_alive = (request.http_version == "HTTP/1.1");  // Default
     
     std::map<std::string, std::string>::iterator conn_it = request.headers.find("Connection");
@@ -906,7 +898,6 @@ void Core::putIntoCached(s_HttpRequest& request)
     
     if (conn_it != request.headers.end()) {
         std::string conn_value = conn_it->second;
-        // Convert to lowercase
         for (size_t i = 0; i < conn_value.length(); i++) {
             conn_value[i] = std::tolower(conn_value[i]);
         }
@@ -918,8 +909,6 @@ void Core::putIntoCached(s_HttpRequest& request)
         }
     }
     std::cout << "   ✅ Keep-Alive: " << (request.keep_alive ? "TRUE" : "FALSE") << std::endl;
-    
-    std::cout << "✅ Header caching complete" << std::endl;
 }
 void Core::parseRequestBody(Client* client, std::istringstream& request_stream, const std::string& raw_req)
 {

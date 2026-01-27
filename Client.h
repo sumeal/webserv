@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Client.h                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
+/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:03:33 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/26 21:50:36 by muzz             ###   ########.fr       */
+/*   Updated: 2026/01/27 10:59:34 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -44,8 +44,6 @@ private:
 	time_t		_lastActivity;
 	int			_connStatus;
 	t_server	_serverConfig;//do we need to hold as reference or as copy per client?
-	
-	// Non-blocking HTTP parsing state
 	std::string		_rawBuffer;
 	std::string		_currentRequest;
 	bool			_headersParsed;
