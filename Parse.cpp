@@ -67,7 +67,6 @@ int Parse::parse_location(const std::string& line, int current_state, Location& 
 		}
 	}
 	else if (tokens[0] == "upload_path" && tokens.size() >= 2) {
-		std::cout << "upload_path: " << tokens[1] << std::endl; //debug
 		temp_location.interp = tokens[1];
 	}
 	else if (tokens[0] == "interp" && tokens.size() >= 2) {

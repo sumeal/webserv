@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/26 10:21:38 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/27 18:38:56 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,7 +25,7 @@ Client::Client(t_server server_config) :  _executor(NULL), _socket(0), _hasCgi(f
 	 _connStatus(CLOSE), revived(false) //FromMuzz
 {
 	state = READ_REQUEST;
-	_responder = new Respond();
+	_responder = new Respond(_serverConfig);
 	_responder->setClient(this);
 	_serverConfig = server_config;
 }
@@ -66,8 +66,6 @@ void	Client::procInput(int i, struct pollfd& pFd)
 			// For CGI requests, we would need to create and configure the CGI executor
 			// For now, just serve as normal file
 			std::string protocol = request.http_version.empty() ? "HTTP/1.1" : request.http_version;
-			std::cout << "content length in client: "  << request.content_length << std::endl; //debug
-			std::cout << "content body in client: " << request.body << std::endl; //debug
 			setCgiExec(new CgiExecute(this, protocol));
 			GetCgiExec()->preExecute();
 			GetCgiExec()->execute();
@@ -103,14 +101,11 @@ void	Client::procInput(int i, struct pollfd& pFd)
 	}
 	else if (state == WAIT_CGI && pFd.fd == GetCgiExec()->getpipeFromCgi())
 	{
-		std::cout << "trigger here 13" << std::endl; //debug			
 		GetCgiExec()->readExec();
 		GetCgiExec()->cgiState();
 		if (GetCgiExec()->isReadDone())
 		{
 			// fdPreCleanup(pipeFromCgi, i);//
-			std::cout << "trigger here 14" << std::endl; //debug			
-			std::cout << "cgi output: " << GetCgiExec()->getOutput() << std::endl;//debug
 			fdPreCleanup(pFd);
 			if (GetCgiExec()->isDone())
 			{
@@ -130,15 +125,13 @@ void	Client::procOutput(int i, struct pollfd& pFd)
 	
 	if (state == WAIT_CGI && _executor)
 	{
-		std::cout << "trigger here 11" << std::endl; //debug
-		std::cout << "method: " << request.method << std::endl; //debug
+		// std::cout << "method: " << request.method << std::endl; //debug
 		int pipeToCgi = GetCgiExec()->getpipeToCgi();
 		if (pFd.fd == pipeToCgi) {
 			GetCgiExec()->writeExec();
 			GetCgiExec()->cgiState();
 			if (GetCgiExec()->isWriteDone())
 			{
-				std::cout << "trigger here 12" << std::endl; //debug
 				fdPreCleanup(pFd);
 				if (GetCgiExec()->isDone())
 				{

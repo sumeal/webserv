@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Core.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
+/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/26 09:59:44 by abin-moh         ###   ########.fr       */
+/*   Updated: 2026/01/26 13:09:10 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -1006,7 +1006,7 @@ void Core::debugHttpRequest(const t_HttpRequest& request)
         if (request.body.length() <= 100) {
             std::cout << "\"" << request.body << "\"" << std::endl;
         } else {
-            std::cout << "\"" << request.body.substr(0, 100) << "...\" (truncated)" << std::endl;
+            std::cout << "\"" << request.body.substr(0, 150) << "...\" (truncated)" << std::endl;
         }
         
         // Show body in hex if it contains binary data

@@ -44,8 +44,6 @@ CgiExecute::~CgiExecute()
 
 void	CgiExecute::execute()
 {
-	std::cout << "request content length in cgiexecute: " << _request.content_length << std::endl; //debug
-	std::cout << "request content body in cgiexecute: " << _request.body << std::endl; //debug
 	//				PIPE & FORK
 	if (pipe(_pipeIn) == -1)
 		throw (500);
@@ -82,9 +80,7 @@ void	CgiExecute::execChild()
 	//				EXEC CGI
 	// _locate.interp = "/usr/bin/python3"; //hardcode askMuzz
 	char*	interpreter = const_cast<char*>(_locate.interp.c_str());
-	std::cout << "locate interpreter path: " << _locate.interp  << std::endl; //debug
 	char*	scriptPath = const_cast<char *>(_absPath.c_str());
-	std::cout << "locate abs path: " << _absPath << std::endl; //debug
 	char*	args[] = { interpreter, scriptPath,NULL};
 	char**	envp = createEnvp();
 	execve(interpreter, args, envp);
@@ -133,10 +129,7 @@ char**	CgiExecute::createEnvp()
 	//				VECTOR to ARRAY
 	char** envp = new char*[envpVector.size() + 1];
 	for (size_t i = 0; i < envpVector.size(); i++)
-	{
 		envp[i] = strdup(envpVector[i].c_str());
-		std::cout << "envp: " << envp[i] << std::endl; //debug
-	}
 	envp[envpVector.size()] = NULL;
 	return envp;
 }
@@ -155,46 +148,40 @@ void	CgiExecute::readExec()
 	{
 		if (errno == EAGAIN || errno == EWOULDBLOCK)
 			return ;
-		std::cout << "trigger here 4" << std::endl; //debug
 		throw(502);
 	}
 }
 
 void	CgiExecute::writeExec()
 {
-	std::cout << "trigger here 11a" << std::endl; //debug
 	if (_request.body.empty() || _writeEnded)
 	{
-		std::cout << "trigger here 11aa" << std::endl; //debug
-		if (_request.body.empty()) //debug
-		{
-			std::cout << "content_length: " << _request.content_length << std::endl; //debug
-			std::cout << "_request body empty()" << std::endl; //debug
-		}
-		else
-			std::cout << "write ended" << std::endl; //debug
+		// if (_request.body.empty()) //debug
+		// {
+		// 	std::cout << "content_length: " << _request.content_length << std::endl; //debug
+		// 	std::cout << "_request body empty()" << std::endl; //debug
+		// }
+		// else
+		// 	std::cout << "write ended" << std::endl; //debug
 		_writeEnded = true;
 		return ;
 	}
-	std::cout << "trigger here 11b" << std::endl; //debug
 	size_t	bytesLeft = _request.body.size() - _bodySizeSent;
 	ssize_t	written = write(_pipeToCgi, _request.body.c_str() + _bodySizeSent, bytesLeft);
 	if (written > 0)
 	{
-		std::string writtenstring = _request.body.substr(_bodySizeSent, written); //debug
-		std::cout << "cgi written:  " <<  writtenstring << std::endl; //debug
+		// std::string writtenstring = _request.body.substr(_bodySizeSent, written); //debug
+		// std::cout << "cgi written:  " <<  writtenstring << std::endl; //debug
 		_bodySizeSent += written;
 	}
 	if (written == -1)
 	{
-		std::cout << "trigger here 11c" << std::endl; //debug
 		if (errno == EAGAIN || errno == EWOULDBLOCK)
 			return ;
 		throw(500);
 	}
 	if (_bodySizeSent == _request.body.size())
 		_writeEnded = true;
-	std::cout << "trigger here 11d" << std::endl; //debug
 }
 
 //calculate abspath
@@ -215,28 +202,18 @@ void	CgiExecute::preExecute()
 	if (script_name[0] != '/')
 		script_name = "/" + script_name;
 	_absPath = root + _locate.path + script_name; 
-	std::cout << "Abs Path: " << _absPath << std::endl; //debug
-	std::cout << "root: " << root << std::endl; //debug
-	std::cout << "interp: " << interp << std::endl; //debug
-	std::cout << "cgi path: " << _locate.path << std::endl; //debug
 	//					ROOT END NOT /
 	if (!_locate.root.empty() && _locate.root[_locate.root.size() - 1] == '/')
 		root.erase(root.size() - 1,  1);
+	std::cout << "abs path: " << _absPath << std::endl; //debug
 	//					CHECK EXISTENCE
 	if (access(_absPath.c_str(), F_OK) == -1)
 		throw(404);
 	//					CHECK EXISTENCE & EXEC
 	if (access(_absPath.c_str(), X_OK) == -1)
-	{
-		std::cout << "trigger here 9" << std::endl; //debug
 		throw(403);
-	}
 	if (access(interp.c_str(), X_OK) == -1)
-	{
-		std::cout << "interp check: " << std::endl; //debug
-		std::cout << "trigger here 8" << std::endl; //debug
 		throw(403);
-	}
 }
 
 void	CgiExecute::cgiState()

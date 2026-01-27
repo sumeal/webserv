@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/16 15:03:57 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/25 10:53:38 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/27 16:14:31 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,6 +30,7 @@ typedef struct s_location {
 	bool allow_post;
 	bool allow_delete;
 	bool auto_index;
+	bool location;
 	//std::vector<std::string> methods;
 	//std::string cgi_extension;     // ".py"
 } t_location;

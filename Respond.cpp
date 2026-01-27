@@ -6,11 +6,12 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 17:17:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/26 00:05:00 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/27 23:06:35 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Respond.h"
+#include "CGI_data.h"
 #include "Client.h"
 #include <algorithm>
 #include <cctype>
@@ -24,9 +25,9 @@
 #include <iostream>
 
 //initialize the status code
-Respond::Respond() : _client(NULL), _statusCode(0), _protocol("HTTP/1.1"), _contentLength(0), _serverName("localhost"), 
-	_connStatus(KEEP_ALIVE), _socketFd(0), 
-	_bytesSent(0)
+Respond::Respond(t_server& serverConf) : _server(serverConf), _client(NULL), _statusCode(0), 
+	_protocol("HTTP/1.1"), _contentLength(0), _serverName("localhost"), 
+	_connStatus(KEEP_ALIVE), _socketFd(0), _bytesSent(0)
 {}
 
 Respond::~Respond()
@@ -37,7 +38,6 @@ void	Respond::procCgiOutput(std::string cgiOutput)
 {
 	if (cgiOutput.empty())
 	{
-		std::cout << "trigger here 5" << std::endl; //debug
 		buildErrorResponse(502);
 		return ;
 	}
@@ -51,7 +51,6 @@ void	Respond::procCgiOutput(std::string cgiOutput)
 	}
 	if (separatorPos == std::string::npos)
 	{
-		std::cout << "trigger here 6" << std::endl; //debug
 		buildErrorResponse(502);
 		return ;
 	}
@@ -72,10 +71,7 @@ void	Respond::procCgiOutput(std::string cgiOutput)
 		_statusCode = std::atoi(statusStr.c_str());
 	}
 	if (_statusCode < 100 || _statusCode > 599)
-	{
-		std::cout << "trigger here 7" << std::endl; //debug
 		_statusCode = 502;
-	}
 	//				FIND CONTENT TYPE
 	size_t contentTypePos = headerLow.find("content-type");
 	if (contentTypePos != std::string::npos)
@@ -231,9 +227,19 @@ void	Respond::procNormalOutput(std::string protocol)
 		filePath = documentRoot + "/index.html";
 	else
 		filePath = documentRoot + requestPath;
-	std::cout << _client->getRequest().method << std::endl; //debug
+	//find matching location
+	// t_location correctLoc = getMatchingLocation();
+	//if no location. return error?
+		
+	//handle if no method allowed
+	
+	// std::cout << _client->getRequest().method << std::endl; //debug
 	if (_client->getRequest().method == "GET")
 	{
+		// if ()
+		// {
+			
+		// }
 		std::ifstream file(filePath.c_str());
 		if (!file.is_open())
 		{
@@ -255,7 +261,9 @@ void	Respond::procNormalOutput(std::string protocol)
 	} 
 	else if (_client->getRequest().method == "POST")
 	{
-		std::ofstream outfile(_filePath.c_str(), std::ios::out | std::ios::trunc);
+		// std::cout << "trigger normal POST" << std::endl; //debug
+		// std::cout << "file Path: " << filePath << std::endl; //debug
+		std::ofstream outfile(filePath.c_str(), std::ios::out | std::ios::trunc);
 		if (!outfile.is_open())
 			throw (500);
 		outfile << _client->getRequest().body;
@@ -269,6 +277,7 @@ void	Respond::procNormalOutput(std::string protocol)
 	}
 	else if (_client->getRequest().method == "DELETE")
 	{
+		std::cout << "File Path: " << filePath << std::endl; //debug
 		if (std::remove(filePath.c_str()) == 0)
 		{
 			_statusCode = 204;
@@ -279,7 +288,10 @@ void	Respond::procNormalOutput(std::string protocol)
 		else 
 		{
 			if (errno == ENOENT)
+			{
+				std::cout << "here" << std::endl; //debug
 				throw (404);
+			}
 			else if (errno == EACCES)
 				throw (403);
 			else
