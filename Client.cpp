@@ -5,10 +5,13 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/28 14:15:45 by muzz             ###   ########.fr       */
+/*   Created: Invalid date        by                   #+#    #+#             */
+/*   Updated: 2026/01/28 20:43:47 by muzz             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
+
+
+
 
 #include "Client.h"
 #include "CGI_data.h"
@@ -73,7 +76,8 @@ void	Client::procInput(int i, struct pollfd& pFd)
 			// For CGI requests, we would need to create and configure the CGI executor
 			// For now, just serve as normal file
 			std::string protocol = request.http_version.empty() ? "HTTP/1.1" : request.http_version;
-			std::cout << "content length: "  << request.content_length << std::endl; //debug
+			std::cout << "content length in client: "  << request.content_length << std::endl; //debug
+			std::cout << "content body in client: " << request.body << std::endl; //debug
 			setCgiExec(new CgiExecute(this, protocol));
 			GetCgiExec()->preExecute();
 			GetCgiExec()->execute();

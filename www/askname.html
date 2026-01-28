@@ -1,5 +1,205 @@
-<!-- www/askname.html -->
-<form action="/cgi-bin/analyzeName.py" method="POST">
-  Enter your name: <input name="name">
-  <button>Who Are you? 你是谁? </button>
-</form>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>姓名分析</title>
+    <style>
+        body {
+            font-family: 'Arial', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+        
+        .chinese-title {
+            color: #ff6b6b;
+            font-size: 36px;
+            margin: 0;
+            font-weight: bold;
+        }
+        
+        .pinyin-title {
+            color: #3498db;
+            font-size: 18px;
+            margin: 5px 0 10px 0;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 1px;
+        }
+        
+        .english-title {
+            color: #2c3e50;
+            font-size: 20px;
+            margin: 0 0 40px 0;
+            font-weight: bold;
+        }
+        
+        .label-container {
+            margin-bottom: 20px;
+        }
+        
+        .chinese-label {
+            color: #2c3e50;
+            font-size: 22px;
+            margin: 0 0 5px 0;
+            font-weight: bold;
+        }
+        
+        .english-label {
+            color: #7f8c8d;
+            font-size: 16px;
+            margin: 0 0 3px 0;
+        }
+        
+        .pinyin-label {
+            color: #e74c3c;
+            font-size: 14px;
+            margin: 0 0 15px 0;
+            font-family: 'Courier New', monospace;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #4ecdc4;
+            border-radius: 10px;
+            font-size: 16px;
+            box-sizing: border-box;
+            margin: 10px 0 30px 0;
+            text-align: center;
+            color: #2c3e50;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #ff6b6b;
+            box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.2);
+            background: white;
+        }
+        
+        input[type="text"]::placeholder {
+            color: #95a5a6;
+            font-style: italic;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+            color: white;
+            border: none;
+            padding: 18px 30px;
+            font-size: 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            box-shadow: 0 8px 20px rgba(255, 107, 107, 0.3);
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(255, 107, 107, 0.4);
+        }
+        
+        .button-chinese {
+            font-size: 20px;
+            margin: 0 0 5px 0;
+        }
+        
+        .button-english {
+            font-size: 14px;
+            margin: 0 0 3px 0;
+            opacity: 0.95;
+        }
+        
+        .button-pinyin {
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+            opacity: 0.9;
+            letter-spacing: 1px;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 30px 20px;
+            }
+            
+            .chinese-title {
+                font-size: 32px;
+            }
+            
+            .english-title {
+                font-size: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <form action="/cgi-bin/analyzeName.py" method="POST">
+            <!-- Title Section -->
+            <h1 class="chinese-title">姓名分析</h1>
+            <div class="pinyin-title">XÌNGMÍNG FĒNXĪ</div>
+            <div class="english-title">NAME ANALYSIS</div>
+            
+            <!-- Input Label Section -->
+            <div class="label-container">
+                <div class="chinese-label">请输入您的姓名</div>
+                <div class="english-label">Enter Your Name</div>
+                <div class="pinyin-label">Qǐng shūrù nín de xìngmíng</div>
+            </div>
+            
+            <!-- Name Input Field -->
+            <input type="text" id="name" name="name" required 
+                   placeholder="Type your name here">
+            
+            <!-- Submit Button -->
+            <button type="submit">
+                <div class="button-chinese">你是谁？</div>
+                <div class="button-english">Who Are You?</div>
+                <div class="button-pinyin">Nǐ shì shéi?</div>
+            </button>
+        </form>
+    </div>
+
+    <script>
+        // Simple focus effect
+        const nameInput = document.getElementById('name');
+        const submitButton = document.querySelector('button');
+        
+        nameInput.addEventListener('focus', function() {
+            this.style.borderColor = '#ff6b6b';
+        });
+        
+        nameInput.addEventListener('blur', function() {
+            this.style.borderColor = '#4ecdc4';
+        });
+        
+        // Button click effect
+        submitButton.addEventListener('mousedown', function() {
+            this.style.transform = 'translateY(-1px) scale(0.99)';
+        });
+        
+        submitButton.addEventListener('mouseup', function() {
+            this.style.transform = 'translateY(-3px) scale(1)';
+        });
+    </script>
+</body>
+</html>
