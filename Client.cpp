@@ -6,7 +6,7 @@
 /*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/27 20:41:35 by muzz             ###   ########.fr       */
+/*   Updated: 2026/01/28 14:15:45 by muzz             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,12 +27,14 @@
 
 Client::Client(t_server server_config) :  _executor(NULL), _socket(0), _hasCgi(false), _lastActivity(time(NULL)),
 	 _connStatus(CLOSE), _headersParsed(false), _expectedBodyLength(0), _currentBodyLength(0), 
-	 _requestComplete(false), _disconnected(false), revived(false) //FromMuzz
+	 _requestComplete(false), _disconnected(false), _isChunked(false), _chunkedComplete(false),
+	 _maxBodySize(server_config.client_max_body_size), revived(false) //FromMuzz
 {
 	state = READ_REQUEST;
 	_responder = new Respond();
 	_responder->setClient(this);
 	_serverConfig = server_config;
+	
 }
 
 Client::~Client()
@@ -289,6 +291,11 @@ bool	Client::isKeepAlive()
 	return _connStatus;
 }
 
+void Client::setMaxBodySize(size_t maxSize)
+{
+	_maxBodySize = maxSize;
+}
+
 void Client::setConnStatus(bool status)
 {
     _connStatus = status;
@@ -321,12 +328,25 @@ bool Client::readHttpRequest()
 				_headersParsed = true;
 				
 				std::string headers_only = _rawBuffer.substr(0, header_end);
-				_expectedBodyLength = parseContentLength(headers_only);
+				
+				_isChunked = parseTransferEncoding(headers_only);
+				
+				if (_isChunked) {
+					std::cout << "📋 Headers parsed - CHUNKED transfer encoding detected" << std::endl;
+					_expectedBodyLength = 0; // Unknown for chunked
+				} else {
+					_expectedBodyLength = parseContentLength(headers_only);
+					if (_expectedBodyLength > _maxBodySize) {
+						std::cout << "Request body too large" <<std::endl;
+						_requestComplete = false;
+						_disconnected = true;
+						throw(413);
+					}
+					std::cout << "📋 Headers parsed - Expected body: " << _expectedBodyLength << " bytes";
+				}
 				
 				_currentBodyLength = _rawBuffer.length() - header_end;
-				
-				std::cout << "📋 Headers parsed - Expected body: " << _expectedBodyLength 
-						  << " bytes, Current: " << _currentBodyLength << " bytes" << std::endl;
+				std::cout << ", Current: " << _currentBodyLength << " bytes" << std::endl;
 			}
 		} else {
 			_currentBodyLength = _rawBuffer.length() - (_rawBuffer.find("\r\n\r\n") + 4);
@@ -338,12 +358,29 @@ bool Client::readHttpRequest()
 			}
 		}
 		
-		if (_headersParsed && _currentBodyLength >= _expectedBodyLength) {
-			_requestComplete = true;
-			_currentRequest = _rawBuffer;
+		// ✅ UPDATED: Check completion based on encoding type (minimal change)
+		if (_headersParsed) {
+			bool isComplete = false;
 			
-			std::cout << "✅ Complete HTTP request received (" << _rawBuffer.length() << " bytes)" << std::endl;
-			return true;
+			if (_isChunked) {
+				// Simple chunked completion check
+				isComplete = isChunkedComplete();
+			} else {
+				// Normal Content-Length completion
+				isComplete = (_currentBodyLength >= _expectedBodyLength);
+			}
+			
+			if (isComplete) {
+				_requestComplete = true;
+				_currentRequest = _rawBuffer;
+				
+				if (_isChunked) {
+					std::cout << "✅ Complete chunked HTTP request received" << std::endl;
+				} else {
+					std::cout << "✅ Complete HTTP request received (" << _rawBuffer.length() << " bytes)" << std::endl;
+				}
+				return true;
+			}
 		}
 		
 		return false;
@@ -392,6 +429,11 @@ void Client::resetRequestBuffer()
 	_currentBodyLength = 0;
 	_requestComplete = false;
 	_disconnected = false;
+	
+	// ✅ ADD: Reset chunked variables
+	_isChunked = false;
+	_chunkedComplete = false;
+	_chunkedBody.clear();
 }
 
 size_t Client::parseContentLength(const std::string& headers)
@@ -442,6 +484,89 @@ size_t Client::parseContentLength(const std::string& headers)
 	}
 	
 	return 0; // No Content-Length found
+}
+
+bool Client::isChunkedComplete()
+{
+	// Simple chunked completion check - look for final chunk (0\r\n\r\n)
+	if (!_isChunked) {
+		return false;
+	}
+	
+	// Find where body starts
+	size_t body_start = _rawBuffer.find("\r\n\r\n");
+	if (body_start == std::string::npos) {
+		body_start = _rawBuffer.find("\n\n");
+		if (body_start != std::string::npos) {
+			body_start += 2;
+		}
+	} else {
+		body_start += 4;
+	}
+	
+	if (body_start == std::string::npos) {
+		return false;
+	}
+	
+	std::string body = _rawBuffer.substr(body_start);
+	
+	// Simple check for final chunk: look for "0\r\n\r\n" or "0\n\n"
+	if (body.find("0\r\n\r\n") != std::string::npos || 
+		body.find("0\n\n") != std::string::npos) {
+		std::cout << "🏁 Chunked request final chunk detected" << std::endl;
+		return true;
+	}
+	
+	return false;
+}
+
+bool Client::parseTransferEncoding(const std::string& headers)
+{
+	std::cout << "🔍 Checking for Transfer-Encoding header..." << std::endl;
+	std::cout << "📋 Headers to check (" << headers.length() << " bytes):" << std::endl;
+	std::cout << "📄 Raw headers content:" << std::endl;
+	std::cout << "\"" << headers << "\"" << std::endl;
+	std::cout << "--- End Headers ---" << std::endl;
+	
+	// Simple chunked detection - minimal implementation
+	size_t pos = 0;
+	
+	while (pos < headers.length()) {
+		size_t line_end = headers.find('\n', pos);
+		if (line_end == std::string::npos) {
+			line_end = headers.length();
+		}
+		
+		std::string line = headers.substr(pos, line_end - pos);
+		if (!line.empty() && line[line.length() - 1] == '\r') {
+			line.erase(line.length() - 1);
+		}
+		
+		// Print each header line for debugging
+		std::cout << "🔎 Header line: \"" << line << "\"" << std::endl;
+		
+		// Convert to lowercase for comparison
+		std::string lower_line = line;
+		for (size_t i = 0; i < lower_line.length(); i++) {
+			lower_line[i] = std::tolower(lower_line[i]);
+		}
+		
+		if (lower_line.find("transfer-encoding:") == 0) {
+			std::cout << "🎯 Found Transfer-Encoding header!" << std::endl;
+			if (lower_line.find("chunked") != std::string::npos) {
+				std::cout << "✅ Chunked encoding detected!" << std::endl;
+				return true;
+			} else {
+				std::cout << "❌ Transfer-Encoding found but not chunked: \"" << line << "\"" << std::endl;
+			}
+			break;
+		}
+		
+		pos = line_end + 1;
+	}
+	
+	std::cout << "❌ No Transfer-Encoding: chunked header found" << std::endl;
+	return false;
 }
 
 std::string Client::readRawRequest()

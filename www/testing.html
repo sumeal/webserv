@@ -309,6 +309,15 @@
                         <label for="post-json">JSON data:</label>
                         <textarea id="post-json" rows="4" placeholder='{"key": "value", "name": "test"}'></textarea>
                     </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="use-chunked" style="margin-right: 8px;">
+                            Use Chunked Transfer Encoding
+                        </label>
+                        <small style="color: #666; display: block; margin-top: 4px;">
+                            Test chunked request parsing on the server
+                        </small>
+                    </div>
                     <button type="submit" class="btn-test btn-post">📤 Send POST Request</button>
                 </form>
             </div>
@@ -422,6 +431,63 @@
         });
 
         // POST Request Handler
+        // Helper function to send chunked request
+        function sendChunkedRequest(path, data, contentType) {
+            return new Promise((resolve, reject) => {
+                console.log('📤 Preparing chunked request:', {
+                    path: path,
+                    dataLength: data.length,
+                    contentType: contentType
+                });
+                
+                // Create chunked encoding format
+                const chunkSize = Math.max(8, Math.floor(data.length / 4));
+                let chunkedData = '';
+                let offset = 0;
+                
+                console.log('🔧 Creating chunks with size:', chunkSize);
+                
+                while (offset < data.length) {
+                    const chunk = data.slice(offset, offset + chunkSize);
+                    const chunkLength = chunk.length.toString(16).toUpperCase();
+                    chunkedData += chunkLength + '\r\n' + chunk + '\r\n';
+                    console.log('📦 Chunk:', chunkLength, 'bytes:', chunk);
+                    offset += chunkSize;
+                }
+                
+                // Add final chunk (0 length signals end)
+                chunkedData += '0\r\n\r\n';
+                console.log('🏁 Final chunked data length:', chunkedData.length);
+                console.log('📋 Full chunked body:', JSON.stringify(chunkedData));
+                
+                // Use fetch with custom headers
+                fetch(path, {
+                    method: 'POST',
+                    headers: {
+                        'Transfer-Encoding': 'chunked',
+                        'Content-Type': contentType || 'text/plain'
+                        // Deliberately not setting Content-Length
+                    },
+                    body: chunkedData,
+                    cache: 'no-cache'
+                })
+                .then(response => {
+                    console.log('✅ Chunked request response:', response.status);
+                    return response.text().then(text => {
+                        resolve({
+                            status: response.status,
+                            statusText: response.statusText,
+                            responseText: text
+                        });
+                    });
+                })
+                .catch(error => {
+                    console.error('❌ Chunked request failed:', error);
+                    reject(error);
+                });
+            });
+        }
+
         document.getElementById('post-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -431,37 +497,62 @@
             if (!path.startsWith('/')) path = '/' + path;
             
             const contentType = document.getElementById('post-content-type').value;
-            let requestOptions = {
-                method: 'POST',
-                cache: 'no-cache'
-            };
+            const useChunked = document.getElementById('use-chunked').checked;
             
             try {
+                let data = '';
+                let contentTypeHeader = '';
+                
                 if (contentType === 'text') {
-                    const textData = document.getElementById('post-data').value;
-                    requestOptions.headers = { 'Content-Type': 'text/plain' };
-                    requestOptions.body = textData;
+                    data = document.getElementById('post-data').value;
+                    contentTypeHeader = 'text/plain';
                 } else if (contentType === 'json') {
-                    const jsonData = document.getElementById('post-json').value;
-                    requestOptions.headers = { 'Content-Type': 'application/json' };
-                    requestOptions.body = jsonData;
+                    data = document.getElementById('post-json').value;
+                    contentTypeHeader = 'application/json';
                 } else if (contentType === 'file') {
                     const fileInput = document.getElementById('post-file');
                     if (fileInput.files.length > 0) {
+                        if (useChunked) {
+                            addResponseToLog('POST', path, 'ERROR', 
+                                'Chunked transfer encoding not supported for file uploads in this demo');
+                            return;
+                        }
                         const formData = new FormData();
                         formData.append('file', fileInput.files[0]);
-                        requestOptions.body = formData;
+                        
+                        const response = await fetch(path, {
+                            method: 'POST',
+                            body: formData,
+                            cache: 'no-cache'
+                        });
+                        const responseText = await response.text();
+                        addResponseToLog('POST', path, response.status, 
+                            `${response.status} ${response.statusText}`, responseText);
+                        return;
                     } else {
                         addResponseToLog('POST', path, 'ERROR', 'No file selected');
                         return;
                     }
                 }
                 
-                const response = await fetch(path, requestOptions);
-                const responseText = await response.text();
-                
-                addResponseToLog('POST', path, response.status, 
-                    `${response.status} ${response.statusText}`, responseText);
+                if (useChunked) {
+                    // Use custom chunked request
+                    addResponseToLog('POST', path, 'INFO', 'Sending chunked request...');
+                    const response = await sendChunkedRequest(path, data, contentTypeHeader);
+                    addResponseToLog('POST', path, response.status, 
+                        `${response.status} ${response.statusText} (chunked)`, response.responseText);
+                } else {
+                    // Use normal fetch request
+                    const response = await fetch(path, {
+                        method: 'POST',
+                        headers: { 'Content-Type': contentTypeHeader },
+                        body: data,
+                        cache: 'no-cache'
+                    });
+                    const responseText = await response.text();
+                    addResponseToLog('POST', path, response.status, 
+                        `${response.status} ${response.statusText}`, responseText);
+                }
                     
             } catch (error) {
                 addResponseToLog('POST', path, 'ERROR', 

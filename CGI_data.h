@@ -6,7 +6,7 @@
 /*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/16 15:03:57 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/27 20:27:08 by muzz             ###   ########.fr       */
+/*   Updated: 2026/01/28 13:27:07 by muzz             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,6 +42,7 @@ typedef struct s_server
 	std::vector<std::string> index_files;
 	std::map<int, std::string> error_pages;
 	std::vector<t_location> locations;
+	size_t client_max_body_size;
 } t_server;
 
 typedef struct s_HttpRequest

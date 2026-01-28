@@ -6,7 +6,7 @@
 /*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/27 20:35:40 by muzz             ###   ########.fr       */
+/*   Updated: 2026/01/28 14:08:42 by muzz             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -513,6 +513,7 @@ void Core::parse_config(const std::string &filename)
             current_state = (ParseState)Parse::parse_outside(line, current_state);
 			if (current_state == SERVER) {
 				temp_server = t_server();
+				temp_server.client_max_body_size = 1048576;
 			}
         }
         else if (current_state == SERVER) {
@@ -589,7 +590,6 @@ void Core::parse_http_request(Client* current_client, const std::string raw_req)
 		}
 	}
 	
-	// ✅ SIMPLE: Extract body from raw_req directly
 	size_t body_start = raw_req.find("\r\n\r\n");
 	if (body_start == std::string::npos) {
 		body_start = raw_req.find("\n\n");
@@ -826,10 +826,17 @@ void Core::debugHttpRequest(const t_HttpRequest& request)
         std::cout << "   Body Content:   (empty)" << std::endl;
     } else {
         std::cout << "   Body Preview:   ";
-        if (request.body.length() <= 100) {
+        if (request.body.length() <= 200) {
             std::cout << "\"" << request.body << "\"" << std::endl;
         } else {
-            std::cout << "\"" << request.body.substr(0, 100) << "...\" (truncated)" << std::endl;
+            std::cout << "\"" << request.body.substr(0, 200) << "...\" (truncated)" << std::endl;
+        }
+        
+        // Show full body if it looks like chunked encoding
+        if (request.body.find('\n') != std::string::npos && 
+            request.body.find("0\n") != std::string::npos) {
+            std::cout << "🔍 Full chunked body:" << std::endl;
+            std::cout << "\"" << request.body << "\"" << std::endl;
         }
         
         // Show body in hex if it contains binary data

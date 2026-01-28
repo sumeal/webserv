@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Respond.cpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
+/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 17:17:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/26 00:05:00 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/28 20:33:33 by muzz             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,16 +18,17 @@
 #include <cstddef>
 #include <fstream>
 #include <sstream>
-#include <variant>
 #include <sys/types.h> //ssize_t
 #include <sys/socket.h> //send
 #include <iostream>
+#include <sys/stat.h>  // For directory operations
+#include <dirent.h>    // For directory listing
 
 //initialize the status code
-Respond::Respond() : _client(NULL), _statusCode(0), _protocol("HTTP/1.1"), _contentLength(0), _serverName("localhost"), 
-	_connStatus(KEEP_ALIVE), _socketFd(0), 
-	_bytesSent(0)
-{}
+Respond::Respond() : _client(NULL), _statusCode(0), _protocol("HTTP/1.1"), _contentLength(0), 
+	_serverName("localhost"), _connStatus(KEEP_ALIVE), _socketFd(0), _bytesSent(0)
+{
+}
 
 Respond::~Respond()
 {}
@@ -152,33 +153,6 @@ void Respond::setSocketFd(int socketFd)
 // 	}
 // }
 
-void	Respond::setContentType()
-{
-	size_t pos = _filePath.rfind(".");
-	if (pos != std::string::npos)
-	{
-		std::string ext = _filePath.substr(pos);
-		if (ext == ".html")
-			_contentType = "text/html";
-		else if (ext == ".css")
-			_contentType = "text/css";
-		else if (ext == ".js")
-			_contentType = "application/javascript";
-		else if (ext == ".jpeg")
-			_contentType = "image/jpeg";
-		else if (ext == ".png")
-			_contentType = "image/png";
-		else
-		 	_contentType = "text/plain"; //it wouldnt try to execute
-	}
-	else
-	{
-		//trigger to save/downlaod the file only
-		_contentType = "application/octet-stream";
-		//throw (404);
-	}
-}
-
 void Respond::setClient(Client* client)
 {
 	_client = client;
@@ -232,8 +206,53 @@ void	Respond::procNormalOutput(std::string protocol)
 	else
 		filePath = documentRoot + requestPath;
 	std::cout << _client->getRequest().method << std::endl; //debug
+	
 	if (_client->getRequest().method == "GET")
 	{
+		// ✅ C++98 Compliant: Check if it's a directory first
+		if (isDirectory(filePath)) {
+			// Try to serve index file
+			std::string indexPath = filePath;
+			if (indexPath[indexPath.length() - 1] != '/') {
+				indexPath += "/";
+			}
+			indexPath += "index.html";
+			
+			std::ifstream indexFile(indexPath.c_str());
+			if (indexFile.is_open()) {
+				// Serve index file
+				std::stringstream buffer;
+				buffer << indexFile.rdbuf();
+				indexFile.close();
+				
+				_body = buffer.str();
+				_statusCode = 200;
+				_protocol = protocol;
+				_contentLength = _body.size();
+				setContentType(indexPath);
+				std::cout << "✅ " <<  indexPath << " served"  << std::endl;
+				return;
+			}
+			
+			// No index file, check if autoindex is enabled
+			t_location* location = getCurrentLocation();
+			if (location && location->auto_index) {
+				// Generate directory listing
+				_body = generateDirectoryListing(filePath, requestPath);
+				_statusCode = 200;
+				_protocol = protocol;
+				_contentLength = _body.size();
+				_contentType = "text/html";
+				std::cout << "✅ Directory listing for " << requestPath << " generated" << std::endl;
+				return;
+			} else {
+				// Autoindex disabled, return 403
+				handleError(403);
+				return;
+			}
+		}
+		
+		// Regular file handling
 		std::ifstream file(filePath.c_str());
 		if (!file.is_open())
 		{
@@ -521,4 +540,146 @@ std::string Respond::getServerRoot() {
 		return (_client->getRoot());
 	}
 	return ("./www");
+}
+
+// ✅ C++98 Compliant: Check if path is a directory
+bool Respond::isDirectory(const std::string& path) {
+	struct stat statbuf;
+	if (stat(path.c_str(), &statbuf) != 0) {
+		return false;
+	}
+	return S_ISDIR(statbuf.st_mode);
+}
+
+// ✅ C++98 Compliant: Generate HTML directory listing
+std::string Respond::generateDirectoryListing(const std::string& dirPath, const std::string& requestPath) {
+	std::ostringstream html;
+	
+	// HTML header
+	html << "<!DOCTYPE html>\n"
+		 << "<html><head><title>Index of " << requestPath << "</title>\n"
+		 << "<style>\n"
+		 << "body { font-family: monospace; margin: 40px; }\n"
+		 << "h1 { color: #333; }\n"
+		 << "a { text-decoration: none; color: #0066cc; }\n"
+		 << "a:hover { text-decoration: underline; }\n"
+		 << ".dir { color: #0066cc; font-weight: bold; }\n"
+		 << ".file { color: #333; }\n"
+		 << "pre { line-height: 1.5; }\n"
+		 << "</style></head><body>\n"
+		 << "<h1>Index of " << requestPath << "</h1>\n"
+		 << "<hr><pre>\n";
+	
+	// Parent directory link
+	if (requestPath != "/" && !requestPath.empty()) {
+		std::string parentPath = requestPath;
+		if (parentPath[parentPath.length() - 1] == '/') {
+			parentPath = parentPath.substr(0, parentPath.length() - 1);
+		}
+		size_t lastSlash = parentPath.find_last_of('/');
+		if (lastSlash != std::string::npos) {
+			parentPath = parentPath.substr(0, lastSlash);
+		}
+		if (parentPath.empty()) {
+			parentPath = "/";
+		}
+		html << "<a href=\"" << parentPath << "\" class=\"dir\">[Parent Directory]</a>\n";
+	}
+	
+	// Open directory
+	DIR* dir = opendir(dirPath.c_str());
+	if (dir == NULL) {
+		html << "Error: Cannot read directory\n";
+	} else {
+		struct dirent* entry;
+		std::vector<std::string> directories;
+		std::vector<std::string> files;
+		
+		// Read directory entries
+		while ((entry = readdir(dir)) != NULL) {
+			std::string name = entry->d_name;
+			
+			// Skip hidden files and current directory
+			if (name[0] == '.') {
+				continue;
+			}
+			
+			std::string fullPath = dirPath;
+			if (fullPath[fullPath.length() - 1] != '/') {
+				fullPath += "/";
+			}
+			fullPath += name;
+			
+			if (isDirectory(fullPath)) {
+				directories.push_back(name);
+			} else {
+				files.push_back(name);
+			}
+		}
+		closedir(dir);
+		
+		// Sort entries (C++98 compliant)
+		std::sort(directories.begin(), directories.end());
+		std::sort(files.begin(), files.end());
+		
+		// Display directories first
+		for (std::vector<std::string>::iterator it = directories.begin(); 
+			 it != directories.end(); ++it) {
+			std::string linkPath = requestPath;
+			if (linkPath[linkPath.length() - 1] != '/') {
+				linkPath += "/";
+			}
+			linkPath += *it + "/";
+			html << "<a href=\"" << linkPath << "\" class=\"dir\">" 
+				 << *it << "/</a>\n";
+		}
+		
+		// Display files
+		for (std::vector<std::string>::iterator it = files.begin(); 
+			 it != files.end(); ++it) {
+			std::string linkPath = requestPath;
+			if (linkPath[linkPath.length() - 1] != '/') {
+				linkPath += "/";
+			}
+			linkPath += *it;
+			html << "<a href=\"" << linkPath << "\" class=\"file\">" 
+				 << *it << "</a>\n";
+		}
+	}
+	
+	// HTML footer
+	html << "</pre><hr>\n"
+		 << "<address>Webserv/1.0</address>\n"
+		 << "</body></html>\n";
+	
+	return html.str();
+}
+
+// ✅ C++98 Compliant: Get current location configuration
+t_location* Respond::getCurrentLocation() {
+	if (!_client) {
+		return NULL;
+	}
+	
+	std::string requestPath = getRequestPath();
+	t_server serverConfig = _client->getServerConfig();
+	t_location* bestMatch = NULL;
+	size_t bestMatchLength = 0;
+	
+	// Find the longest matching location
+	for (std::vector<t_location>::iterator it = serverConfig.locations.begin();
+		 it != serverConfig.locations.end(); ++it) {
+		
+		std::string locationPath = it->path;
+		
+		// Check if request path starts with location path
+		if (requestPath.find(locationPath) == 0) {
+			if (locationPath.length() > bestMatchLength) {
+				bestMatch = &(*it);
+				bestMatchLength = locationPath.length();
+			}
+		}
+	}
+	
+	return bestMatch;
 }

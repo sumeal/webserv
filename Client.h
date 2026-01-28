@@ -6,7 +6,7 @@
 /*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:03:33 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/27 20:41:26 by muzz             ###   ########.fr       */
+/*   Updated: 2026/01/28 14:05:00 by muzz             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -52,8 +52,14 @@ private:
 	bool			_requestComplete;
 	bool			_disconnected;
 	
+	bool			_isChunked;
+	bool			_chunkedComplete;
+	std::string		_chunkedBody;
+	size_t _maxBodySize;
 	// Non-blocking parsing helper
 	size_t			parseContentLength(const std::string& headers);
+	bool			parseTransferEncoding(const std::string& headers);  // ✅ ADD
+	bool			isChunkedComplete();  // ✅ ADD: Simple chunked checker
 public:
 	e_State state;
 	Client(t_server server_config);
@@ -76,7 +82,6 @@ public:
     void	setConnStatus(bool status);
 
 	
-	// Non-blocking HTTP request methods
 	bool			readHttpRequest();
 	bool			isRequestComplete();
 	bool			isDisconnected();
@@ -88,7 +93,7 @@ public:
 	std::string 	getRoot();
 	t_server		getServerConfig();
 	t_location&		getCgiLocation();
-	
+	void	setMaxBodySize(size_t maxSize);
 	bool	isCGI(const s_HttpRequest& request, const t_location& locate) const; // check
 	bool	isCGIextOK(const s_HttpRequest& request, const t_location& locate) const; //check
 	// CgiRequest* GetCgiReq();
