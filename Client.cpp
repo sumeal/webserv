@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Client.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
+/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: Invalid date        by                   #+#    #+#             */
-/*   Updated: 2026/01/29 10:48:42 by abin-moh         ###   ########.fr       */
+/*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
+/*   Updated: 2026/01/29 12:35:18 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,12 +29,12 @@
 #include <cctype>
 
 Client::Client(t_server server_config) :  _executor(NULL), _socket(0), _hasCgi(false), _lastActivity(time(NULL)),
-	 _connStatus(CLOSE), _headersParsed(false), _expectedBodyLength(0), _currentBodyLength(0), 
+	 _connStatus(CLOSE), _bestLocation(NULL), _headersParsed(false), _expectedBodyLength(0), _currentBodyLength(0), 
 	 _requestComplete(false), _disconnected(false), _isChunked(false), _chunkedComplete(false),
 	 _maxBodySize(server_config.client_max_body_size), revived(false) //FromMuzz
 {
 	state = READ_REQUEST;
-	_responder = new Respond();
+	_responder = new Respond(_serverConfig);
 	_responder->setClient(this);
 	_serverConfig = server_config;
 	
@@ -76,51 +76,19 @@ void	Client::procInput(int i, struct pollfd& pFd)
 			// For CGI requests, we would need to create and configure the CGI executor
 			// For now, just serve as normal file
 			std::string protocol = request.http_version.empty() ? "HTTP/1.1" : request.http_version;
-			std::cout << "content length in client: "  << request.content_length << std::endl; //debug
-			std::cout << "content body in client: " << request.body << std::endl; //debug
 			setCgiExec(new CgiExecute(this, protocol));
 			GetCgiExec()->preExecute();
 			GetCgiExec()->execute();
 			state = EXECUTE_CGI;
 		}
-	// // int pipeFromCgi = GetCgiExec()->getpipeFromCgi(); //my old commit
-	//
-	// if (state == READ_REQUEST)
-	// {
-	// 	//check client disconnect using received
-	// 	//READ REQUEST fromMuzz
-	// 	// if (/*read request finished*/)
-	// 	// if (state == HANDLE_REQUEST)
-	// 	// {
-	// 		if (!isCGI(request, locate))
-	// 		{
-	// 			getRespond().procNormalOutput(request, locate);
-	// 			getRespond().buildResponse();
-	// 			state = SEND_RESPONSE;
-	// 			// respondRegister(client);//
-	// 			// state = WAIT_RESPONSE;
-	// 		}
-	// 		else
-	// 		{
-	// 			setCgiExec(new CgiExecute(this, request, locate));
-	// 			GetCgiExec()->preExecute();
-	// 			GetCgiExec()->execute();
-	// 			state = EXECUTE_CGI;
-	// 			// cgiRegister(client);//
-	// 			// state = WAIT_CGI;
-	// 		}
-	// 	// }
 	}
 	else if (state == WAIT_CGI && pFd.fd == GetCgiExec()->getpipeFromCgi())
 	{
-		std::cout << "trigger here 13" << std::endl; //debug			
 		GetCgiExec()->readExec();
 		GetCgiExec()->cgiState();
 		if (GetCgiExec()->isReadDone())
 		{
 			// fdPreCleanup(pipeFromCgi, i);//
-			std::cout << "trigger here 14" << std::endl; //debug			
-			std::cout << "cgi output: " << GetCgiExec()->getOutput() << std::endl;//debug
 			fdPreCleanup(pFd);
 			if (GetCgiExec()->isDone())
 			{
@@ -140,15 +108,13 @@ void	Client::procOutput(int i, struct pollfd& pFd)
 	
 	if (state == WAIT_CGI && _executor)
 	{
-		std::cout << "trigger here 11" << std::endl; //debug
-		std::cout << "method: " << request.method << std::endl; //debug
+		// std::cout << "method: " << request.method << std::endl; //debug
 		int pipeToCgi = GetCgiExec()->getpipeToCgi();
 		if (pFd.fd == pipeToCgi) {
 			GetCgiExec()->writeExec();
 			GetCgiExec()->cgiState();
 			if (GetCgiExec()->isWriteDone())
 			{
-				std::cout << "trigger here 12" << std::endl; //debug
 				fdPreCleanup(pFd);
 				if (GetCgiExec()->isDone())
 				{
@@ -273,9 +239,9 @@ bool	Client::getHasCgi()
 	return _hasCgi;
 }
 
-bool	Client::isCgiOn()  //mcm x perlu
+bool	Client::isCgiExecuted()  //mcm x perlu
 {
-	return _executor->getpid();
+	return _executor;
 }
 
 void	Client::setHasCgi(bool status)
@@ -607,13 +573,88 @@ t_server	Client::getServerConfig()
 	return (_serverConfig);
 }
 
-t_location&	Client::getCgiLocation()
+//what to compare to get the matching location. something from request?
+void	Client::checkBestLocation()
 {
-	size_t i = 0;
-	for (; i < _serverConfig.locations.size(); i++)
+	std::cout << "check best location enter" << std::endl; //debug
+	t_location*		bestLoc = NULL;
+	size_t			bestLen = 0;
+	s_HttpRequest	request = getRequest();
+
+	std::cout << "Request Path: " << request.path << std::endl;//debug
+	for (size_t i = 0; i < _serverConfig.locations.size();i++)
 	{
-		if (_serverConfig.locations[i].path == "/cgi-bin")
-			return _serverConfig.locations[i];
+		t_location& loc =  _serverConfig.locations[i];
+
+		std::cout << "server path" << loc.path << std::endl;
+		if (request.path.compare(0, loc.path.size(), loc.path) == 0) // 1. img 2.img/
+		{
+			bool boundary = (request.path.size() == loc.path.size() //cases where match both. req: img and loc: img, /img and /img 
+			|| (!loc.path.empty() && loc.path[loc.path.size() - 1] == '/') //cases where loc is img/ and req is only img/... .  so we dont care after loc img/.  why req is only img/? the compare filter it
+			|| request.path[loc.path.size()] == '/'); //cases where loc: img (no /) will match w/ req: img/ or imga or img.... we only want to allow req: img/
+			if (boundary && loc.path.length() > bestLen)
+			{
+				bestLen = loc.path.length();  
+				bestLoc = &_serverConfig.locations[i];
+			}
+		}
 	}
-	return _serverConfig.locations[i]; //suppose not to trigger
+	if (!bestLoc)
+		throw 404;
+	if (getRequest().method != "GET" && getRequest().method != "POST" 
+		&& getRequest().method != "DELETE")
+		throw 501;
+	if ((getRequest().method == "GET" && !bestLoc->allow_get) ||
+		(getRequest().method == "POST" && !bestLoc->allow_post) || 
+		(getRequest().method == "DELETE" && !bestLoc->allow_delete))
+	{
+		std::cout << "405 throw trigger" << std::endl; //debug
+		throw 405; //will throw crash server or handle that one client only
+	}
+ 	_bestLocation = bestLoc;
+	std::cout << "check best location doesnt throw" << std::endl; //debug
 }
+
+t_location*		Client::getBestLocation()
+{
+	return _bestLocation;
+}
+
+// t_location&	Client::getCgiLocation()
+// {
+// 	size_t i = 0;
+// 	for (; i < _serverConfig.locations.size(); i++)
+// 	{
+// 		if (_serverConfig.locations[i].path == "/cgi-bin")
+// 			return _serverConfig.locations[i];
+// 	}
+// 	return _serverConfig.locations[i]; //suppose not to trigger
+// }
+
+	// // int pipeFromCgi = GetCgiExec()->getpipeFromCgi(); //my old commit
+	//
+	// if (state == READ_REQUEST)
+	// {
+	// 	//check client disconnect using received
+	// 	//READ REQUEST fromMuzz
+	// 	// if (/*read request finished*/)
+	// 	// if (state == HANDLE_REQUEST)
+	// 	// {
+	// 		if (!isCGI(request, locate))
+	// 		{
+	// 			getRespond().procNormalOutput(request, locate);
+	// 			getRespond().buildResponse();
+	// 			state = SEND_RESPONSE;
+	// 			// respondRegister(client);//
+	// 			// state = WAIT_RESPONSE;
+	// 		}
+	// 		else
+	// 		{
+	// 			setCgiExec(new CgiExecute(this, request, locate));
+	// 			GetCgiExec()->preExecute();
+	// 			GetCgiExec()->execute();
+	// 			state = EXECUTE_CGI;
+	// 			// cgiRegister(client);//
+	// 			// state = WAIT_CGI;
+	// 		}
+	// 	// }

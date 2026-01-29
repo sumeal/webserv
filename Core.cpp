@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Core.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
+/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/29 10:48:06 by abin-moh         ###   ########.fr       */
+/*   Updated: 2026/01/29 12:55:22 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -373,7 +373,7 @@ void	Core::handleClientError(Client* client, int statusCode)
 		client->getRespond().findErrorBody(errorPath);
 	client->getRespond().buildErrorResponse(statusCode);
 	//Cleanup for finished problematic CGI
-	if (client->getHasCgi())
+	if (client->isCgiExecuted())
 	{
 		client->GetCgiExec()->clearCgi();
 		fdPreCleanup(client->GetCgiExec()->getpipeFromCgi(), 0);
@@ -624,9 +624,9 @@ void Core::parse_http_request(Client* current_client, const std::string raw_req)
         std::cout << "Normal file request: " << path << std::endl;
     }
 	
-	putIntoCached(current_request);
-	std::cout << "Parsed: " << current_request.method << " " << current_request.path << std::endl;
-	debugHttpRequest(current_request);
+	putIntoCached(current_request); //importantdebug
+	debugHttpRequest(current_request); //importantdebug
+	current_client->checkBestLocation();
 	current_client->state = HANDLE_REQUEST;
 }
 

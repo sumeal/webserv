@@ -39,9 +39,6 @@ private:
 	void debugHttpRequest(const t_HttpRequest& request);
     void putIntoCached(s_HttpRequest& request);
 
-
-
-
 public:
 	Core();
 	~Core();

@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Respond.h                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
+/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 16:58:34 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/29 10:47:45 by abin-moh         ###   ########.fr       */
+/*   Updated: 2026/01/29 13:02:36 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,7 +27,8 @@ enum e_connectionStatus {
 
 class Respond {
 private:
-    Client* _client;
+	t_server&	_server;
+    Client* 	_client;
 	std::string	_fullResponse;
 	int			_statusCode;
 	std::string	_protocol;
@@ -41,7 +42,7 @@ private:
 	int			_socketFd;
 	size_t		_bytesSent;
 public:
-	Respond();
+	Respond(t_server& serverConf);
 	~Respond();
 	void	buildErrorResponse(int statusCode);
 	void	procCgiOutput(std::string cgiOutput);

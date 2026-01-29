@@ -3,14 +3,15 @@
 /*                                                        :::      ::::::::   */
 /*   Respond.cpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
+/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 17:17:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/29 10:48:50 by abin-moh         ###   ########.fr       */
+/*   Updated: 2026/01/29 13:02:25 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Respond.h"
+#include "CGI_data.h"
 #include "Client.h"
 #include <algorithm>
 #include <cctype>
@@ -25,10 +26,10 @@
 #include <dirent.h>    // For directory listing
 
 //initialize the status code
-Respond::Respond() : _client(NULL), _statusCode(0), _protocol("HTTP/1.1"), _contentLength(0), 
-	_serverName("localhost"), _connStatus(KEEP_ALIVE), _socketFd(0), _bytesSent(0)
-{
-}
+Respond::Respond(t_server& serverConf) : _server(serverConf), _client(NULL), _statusCode(0), //consider removing _server
+	_protocol("HTTP/1.1"), _contentLength(0), _serverName("localhost"), 
+	_connStatus(KEEP_ALIVE), _socketFd(0), _bytesSent(0)
+{}
 
 Respond::~Respond()
 {}
@@ -38,7 +39,6 @@ void	Respond::procCgiOutput(std::string cgiOutput)
 {
 	if (cgiOutput.empty())
 	{
-		std::cout << "trigger here 5" << std::endl; //debug
 		buildErrorResponse(502);
 		return ;
 	}
@@ -52,7 +52,6 @@ void	Respond::procCgiOutput(std::string cgiOutput)
 	}
 	if (separatorPos == std::string::npos)
 	{
-		std::cout << "trigger here 6" << std::endl; //debug
 		buildErrorResponse(502);
 		return ;
 	}
@@ -73,10 +72,7 @@ void	Respond::procCgiOutput(std::string cgiOutput)
 		_statusCode = std::atoi(statusStr.c_str());
 	}
 	if (_statusCode < 100 || _statusCode > 599)
-	{
-		std::cout << "trigger here 7" << std::endl; //debug
 		_statusCode = 502;
-	}
 	//				FIND CONTENT TYPE
 	size_t contentTypePos = headerLow.find("content-type");
 	if (contentTypePos != std::string::npos)
@@ -205,75 +201,92 @@ void	Respond::procNormalOutput(std::string protocol)
 		filePath = documentRoot + "/index.html";
 	else
 		filePath = documentRoot + requestPath;
-	std::cout << _client->getRequest().method << std::endl; //debug
+	// std::cout << _client->getRequest().method << std::endl; //debug //study this part how to merge
 	
+	// if (_client->getRequest().method == "GET")
+	// {
+	// 	if (isDirectory(filePath)) 
+	// 	{
+	// 		// Try to serve index file
+	// 		std::string indexPath = filePath;
+	// 		if (indexPath[indexPath.length() - 1] != '/') {
+	// 			indexPath += "/";
+	// 		}
+	// 		indexPath += "index.html";
+			
+	// 		std::ifstream indexFile(indexPath.c_str());
+	// 		if (indexFile.is_open()) {
+	// 			// Serve index file
+	// 			std::stringstream buffer;
+	// 			buffer << indexFile.rdbuf();
+	// 			indexFile.close();
+				
+	// 			_body = buffer.str();
+	// 			_statusCode = 200;
+	// 			_protocol = protocol;
+	// 			_contentLength = _body.size();
+	// 			setContentType(indexPath);
+	// 			std::cout << "✅ " <<  indexPath << " served"  << std::endl;
+	// 			return;
+	// 		}
+			
+	// 		// No index file, check if autoindex is enabled
+	// 		t_location* location = getCurrentLocation();
+	// 		if (location && location->auto_index) {
+	// 			// Generate directory listing
+	// 			_body = generateDirectoryListing(filePath, requestPath);
+	// 			_statusCode = 200;
+	// 			_protocol = protocol;
+	// 			_contentLength = _body.size();
+	// 			_contentType = "text/html";
+	// 			std::cout << "✅ Directory listing for " << requestPath << " generated" << std::endl;
+	// 			return;
+	// 		} else {
+	// 			// Autoindex disabled, return 403
+	// 			handleError(403);
+	// 			return;
+	// 		}
+	// 	}
+		
+	// 	// Regular file handling
+	// 	std::ifstream file(filePath.c_str());
+	// 	if (!file.is_open())
+	// std::cout << _client->getRequest().method << std::endl; //debug
 	if (_client->getRequest().method == "GET")
 	{
-		if (isDirectory(filePath)) {
-			// Try to serve index file
-			std::string indexPath = filePath;
-			if (indexPath[indexPath.length() - 1] != '/') {
-				indexPath += "/";
-			}
-			indexPath += "index.html";
-			
-			std::ifstream indexFile(indexPath.c_str());
-			if (indexFile.is_open()) {
-				// Serve index file
-				std::stringstream buffer;
-				buffer << indexFile.rdbuf();
-				indexFile.close();
-				
-				_body = buffer.str();
-				_statusCode = 200;
-				_protocol = protocol;
-				_contentLength = _body.size();
-				setContentType(indexPath);
-				std::cout << "✅ " <<  indexPath << " served"  << std::endl;
-				return;
-			}
-			
-			// No index file, check if autoindex is enabled
-			t_location* location = getCurrentLocation();
-			if (location && location->auto_index) {
-				// Generate directory listing
-				_body = generateDirectoryListing(filePath, requestPath);
-				_statusCode = 200;
-				_protocol = protocol;
-				_contentLength = _body.size();
-				_contentType = "text/html";
-				std::cout << "✅ Directory listing for " << requestPath << " generated" << std::endl;
-				return;
-			} else {
-				// Autoindex disabled, return 403
-				handleError(403);
-				return;
-			}
-		}
-		
-		// Regular file handling
-		std::ifstream file(filePath.c_str());
-		if (!file.is_open())
+		if (_client->getBestLocation()->has_redirect)
 		{
-			handleError(404);
-			return;
+			_statusCode = _client->getBestLocation()->redir_status;
+			_protocol = protocol;
+			_contentLength = 0;
 		}
-		std::stringstream buffer;
-		buffer << file.rdbuf();
-		file.close();
+		else 
+		{
+			std::ifstream file(filePath.c_str());
+			if (!file.is_open())
+			{
+				handleError(404);
+				return;
+			}
+			std::stringstream buffer;
+			buffer << file.rdbuf();
+			file.close();
+			
+			_body = buffer.str();
+			_statusCode = 200;
+			_protocol = protocol;
+			_contentLength = _body.size();
 		
-		_body = buffer.str();
-		_statusCode = 200;
-		_protocol = protocol;
-		_contentLength = _body.size();
-
-		setContentType(filePath);
-		
-		std::cout << "✅ " <<  filePath << " served"  << std::endl;
+			setContentType(filePath);
+			
+			std::cout << "✅ " <<  filePath << " served"  << std::endl;
+		}
 	} 
 	else if (_client->getRequest().method == "POST")
 	{
-		std::ofstream outfile(_filePath.c_str(), std::ios::out | std::ios::trunc);
+		// std::cout << "trigger normal POST" << std::endl; //debug
+		// std::cout << "file Path: " << filePath << std::endl; //debug
+		std::ofstream outfile(filePath.c_str(), std::ios::out | std::ios::trunc);
 		if (!outfile.is_open())
 			throw (500);
 		outfile << _client->getRequest().body;
@@ -287,6 +300,7 @@ void	Respond::procNormalOutput(std::string protocol)
 	}
 	else if (_client->getRequest().method == "DELETE")
 	{
+		std::cout << "File Path: " << filePath << std::endl; //debug
 		if (std::remove(filePath.c_str()) == 0)
 		{
 			_statusCode = 204;
@@ -297,7 +311,10 @@ void	Respond::procNormalOutput(std::string protocol)
 		else 
 		{
 			if (errno == ENOENT)
+			{
+				std::cout << "here" << std::endl; //debug
 				throw (404);
+			}
 			else if (errno == EACCES)
 				throw (403);
 			else
@@ -305,7 +322,7 @@ void	Respond::procNormalOutput(std::string protocol)
 		}
 	}
 }
-	
+
 	// std::string filePath = "FromMuzz";
 	// //read file and take path
 	// std::ifstream file(filePath.c_str());
@@ -342,7 +359,6 @@ void	Respond::procNormalOutput(std::string protocol)
 	// 	//throw (404);
 	// }
 
-
 void	Respond::buildResponse()
 {
 	std::stringstream ss;
@@ -356,6 +372,8 @@ void	Respond::buildResponse()
 	// CGI Headers: Add the Content-Type you found earlier.
 	std::string ct = (_contentType.empty()) ? "text/html" : _contentType;
 	ss << "Content-Type: " << ct << "\r\n";
+	if (_statusCode >= 300 && _statusCode < 400)
+		ss << "Location: " << _client->getBestLocation()->path << "\r\n";
 	std::string cs = (_connStatus == KEEP_ALIVE) ? "keep-alive" : "close";
 	ss << "Connection: " << cs << "\r\n";
 	// Separator: \r\n
