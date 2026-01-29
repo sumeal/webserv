@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Core.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
+/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/28 14:08:42 by muzz             ###   ########.fr       */
+/*   Updated: 2026/01/29 10:48:06 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -54,7 +54,7 @@ void	Core::run()
 	while (1)
 	{
 
-		int result = poll(&_fds[0], _fds.size(), 4000);
+		int result = poll(&_fds[0], _fds.size(), 400000);
 		if (result < 0) {
 			perror("Poll error");
 			continue;
@@ -616,11 +616,11 @@ void Core::parse_http_request(Client* current_client, const std::string raw_req)
         path.find(".php") != std::string::npos) {
         
         current_client->setHasCgi(true);
-        current_request.is_cgi = true;  // ✅ Set the flag in request too
+        current_request.is_cgi = true;  // Set the flag in request too
         std::cout << "CGI request: " << path << std::endl;
     } else {
         current_client->setHasCgi(false);
-        current_request.is_cgi = false; // ✅ Set to false for non-CGI
+        current_request.is_cgi = false; // Set to false for non-CGI
         std::cout << "Normal file request: " << path << std::endl;
     }
 	
@@ -895,7 +895,7 @@ void Core::putIntoCached(s_HttpRequest& request)
     std::map<std::string, std::string>::iterator cl_it = request.headers.find("Content-Length");
     if (cl_it != request.headers.end()) {
         request.content_length = static_cast<size_t>(atoi(cl_it->second.c_str()));
-        std::cout << "   ✅ Content-Length: " << request.content_length << " bytes" << std::endl;
+        std::cout << "    Content-Length: " << request.content_length << " bytes" << std::endl;
     } else {
         request.content_length = 0;
         if (request.method == "POST" || request.method == "PUT" || request.method == "PATCH") {
@@ -906,7 +906,7 @@ void Core::putIntoCached(s_HttpRequest& request)
     std::map<std::string, std::string>::iterator ct_it = request.headers.find("Content-Type");
     if (ct_it != request.headers.end()) {
         request.content_type = ct_it->second;
-        std::cout << "   ✅ Content-Type: \"" << request.content_type << "\"" << std::endl;
+        std::cout << "    Content-Type: \"" << request.content_type << "\"" << std::endl;
     } else {
         request.content_type = "";
         if (request.method == "POST" || request.method == "PUT" || request.method == "PATCH") {
@@ -933,7 +933,7 @@ void Core::putIntoCached(s_HttpRequest& request)
             request.keep_alive = false;
         }
     }
-    std::cout << "   ✅ Keep-Alive: " << (request.keep_alive ? "TRUE" : "FALSE") << std::endl;
+    std::cout << "    Keep-Alive: " << (request.keep_alive ? "TRUE" : "FALSE") << std::endl;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////

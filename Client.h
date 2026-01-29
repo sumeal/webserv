@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Client.h                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
+/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:03:33 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/28 14:05:00 by muzz             ###   ########.fr       */
+/*   Updated: 2026/01/29 10:47:02 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -56,10 +56,9 @@ private:
 	bool			_chunkedComplete;
 	std::string		_chunkedBody;
 	size_t _maxBodySize;
-	// Non-blocking parsing helper
 	size_t			parseContentLength(const std::string& headers);
-	bool			parseTransferEncoding(const std::string& headers);  // ✅ ADD
-	bool			isChunkedComplete();  // ✅ ADD: Simple chunked checker
+	bool			parseTransferEncoding(const std::string& headers);
+	bool			isChunkedComplete();
 public:
 	e_State state;
 	Client(t_server server_config);

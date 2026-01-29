@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Client.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
+/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: Invalid date        by                   #+#    #+#             */
-/*   Updated: 2026/01/28 20:43:47 by muzz             ###   ########.fr       */
+/*   Updated: 2026/01/29 10:48:42 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -362,7 +362,6 @@ bool Client::readHttpRequest()
 			}
 		}
 		
-		// ✅ UPDATED: Check completion based on encoding type (minimal change)
 		if (_headersParsed) {
 			bool isComplete = false;
 			
@@ -433,9 +432,7 @@ void Client::resetRequestBuffer()
 	_currentBodyLength = 0;
 	_requestComplete = false;
 	_disconnected = false;
-	
-	// ✅ ADD: Reset chunked variables
-	_isChunked = false;
+		_isChunked = false;
 	_chunkedComplete = false;
 	_chunkedBody.clear();
 }

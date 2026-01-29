@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Respond.h                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
+/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 16:58:34 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/28 15:05:59 by muzz             ###   ########.fr       */
+/*   Updated: 2026/01/29 10:47:45 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -60,8 +60,6 @@ public:
 	void	setProtocol(const std::string& protocol);
 	void	handleError(int statusCode);
 	std::string getServerRoot();
-	
-	// ✅ ADD: Autoindex functionality
 	std::string generateDirectoryListing(const std::string& dirPath, const std::string& requestPath);
 	bool isDirectory(const std::string& path);
 	t_location* getCurrentLocation(); // Get matching location for current request

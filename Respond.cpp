@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Respond.cpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
+/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 17:17:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/28 20:33:33 by muzz             ###   ########.fr       */
+/*   Updated: 2026/01/29 10:48:50 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -209,7 +209,6 @@ void	Respond::procNormalOutput(std::string protocol)
 	
 	if (_client->getRequest().method == "GET")
 	{
-		// ✅ C++98 Compliant: Check if it's a directory first
 		if (isDirectory(filePath)) {
 			// Try to serve index file
 			std::string indexPath = filePath;
@@ -542,7 +541,6 @@ std::string Respond::getServerRoot() {
 	return ("./www");
 }
 
-// ✅ C++98 Compliant: Check if path is a directory
 bool Respond::isDirectory(const std::string& path) {
 	struct stat statbuf;
 	if (stat(path.c_str(), &statbuf) != 0) {
@@ -551,7 +549,6 @@ bool Respond::isDirectory(const std::string& path) {
 	return S_ISDIR(statbuf.st_mode);
 }
 
-// ✅ C++98 Compliant: Generate HTML directory listing
 std::string Respond::generateDirectoryListing(const std::string& dirPath, const std::string& requestPath) {
 	std::ostringstream html;
 	
@@ -655,7 +652,6 @@ std::string Respond::generateDirectoryListing(const std::string& dirPath, const 
 	return html.str();
 }
 
-// ✅ C++98 Compliant: Get current location configuration
 t_location* Respond::getCurrentLocation() {
 	if (!_client) {
 		return NULL;
