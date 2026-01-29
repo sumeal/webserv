@@ -37,9 +37,6 @@ private:
     void putIntoCached(s_HttpRequest& request);
     void parseRequestBody(Client* client, std::istringstream& request_stream, const std::string& raw_req);
 
-
-
-
 public:
 	Core();
 	~Core();

@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/26 13:09:10 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/29 10:01:36 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -94,15 +94,17 @@ void	Core::run()
 					}
 					if (revents & POLLIN || revents & POLLHUP)  //POLLHUP for CGI
 					{
-						// 24jan26.is it that every pollin will go in here. what if the pollin is for cgi? shouldnt it better to check the state first then implement this part? so if the state is cgi dont need to go through here?
+						// 24jan26.is it that every pollin will go in here. what if the pollin is for cgi? shouldnt it better to check the state first then implement this part? so if the state is cgi dont need to go through here? askMuzz
 						if (client->state == READ_REQUEST) //mad added
 						{ //mad added
 							std::string raw_request = client->readRawRequest();
+							std::cout << "raw request enter" << std::endl; //debug
 							if (!raw_request.empty())
 								parse_http_request(client, raw_request);
 							else
 								client->state = DISCONNECTED;
 						} //mad added
+						
 						client->procInput(i, _fds[i]);
 						if (_clients.find(oriFd) == _clients.end()) 
 						{
@@ -363,7 +365,7 @@ void	Core::handleClientError(Client* client, int statusCode)
 		client->getRespond().findErrorBody(errorPath);
 	client->getRespond().buildErrorResponse(statusCode);
 	//Cleanup for finished problematic CGI
-	if (client->hasCgi())
+	if (/*client->hasCgi()*/client->isCgiExecuted())
 	{
 		client->GetCgiExec()->clearCgi();
 		fdPreCleanup(client->GetCgiExec()->getpipeFromCgi(), 0);
@@ -808,9 +810,11 @@ void Core::parse_http_request(Client* current_client, const std::string raw_req)
         std::cout << "Normal file request: " << path << std::endl;
     }
 	
-	putIntoCached(current_request);
+	putIntoCached(current_request); //importantdebug
 	std::cout << "Parsed: " << current_request.method << " " << current_request.path << std::endl;
-	debugHttpRequest(current_request);
+	//debugHttpRequest(current_request); //importantdebug
+	//find matching location
+	current_client->checkBestLocation();
 	current_client->state = HANDLE_REQUEST;
 }
 

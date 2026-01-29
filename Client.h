@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:03:33 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/24 14:20:32 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/29 10:01:22 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,11 +37,12 @@ class Client {
 private:
 	CgiExecute* _executor;
 	s_HttpRequest request;
-	Respond*		_responder;
+	Respond*	_responder;
 	int			_socket; //FromMuzz
 	bool		_hasCgi;
 	time_t		_lastActivity;
 	int			_connStatus;
+	t_location*	_bestLocation;
 	t_server	_serverConfig;//do we need to hold as reference or as copy per client?
 	//loop thingy
 public:
@@ -58,22 +59,23 @@ public:
 	CgiExecute* GetCgiExec();
 	void	setCgiExec(CgiExecute* executor);
 	Respond&	getRespond();
-	bool	isCgiOn(); //mcm x perlu
+	bool	isCgiExecuted(); //mcm x perlu
 	bool	hasCgi();
 	void	setHasCgi(bool status);
 	bool	isIdle(time_t now);
 	bool	isKeepAlive();
     void	setConnStatus(bool status);
+	void	checkBestLocation();
 
-	
 	std::string 	readRawRequest();
 	s_HttpRequest& 	getRequest();
 	std::string 	getRoot();
 	t_server		getServerConfig();
-	t_location&		getCgiLocation();
+	t_location*		getBestLocation();
 	
 	bool	isCGI(const t_request& request, const t_location& locate) const; // check
 	bool	isCGIextOK(const t_request& request, const t_location& locate) const; //check
+	//t_location&		getCgiLocation();
 	// CgiRequest* GetCgiReq();
 	// t_CGI*	getCgi();
 	// void	setCgi(t_CGI* cgi);

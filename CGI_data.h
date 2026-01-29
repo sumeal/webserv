@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/16 15:03:57 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/27 16:14:31 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/29 11:04:46 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,9 +20,11 @@
 #include <vector>
 
 typedef struct s_location {
-    std::string path;              // "/cgi-bin"
+    std::string path;              // "/cgi-bin". also for redirection
     std::string root;              // filesystem root
     bool cgi_enabled;
+	bool has_redirect;
+	int  redir_status;
    
     std::string interp;          // "/usr/bin/python3". the binary
 	std::vector<std::string> cgi_extension;

@@ -34,7 +34,7 @@
 // {}
 
 CgiExecute::CgiExecute(Client* client, std::string protocol)
-	: _request(client->getRequest()), _locate(client->getCgiLocation()), _client(client), _pid(-1), _pipeToCgi(-1), 
+	: _request(client->getRequest()), /*_locate(client->getCgiLocation())*/ _locate(*client->getBestLocation()), _client(client), _pid(-1), _pipeToCgi(-1), 
 	_pipeFromCgi(-1), _protocol(protocol), _bodySizeSent(0), _writeEnded(false), _readEnded(false), 
 	_exitStatus(0)
 {}

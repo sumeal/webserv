@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/27 18:38:56 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/29 10:01:10 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,8 +21,8 @@
 #include <iostream>
 #include <cstdio>
 
-Client::Client(t_server server_config) :  _executor(NULL), _socket(0), _hasCgi(false), _lastActivity(time(NULL)),
-	 _connStatus(CLOSE), revived(false) //FromMuzz
+Client::Client(t_server server_config):  _executor(NULL), _socket(0), _hasCgi(false), _lastActivity(time(NULL)),
+	 _connStatus(CLOSE), _bestLocation(NULL), revived(false) //FromMuzz
 {
 	state = READ_REQUEST;
 	_responder = new Respond(_serverConfig);
@@ -252,9 +252,9 @@ bool	Client::hasCgi()
 	return _hasCgi;
 }
 
-bool	Client::isCgiOn()  //mcm x perlu
+bool	Client::isCgiExecuted()  //mcm x perlu
 {
-	return _executor->getpid();
+	return _executor;
 }
 
 void	Client::setHasCgi(bool status)
@@ -315,13 +315,60 @@ t_server	Client::getServerConfig()
 	return (_serverConfig);
 }
 
-t_location&	Client::getCgiLocation()
+//what to compare to get the matching location. something from request?
+void	Client::checkBestLocation()
 {
-	size_t i = 0;
-	for (; i < _serverConfig.locations.size(); i++)
+	std::cout << "check best location enter" << std::endl; //debug
+	t_location*		bestLoc = NULL;
+	size_t			bestLen = 0;
+	s_HttpRequest	request = getRequest();
+
+	std::cout << "Request Path: " << request.path << std::endl;//debug
+	for (size_t i = 0; i < _serverConfig.locations.size();i++)
 	{
-		if (_serverConfig.locations[i].path == "/cgi-bin")
-			return _serverConfig.locations[i];
+		t_location& loc =  _serverConfig.locations[i];
+
+		std::cout << "server path" << loc.path << std::endl;
+		if (request.path.compare(0, loc.path.size(), loc.path) == 0) // 1. img 2.img/
+		{
+			bool boundary = (request.path.size() == loc.path.size() //cases where match both. req: img and loc: img, /img and /img 
+			|| (!loc.path.empty() && loc.path[loc.path.size() - 1] == '/') //cases where loc is img/ and req is only img/... .  so we dont care after loc img/.  why req is only img/? the compare filter it
+			|| request.path[loc.path.size()] == '/'); //cases where loc: img (no /) will match w/ req: img/ or imga or img.... we only want to allow req: img/
+			if (boundary && loc.path.length() > bestLen)
+			{
+				bestLen = loc.path.length();  
+				bestLoc = &_serverConfig.locations[i];
+			}
+		}
 	}
-	return _serverConfig.locations[i]; //suppose not to trigger
+	if (!bestLoc)
+		throw 404;
+	if (getRequest().method != "GET" && getRequest().method != "POST" 
+		&& getRequest().method != "DELETE")
+		throw 501;
+	if ((getRequest().method == "GET" && !bestLoc->allow_get) ||
+		(getRequest().method == "POST" && !bestLoc->allow_post) || 
+		(getRequest().method == "DELETE" && !bestLoc->allow_delete))
+	{
+		std::cout << "405 throw trigger" << std::endl; //debug
+		throw 405; //will throw crash server or handle that one client only
+	}
+ 	_bestLocation = bestLoc;
+	std::cout << "check best location doesnt throw" << std::endl; //debug
 }
+
+t_location*		Client::getBestLocation()
+{
+	return _bestLocation;
+}
+
+// t_location&	Client::getCgiLocation()
+// {
+// 	size_t i = 0;
+// 	for (; i < _serverConfig.locations.size(); i++)
+// 	{
+// 		if (_serverConfig.locations[i].path == "/cgi-bin")
+// 			return _serverConfig.locations[i];
+// 	}
+// 	return _serverConfig.locations[i]; //suppose not to trigger
+// }

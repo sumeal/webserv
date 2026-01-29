@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 17:17:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/27 23:06:35 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/29 11:00:57 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -227,37 +227,36 @@ void	Respond::procNormalOutput(std::string protocol)
 		filePath = documentRoot + "/index.html";
 	else
 		filePath = documentRoot + requestPath;
-	//find matching location
-	// t_location correctLoc = getMatchingLocation();
-	//if no location. return error?
-		
-	//handle if no method allowed
-	
 	// std::cout << _client->getRequest().method << std::endl; //debug
 	if (_client->getRequest().method == "GET")
 	{
-		// if ()
-		// {
-			
-		// }
-		std::ifstream file(filePath.c_str());
-		if (!file.is_open())
+		if (_client->getBestLocation()->has_redirect)
 		{
-			handleError(404);
-			return;
+			_statusCode = _client->getBestLocation()->redir_status;
+			_protocol = protocol;
+			_contentLength = 0;
 		}
-		std::stringstream buffer;
-		buffer << file.rdbuf();
-		file.close();
+		else 
+		{
+			std::ifstream file(filePath.c_str());
+			if (!file.is_open())
+			{
+				handleError(404);
+				return;
+			}
+			std::stringstream buffer;
+			buffer << file.rdbuf();
+			file.close();
+			
+			_body = buffer.str();
+			_statusCode = 200;
+			_protocol = protocol;
+			_contentLength = _body.size();
 		
-		_body = buffer.str();
-		_statusCode = 200;
-		_protocol = protocol;
-		_contentLength = _body.size();
-
-		setContentType(filePath);
-		
-		std::cout << "✅ " <<  filePath << " served"  << std::endl;
+			setContentType(filePath);
+			
+			std::cout << "✅ " <<  filePath << " served"  << std::endl;
+		}
 	} 
 	else if (_client->getRequest().method == "POST")
 	{
@@ -299,7 +298,7 @@ void	Respond::procNormalOutput(std::string protocol)
 		}
 	}
 }
-	
+
 	// std::string filePath = "FromMuzz";
 	// //read file and take path
 	// std::ifstream file(filePath.c_str());
@@ -336,7 +335,6 @@ void	Respond::procNormalOutput(std::string protocol)
 	// 	//throw (404);
 	// }
 
-
 void	Respond::buildResponse()
 {
 	std::stringstream ss;
@@ -350,6 +348,8 @@ void	Respond::buildResponse()
 	// CGI Headers: Add the Content-Type you found earlier.
 	std::string ct = (_contentType.empty()) ? "text/html" : _contentType;
 	ss << "Content-Type: " << ct << "\r\n";
+	if (_statusCode >= 300 && _statusCode < 400)
+		ss << "Location: " << _client->getBestLocation()->path << "\r\n";
 	std::string cs = (_connStatus == KEEP_ALIVE) ? "keep-alive" : "close";
 	ss << "Connection: " << cs << "\r\n";
 	// Separator: \r\n
