@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   CGI_data.h                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
+/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/16 15:03:57 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/28 13:27:07 by muzz             ###   ########.fr       */
+/*   Updated: 2026/01/29 11:04:54 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,7 +20,7 @@
 #include <vector>
 
 typedef struct s_location {
-    std::string path;              // "/cgi-bin"
+    std::string path;              // "/cgi-bin" also for redirection //needcheck
     std::string root;              // filesystem root
     bool cgi_enabled;
    
@@ -30,6 +30,8 @@ typedef struct s_location {
 	bool allow_post;
 	bool allow_delete;
 	bool auto_index;
+	bool has_redirect;
+	int  redir_status;
 	//std::vector<std::string> methods;
 	//std::string cgi_extension;     // ".py"
 } t_location;

@@ -94,6 +94,11 @@ int Parse::parse_location(const std::string& line, int current_state, Location& 
 	else if (tokens[0] == "autoindex" && tokens.size() >= 2) {
 		temp_location.auto_index = (tokens[1] == "on");
 	}
+	else if (tokens[0] == "return" && tokens.size() >= 3) {
+		temp_location.has_redirect = true;
+		temp_location.redir_status = atoi(tokens[1].c_str());
+		temp_location.path = tokens[2];
+	}
     else if (line.find("}") != std::string::npos) {
         return SERVER;
     }
