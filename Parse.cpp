@@ -76,6 +76,10 @@ int Parse::parse_location(const std::string& line, int current_state, Location& 
 				temp_location.allow_post = true;
 			else if (tokens[i] == "DELETE")
 				temp_location.allow_delete = true;
+			else {
+				std::cout << "Unknown method " << tokens[i] <<std::endl;
+				exit(1);
+			}
 		}
 	}
 	else if (tokens[0] == "cgi_ext") {
@@ -96,9 +100,12 @@ int Parse::parse_location(const std::string& line, int current_state, Location& 
 	else if (tokens[0] == "return" && tokens.size() >= 3) {
 		temp_location.has_redirect = true;
 		temp_location.redir_status = atoi(tokens[1].c_str());
-		temp_location.path = tokens[2];
+		temp_location.redir_path = tokens[2];
 	}
     else if (line.find("}") != std::string::npos) {
+		if (!temp_location.allow_get && !temp_location.allow_post && !temp_location.allow_delete) {
+			temp_location.allow_get = true;
+		}
         return SERVER;
     }
     return LOCATION;

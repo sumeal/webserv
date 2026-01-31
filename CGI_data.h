@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/16 15:03:57 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/29 12:30:39 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/29 14:53:25 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,6 +25,7 @@ typedef struct s_location {
     bool cgi_enabled;
 	bool has_redirect;
 	int  redir_status;
+	std::string	redir_path;
    
     std::string interp;          // "/usr/bin/python3". the binary
 	std::vector<std::string> cgi_extension;

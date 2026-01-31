@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 16:58:34 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/29 13:02:36 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/31 13:22:31 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,6 +38,7 @@ private:
 	std::string	_serverName;
 	int			_connStatus;//
 	std::string	_filePath;
+	std::string _location;
 	//send data
 	int			_socketFd;
 	size_t		_bytesSent;

@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/29 12:35:18 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/31 13:33:54 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -136,7 +136,7 @@ void	Client::procOutput(int i, struct pollfd& pFd)
 		}
 		else if (status)
 		{
-			//getRespond().printResponse(); //important debug
+			getRespond().printResponse(); //important debug
 			state = FINISHED;
 		}
 	}
@@ -185,7 +185,8 @@ void	Client::resetClient()
 		delete _executor;
 		_executor = NULL;
 	}
-	_responder->resetResponder();
+	if (_responder)
+		_responder->resetResponder();
 	_hasCgi = false;
 	_lastActivity = time(NULL);
 	_connStatus = KEEP_ALIVE;
@@ -586,7 +587,9 @@ void	Client::checkBestLocation()
 	{
 		t_location& loc =  _serverConfig.locations[i];
 
-		std::cout << "server path" << loc.path << std::endl;
+		std::cout << "server path: " << loc.path << std::endl; //debug
+		std::cout << "must same. location path: " << loc.path ; //debug
+		std::cout << "request path: " << request.path << std::endl; //debug
 		if (request.path.compare(0, loc.path.size(), loc.path) == 0) // 1. img 2.img/
 		{
 			bool boundary = (request.path.size() == loc.path.size() //cases where match both. req: img and loc: img, /img and /img 
@@ -596,6 +599,8 @@ void	Client::checkBestLocation()
 			{
 				bestLen = loc.path.length();  
 				bestLoc = &_serverConfig.locations[i];
+				std::cout << "best location path 1: " << bestLoc->path << std::endl;  //debug
+				std::cout << "inside if " << i << std::endl;//debug
 			}
 		}
 	}
@@ -604,6 +609,7 @@ void	Client::checkBestLocation()
 	if (getRequest().method != "GET" && getRequest().method != "POST" 
 		&& getRequest().method != "DELETE")
 		throw 501;
+	std::cout << "bestLoc: " << bestLoc->path << "get allowance: " << bestLoc->allow_get << std::endl;//debug
 	if ((getRequest().method == "GET" && !bestLoc->allow_get) ||
 		(getRequest().method == "POST" && !bestLoc->allow_post) || 
 		(getRequest().method == "DELETE" && !bestLoc->allow_delete))
@@ -612,6 +618,7 @@ void	Client::checkBestLocation()
 		throw 405; //will throw crash server or handle that one client only
 	}
  	_bestLocation = bestLoc;
+	std::cout << "best location path: " << _bestLocation->path << std::endl; //debug
 	std::cout << "check best location doesnt throw" << std::endl; //debug
 }
 

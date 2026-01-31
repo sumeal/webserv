@@ -41,6 +41,7 @@ if fileitem and fileitem.filename:
         f.write(fileitem.file.read())
 
     print(f"<h1>File '{filename}' uploaded successfully!</h1>")
+    print(f"<p>Saved at: {os.path.abspath(filepath)}</p>")
 else:
     print("<h1>No file uploaded!</h1>")
 

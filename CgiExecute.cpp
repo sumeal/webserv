@@ -98,6 +98,7 @@ void	CgiExecute::execChild()
 //extra is the PATH info
 char**	CgiExecute::createEnvp()
 {
+	// std::cout << "\nQUERY_STRING=" << _request.query << "\n" << std::endl; //debug
 	std::vector<std::string> envpVector;
 	envpVector.push_back("REQUEST_METHOD=" + _request.method);
 	envpVector.push_back("QUERY_STRING=" + _request.query);
@@ -205,10 +206,14 @@ void	CgiExecute::preExecute()
 	//					ROOT END NOT /
 	if (!_locate.root.empty() && _locate.root[_locate.root.size() - 1] == '/')
 		root.erase(root.size() - 1,  1);
+	std::cout << "script name: " << script_name << ". root: " << _locate.root << std::endl; //debug
 	std::cout << "abs path: " << _absPath << std::endl; //debug
 	//					CHECK EXISTENCE
 	if (access(_absPath.c_str(), F_OK) == -1)
+	{
+		std::cout << "this 404 trigger. abs path: " << _absPath << std::endl; //debug
 		throw(404);
+	}
 	//					CHECK EXISTENCE & EXEC
 	if (access(_absPath.c_str(), X_OK) == -1)
 		throw(403);
