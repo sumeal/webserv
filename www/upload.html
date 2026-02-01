@@ -1,14 +1,122 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Upload File</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebServ | File Upload</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent-color: #38bdf8;
+            --text-main: #f1f5f9;
+            --text-dim: #94a3b8;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .upload-container {
+            background-color: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        h1 {
+            margin-bottom: 0.5rem;
+            font-size: 1.8rem;
+            color: var(--accent-color);
+        }
+
+        p {
+            color: var(--text-dim);
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        /* Custom styling for the file input */
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            color: var(--text-dim);
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px dashed var(--text-dim);
+            border-radius: 0.5rem;
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+
+        input[type="file"]:hover {
+            border-color: var(--accent-color);
+            color: var(--text-main);
+        }
+
+        button {
+            background-color: var(--accent-color);
+            color: var(--bg-color);
+            border: none;
+            padding: 0.8rem 2rem;
+            font-weight: bold;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            width: 100%;
+            font-size: 1rem;
+            transition: transform 0.2s, background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #7dd3fc;
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .footer {
+            margin-top: 2rem;
+            font-size: 0.7rem;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+    </style>
 </head>
 <body>
-    <h1>Upload a File</h1>
-    <form action="/cgi-bin/upload.py" method="POST" enctype="multipart/form-data">
-        <input type="file" name="myfile">
-        <button type="submit">Upload</button>
-    </form>
+
+    <div class="upload-container">
+        <h1>Cloud Upload</h1>
+        <p>Select a file to send to the WebServ storage.</p>
+        
+        <form action="/cgi-bin/upload.py" method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <input type="file" name="myfile" required>
+            </div>
+            <button type="submit">Deploy File</button>
+        </form>
+
+        <div class="footer">
+            42KL Webserv Engine v1.0
+        </div>
+    </div>
+
 </body>
 </html>
-

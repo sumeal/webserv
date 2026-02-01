@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/29 12:55:22 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/31 16:39:46 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,6 +21,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include "Respond.h"
+#include <ctime>
 // #include <cstdint>
 // #include <stdexcept>
 // #include <set>
@@ -31,20 +32,7 @@ Core::Core() : _needCleanup(false)
 {}
 
 Core::~Core() 
-{
-	// std::set<CgiExecute*> deletedPtrs;
-	
-	// for (std::map<int, CgiExecute*>::iterator it = _cgiMap.begin(); it != _cgiMap.end(); it++)
-	// {
-	// 	CgiExecute* current = it->second;
-	// 	if (current != NULL && deletedPtrs.find(current) == deletedPtrs.end())
-	// 	{
-	// 		deletedPtrs.insert(current);
-	// 		delete(current);
-	// 	}
-	// }
-	// _cgiMap.clear();//redundant as this only being used when we clear vector but keep the heap object. now the heap object already gone no use
-}
+{}
 
 void	Core::run()
 {
@@ -103,14 +91,14 @@ void	Core::run()
 							} else if (request_ready && client->isRequestComplete()) {
 								std::string raw_request = client->getCompleteRequest();
 								if (!raw_request.empty()) {
-									std::cout << "🚀 Processing complete HTTP request..." << std::endl;
+									// std::cout << "🚀 Processing complete HTTP request..." << std::endl;
 									parse_http_request(client, raw_request);
 									client->resetRequestBuffer();
 								} else {
 									client->state = DISCONNECTED;
 								}
 							} else if (!request_ready && !client->isRequestComplete() && !client->isDisconnected()) {
-								std::cout << "📂 HTTP request incomplete, waiting for more data..." << std::endl;
+								// std::cout << "📂 HTTP request incomplete, waiting for more data..." << std::endl;
 							}
 						}
 						client->procInput(i, _fds[i]);
@@ -191,6 +179,7 @@ void	Core::handleTransition(Client* client)
 		deleteClient(client);
 	}
 }
+
 void	Core::handleTimeout()
 {
 	time_t now = time(NULL);
@@ -224,8 +213,6 @@ void	Core::handleTimeout()
         }
     }
 }
-
-
 //comment jap ada error
 // void	Core::launchCgi(Client* client, t_location& locate, t_request& request)
 // {
@@ -523,7 +510,7 @@ void Core::parse_config(const std::string &filename)
 			}
 			else if (new_state == OUTSIDE && current_state == SERVER) {
 				server_config.push_back(temp_server);
-				std::cout << "Parsed server block:" << std::endl;
+				// std::cout << "Parsed server block:" << std::endl;
 			}
 			current_state = (ParseState)new_state;
         }
@@ -624,7 +611,7 @@ void Core::parse_http_request(Client* current_client, const std::string raw_req)
         std::cout << "Normal file request: " << path << std::endl;
     }
 	
-	putIntoCached(current_request); //importantdebug
+	//putIntoCached(current_request); //importantdebug
 	debugHttpRequest(current_request); //importantdebug
 	current_client->checkBestLocation();
 	current_client->state = HANDLE_REQUEST;
@@ -636,18 +623,18 @@ void Core::initialize_server()
 	for(size_t i = 0; i < server_config.size(); i++) {
 		int server_fd = SocketUtils::create_listening_socket(server_config[i].port);
 		if (server_fd < 0) {
-			std::cerr << "Failed to create server socket" << std::endl;
+			// std::cerr << "Failed to create server socket" << std::endl;
 			return;
 		}
 		if (SocketUtils::set_non_blocking(server_fd) < 0) {
-			perror("Failed to set non-blocking for Listening Socket");
+			// perror("Failed to set non-blocking for Listening Socket");
 			close(server_fd);
 			continue;
 		}
 		_serverFd[server_fd] = i;
 		serverRegister(server_fd);
-		std::cout << "Server initialized with:" << std::endl;
-		std::cout << "Port: " << server_config[i].port << std::endl;
+		// std::cout << "Server initialized with:" << std::endl;
+		// std::cout << "Port: " << server_config[i].port << std::endl;
 	}
 }
 
@@ -657,7 +644,7 @@ void Core::accepter(int server_fd, size_t server_index)
 	socklen_t addrlen = sizeof(client_addr);
 
 	int new_socket = accept(server_fd, (struct sockaddr *)&client_addr, &addrlen);
-	std::cout << "New Connection " << new_socket << " Accepted from Server : " << _serverFd[server_index] << std::endl;
+	// std::cout << "New Connection " << new_socket << " Accepted from Server : " << _serverFd[server_index] << std::endl;
 	
 	if (new_socket < 0) {
 		perror("Accept fail");
@@ -672,7 +659,7 @@ void Core::accepter(int server_fd, size_t server_index)
 	Client* new_client = new Client(server_config[server_index]);
 	clientRegister(new_socket, new_client, server_index);
 	
-	std::cout << "Client registered seccessfully !" << std::endl;
+	// std::cout << "Client registered seccessfully !" << std::endl;
 }
 
 

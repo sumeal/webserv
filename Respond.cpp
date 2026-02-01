@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 17:17:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/31 13:30:12 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/01 00:24:49 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,6 +37,7 @@ Respond::~Respond()
 //first line check?
 void	Respond::procCgiOutput(std::string cgiOutput)
 {
+	std::cout << "cgiOutput: " << cgiOutput << std::endl; //debug
 	if (cgiOutput.empty())
 	{
 		buildErrorResponse(502);
@@ -70,7 +71,7 @@ void	Respond::procCgiOutput(std::string cgiOutput)
 		size_t	statusDigitPos = header.find_first_of("1234567890", statusPos);
 		std::string statusStr = header.substr(statusDigitPos, 3);
 		_statusCode = std::atoi(statusStr.c_str());
-		std::cout << "status code check:" << _statusCode << std::endl; //debug
+		// std::cout << "status code check:" << _statusCode << std::endl; //debug
 	}
 	if (_statusCode < 100 || _statusCode > 599)
 		_statusCode = 502;
@@ -97,28 +98,45 @@ void	Respond::procCgiOutput(std::string cgiOutput)
 	size_t locationPos = headerLow.find("location");
 	if (locationPos != std::string::npos)
 	{
-    	// "location" is 8 characters long + colon is 9
-    	size_t start = locationPos + 9; 
-    	while (start < header.length() && (header[start] == ' ' || header[start] == '\t' || header[start] == ':'))
-    	    start++;
-		
-    	size_t end = header.find("\n", start);
-    	if (end == std::string::npos)
-    	    _location = header.substr(start);
-    	else
-    	{
-    	    _location = header.substr(start, end - start);
-    	    // Trim trailing \r if it exists
-    	    if (!_location.empty() && _location[_location.size() - 1] == '\r')
-    	        _location.erase(_location.size() - 1);
-    	}
-    	// Debug to verify it's found
-    	std::cout << "Location header found: " << _location << std::endl;
-		//				EXTRACT BODY	
-		_body = cgiOutput.substr(separatorPos + offset);
-		_contentLength = _body.length();
+		size_t start = locationPos + 9;
+		while (start < header.length() && (header[start] == ' ' || header[start] == '\t'))
+			start++;
+		size_t end = header.find("\n", start);
+		if (end == std::string::npos)
+			_location = header.substr(start);
+		else
+		{
+			_location = header.substr(start, end - start);
+			if (!_location.empty() && _location[_location.size() - 1] == '\r')
+				_location.erase(_location.size() - 1);
+		}
 	}
+	//				EXTRACT BODY	
+	_body = cgiOutput.substr(separatorPos + offset);
+	std::cout << "only body check. body: " << _body << "\nonly body check ends" << std::endl; //debug
+	_contentLength = _body.length();
+	setCurrentTime();
 }
+
+	// size_t locationPos = headerLow.find("location");
+	// if (locationPos != std::string::npos)
+	// {
+    // 	// "location" is 8 characters long + colon is 9
+    // 	size_t start = locationPos + 9; 
+    // 	while (start < header.length() && (header[start] == ' ' || header[start] == '\t' || header[start] == ':'))
+    // 	    start++;
+		
+    // 	size_t end = header.find("\n", start);
+    // 	if (end == std::string::npos)
+    // 	    _location = header.substr(start);
+    // 	else
+    // 	{
+    // 	    _location = header.substr(start, end - start);
+    // 	    // Trim trailing \r if it exists
+    // 	    if (!_location.empty() && _location[_location.size() - 1] == '\r')
+    // 	        _location.erase(_location.size() - 1);
+    // 	}
+
 //chatgpt
 void Respond::setSocketFd(int socketFd)
 {
@@ -256,6 +274,7 @@ void	Respond::procNormalOutput(std::string protocol)
 				_statusCode = 200;
 				_protocol = protocol;
 				_contentLength = _body.size();
+				
 				setContentType(indexPath);
 				std::cout << "✅ " <<  indexPath << " served"  << std::endl;
 				return;
@@ -330,7 +349,7 @@ void	Respond::procNormalOutput(std::string protocol)
 		{
 			if (errno == ENOENT)
 			{
-				std::cout << "here" << std::endl; //debug
+				// std::cout << "here" << std::endl; //debug
 				throw (404);
 			}
 			else if (errno == EACCES)
@@ -339,6 +358,8 @@ void	Respond::procNormalOutput(std::string protocol)
 				throw (500);
 		}
 	}
+	setCurrentTime();
+	setLastModified(filePath);
 }
 
 	// std::string filePath = "FromMuzz";
@@ -383,11 +404,18 @@ void	Respond::buildResponse()
 
 	// Status Line: HTTP/1.1 + parsedCode + OK + \r\n
 	ss << _protocol << " " << _statusCode << " " << getStatusMsg() << "\r\n";
+	ss << "Date: " << _currentTime << "\r\n";
+	if (!_lastModified.empty())
+		ss << "Last Modified: " << _lastModified << "\r\n";
 	// Server Header: Server: Webserv/1.0\r\n
 	ss << "Server: " << _serverName << "\r\n";
 	// Content-Length: Content-Length: + body.size() + \r\n
 	ss << "Content-Length: " << _body.size() << "\r\n";
 	// CGI Headers: Add the Content-Type you found earlier.
+	if (_contentType.empty()) //debug
+		std::cout << "content type empty" << std::endl; //debug
+	else //debug
+	 	std::cout << "content type: " << _contentType << std::endl; //debug
 	std::string ct = (_contentType.empty()) ? "text/html" : _contentType;
 	ss << "Content-Type: " << ct << "\r\n";
 	if (_statusCode >= 300 && _statusCode < 400) 
@@ -457,6 +485,7 @@ int	Respond::sendResponse()
 void	Respond::buildErrorResponse(int statusCode)
 {
 	_statusCode = statusCode;
+	setCurrentTime();
 
 	std::stringstream bodySs;
 	if(_body.empty())
@@ -472,6 +501,7 @@ void	Respond::buildErrorResponse(int statusCode)
 
 	ss << _protocol << " " << _statusCode << " " << getStatusMsg() << "\r\n";
 	ss << "Server: " << _serverName << "\r\n";
+	ss << "Date: " << _currentTime << "\r\n";
 	ss << "Content-Type: " << "text/html" << "\r\n";
 	ss << "Content-Length: " << _body.size() << "\r\n";
 	ss << "Connection: " << "close" << "\r\n";
@@ -498,14 +528,44 @@ void	Respond::printResponse()
 	std::cout << "\n==========RESPOND===============" << std::endl;
 	std::cout << "Status Code : " << _statusCode << std::endl;
 	std::cout << "Protocol: " << _protocol << std::endl;
-	std::cout << "Body: " << _body << std::endl;
-	std::cout << "Content Type: " << _contentType << std::endl;
+	std::cout << "Body: " << (_body.length() > 50 ? _body.substr(0, 50) + "..." : _body) << std::endl;
 	std::cout << "Content Length: " << _contentLength << std::endl;
+	std::cout << "Content Type: " << _contentType << std::endl;
+	std::cout << "Date: " << _currentTime << std::endl;
+	if (!_lastModified.empty())
+		std::cout << "Last Modified: " << _lastModified << std::endl;
 	std::cout << "Server Name: " << _serverName << std::endl;
 	std::cout << "Connection Status: " << _connStatus << std::endl;
 	std::cout << "Socket Fd: " << _socketFd;
-	std::cout << "\n\nFull Response: \n" << _fullResponse << std::endl;
+	std::cout << "\n\nFull Response: \n" << (_fullResponse.length() > 10000 ? _fullResponse.substr(0, 100) + "..." : _fullResponse) << std::endl;
 	std::cout << "\n==========FINISH================" << std::endl;
+}
+
+//amik data dari struct
+//change data from struct to appropriate format
+//Sat, 31 Jan 2026 09:30:00 GMT
+void	Respond::setCurrentTime()
+{
+	std::time_t now = std::time(0);
+	struct std::tm* gmt = std::gmtime(&now);
+
+	char buffer[100];
+	std::strftime(buffer, 100,"%a, %d %b %Y %H:%M:%S GMT", gmt);
+	_currentTime = std::string(buffer);
+}
+
+void	Respond::setLastModified(const std::string& path)
+{
+	struct stat fileStat;
+	
+	if (stat(path.c_str(), &fileStat) != 0)
+		return ;
+	struct std::tm* gmt = std::gmtime(&fileStat.st_mtime);
+
+	char buffer[100];
+	strftime(buffer, sizeof(buffer), "%a,  %d  %b %Y %H:%M:%S GMT", gmt);
+	_lastModified = std::string(buffer);
+	std::cout << _lastModified << std::endl; //debug
 }
 
 void	Respond::resetResponder()
@@ -516,6 +576,8 @@ void	Respond::resetResponder()
 	_body.clear();
 	_contentType.clear();
 	_contentLength = 0;
+	_currentTime.clear();
+	_location.clear();
 	_serverName.clear();
 	_connStatus = 0;
 	_bytesSent = 0;

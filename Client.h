@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:03:33 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/29 12:48:10 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/31 18:40:25 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,6 +36,7 @@ DISCONNECTED,
 
 class Client {
 private:
+	t_server	_serverConfig;//do we need to hold as reference or as copy per client?
 	CgiExecute* _executor;
 	s_HttpRequest request;
 	Respond*	_responder;
@@ -44,7 +45,6 @@ private:
 	time_t		_lastActivity;
 	int			_connStatus;
 	t_location*	_bestLocation;
-	t_server	_serverConfig;//do we need to hold as reference or as copy per client?
 	std::string		_rawBuffer;
 	std::string		_currentRequest;
 	bool			_headersParsed;

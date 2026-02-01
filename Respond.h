@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 16:58:34 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/31 13:22:31 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/31 18:33:16 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -39,6 +39,8 @@ private:
 	int			_connStatus;//
 	std::string	_filePath;
 	std::string _location;
+	std::string	_currentTime;
+	std::string	_lastModified;
 	//send data
 	int			_socketFd;
 	size_t		_bytesSent;
@@ -60,6 +62,8 @@ public:
 	void	setSocketFd(int socketFd);
 	void	setServerName(const std::string& serverName);
 	void	setProtocol(const std::string& protocol);
+	void	setCurrentTime();
+	void	setLastModified(const std::string& path);
 	void	handleError(int statusCode);
 	std::string getServerRoot();
 	std::string generateDirectoryListing(const std::string& dirPath, const std::string& requestPath);

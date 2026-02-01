@@ -10,7 +10,7 @@ TMP_DIR = "/home/muhamadd/42kl/webserv/www/uploads"
 
 method = os.environ.get("REQUEST_METHOD", "GET")
 
-print("Content-Type: text/html\n") # Single header for the whole response
+print("Content-Type: text/html; charset=utf-8\n")
 
 # --- Logic: Get File List ---
 try:

@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/31 13:33:54 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/01/31 18:44:56 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,16 +28,13 @@
 #include <cstdio>
 #include <cctype>
 
-Client::Client(t_server server_config) :  _executor(NULL), _socket(0), _hasCgi(false), _lastActivity(time(NULL)),
+Client::Client(t_server server_config) : _serverConfig(server_config), _executor(NULL),	_responder(new Respond(_serverConfig)), _socket(0), _hasCgi(false), _lastActivity(time(NULL)),
 	 _connStatus(CLOSE), _bestLocation(NULL), _headersParsed(false), _expectedBodyLength(0), _currentBodyLength(0), 
 	 _requestComplete(false), _disconnected(false), _isChunked(false), _chunkedComplete(false),
 	 _maxBodySize(server_config.client_max_body_size), revived(false) //FromMuzz
 {
 	state = READ_REQUEST;
-	_responder = new Respond(_serverConfig);
 	_responder->setClient(this);
-	_serverConfig = server_config;
-	
 }
 
 Client::~Client()
@@ -282,7 +279,7 @@ bool Client::readHttpRequest()
 		_rawBuffer.append(buffer, bytes_read);
 		_lastActivity = time(NULL);
 		
-		std::cout << "📥 Received " << bytes_read << " bytes from FD " << _socket << std::endl;
+		// std::cout << "📥 Received " << bytes_read << " bytes from FD " << _socket << std::endl;
 		
 		if (!_headersParsed) {
 			size_t header_end = _rawBuffer.find("\r\n\r\n");
@@ -303,21 +300,21 @@ bool Client::readHttpRequest()
 				_isChunked = parseTransferEncoding(headers_only);
 				
 				if (_isChunked) {
-					std::cout << "📋 Headers parsed - CHUNKED transfer encoding detected" << std::endl;
+					// std::cout << "📋 Headers parsed - CHUNKED transfer encoding detected" << std::endl;
 					_expectedBodyLength = 0; // Unknown for chunked
 				} else {
 					_expectedBodyLength = parseContentLength(headers_only);
 					if (_expectedBodyLength > _maxBodySize) {
-						std::cout << "Request body too large" <<std::endl;
+						// std::cout << "Request body too large" <<std::endl;
 						_requestComplete = false;
 						_disconnected = true;
 						throw(413);
 					}
-					std::cout << "📋 Headers parsed - Expected body: " << _expectedBodyLength << " bytes";
+					// std::cout << "📋 Headers parsed - Expected body: " << _expectedBodyLength << " bytes";
 				}
 				
 				_currentBodyLength = _rawBuffer.length() - header_end;
-				std::cout << ", Current: " << _currentBodyLength << " bytes" << std::endl;
+				// std::cout << ", Current: " << _currentBodyLength << " bytes" << std::endl;
 			}
 		} else {
 			_currentBodyLength = _rawBuffer.length() - (_rawBuffer.find("\r\n\r\n") + 4);
@@ -345,9 +342,9 @@ bool Client::readHttpRequest()
 				_currentRequest = _rawBuffer;
 				
 				if (_isChunked) {
-					std::cout << "✅ Complete chunked HTTP request received" << std::endl;
+					// std::cout << "✅ Complete chunked HTTP request received" << std::endl;
 				} else {
-					std::cout << "✅ Complete HTTP request received (" << _rawBuffer.length() << " bytes)" << std::endl;
+					// std::cout << "✅ Complete HTTP request received (" << _rawBuffer.length() << " bytes)" << std::endl;
 				}
 				return true;
 			}
@@ -356,7 +353,7 @@ bool Client::readHttpRequest()
 		return false;
 	}
 	else if (bytes_read == 0) {
-		std::cout << "📤 Client closed connection (FD: " << _socket << ")" << std::endl;
+		// std::cout << "📤 Client closed connection (FD: " << _socket << ")" << std::endl;
 		_disconnected = true;
 		_requestComplete = false;
 		return false;
@@ -490,11 +487,11 @@ bool Client::isChunkedComplete()
 
 bool Client::parseTransferEncoding(const std::string& headers)
 {
-	std::cout << "🔍 Checking for Transfer-Encoding header..." << std::endl;
-	std::cout << "📋 Headers to check (" << headers.length() << " bytes):" << std::endl;
-	std::cout << "📄 Raw headers content:" << std::endl;
-	std::cout << "\"" << headers << "\"" << std::endl;
-	std::cout << "--- End Headers ---" << std::endl;
+	// std::cout << "🔍 Checking for Transfer-Encoding header..." << std::endl;
+	// std::cout << "📋 Headers to check (" << headers.length() << " bytes):" << std::endl;
+	// std::cout << "📄 Raw headers content:" << std::endl;
+	// std::cout << "\"" << headers << "\"" << std::endl;
+	// std::cout << "--- End Headers ---" << std::endl;
 	
 	// Simple chunked detection - minimal implementation
 	size_t pos = 0;
@@ -511,7 +508,7 @@ bool Client::parseTransferEncoding(const std::string& headers)
 		}
 		
 		// Print each header line for debugging
-		std::cout << "🔎 Header line: \"" << line << "\"" << std::endl;
+		// std::cout << "🔎 Header line: \"" << line << "\"" << std::endl;
 		
 		// Convert to lowercase for comparison
 		std::string lower_line = line;
@@ -520,12 +517,12 @@ bool Client::parseTransferEncoding(const std::string& headers)
 		}
 		
 		if (lower_line.find("transfer-encoding:") == 0) {
-			std::cout << "🎯 Found Transfer-Encoding header!" << std::endl;
+			// std::cout << "🎯 Found Transfer-Encoding header!" << std::endl;
 			if (lower_line.find("chunked") != std::string::npos) {
-				std::cout << "✅ Chunked encoding detected!" << std::endl;
+				// std::cout << "✅ Chunked encoding detected!" << std::endl;
 				return true;
 			} else {
-				std::cout << "❌ Transfer-Encoding found but not chunked: \"" << line << "\"" << std::endl;
+				// std::cout << "❌ Transfer-Encoding found but not chunked: \"" << line << "\"" << std::endl;
 			}
 			break;
 		}
@@ -533,7 +530,7 @@ bool Client::parseTransferEncoding(const std::string& headers)
 		pos = line_end + 1;
 	}
 	
-	std::cout << "❌ No Transfer-Encoding: chunked header found" << std::endl;
+	// std::cout << "❌ No Transfer-Encoding: chunked header found" << std::endl;
 	return false;
 }
 
@@ -577,19 +574,19 @@ t_server	Client::getServerConfig()
 //what to compare to get the matching location. something from request?
 void	Client::checkBestLocation()
 {
-	std::cout << "check best location enter" << std::endl; //debug
+	// std::cout << "check best location enter" << std::endl; //debug
 	t_location*		bestLoc = NULL;
 	size_t			bestLen = 0;
 	s_HttpRequest	request = getRequest();
 
-	std::cout << "Request Path: " << request.path << std::endl;//debug
+	// std::cout << "Request Path: " << request.path << std::endl;//debug
 	for (size_t i = 0; i < _serverConfig.locations.size();i++)
 	{
 		t_location& loc =  _serverConfig.locations[i];
 
-		std::cout << "server path: " << loc.path << std::endl; //debug
-		std::cout << "must same. location path: " << loc.path ; //debug
-		std::cout << "request path: " << request.path << std::endl; //debug
+		// std::cout << "server path: " << loc.path << std::endl; //debug
+		// std::cout << "must same. location path: " << loc.path ; //debug
+		// std::cout << "request path: " << request.path << std::endl; //debug
 		if (request.path.compare(0, loc.path.size(), loc.path) == 0) // 1. img 2.img/
 		{
 			bool boundary = (request.path.size() == loc.path.size() //cases where match both. req: img and loc: img, /img and /img 
@@ -599,8 +596,8 @@ void	Client::checkBestLocation()
 			{
 				bestLen = loc.path.length();  
 				bestLoc = &_serverConfig.locations[i];
-				std::cout << "best location path 1: " << bestLoc->path << std::endl;  //debug
-				std::cout << "inside if " << i << std::endl;//debug
+				// std::cout << "best location path 1: " << bestLoc->path << std::endl;  //debug
+				// std::cout << "inside if " << i << std::endl;//debug
 			}
 		}
 	}
@@ -609,17 +606,17 @@ void	Client::checkBestLocation()
 	if (getRequest().method != "GET" && getRequest().method != "POST" 
 		&& getRequest().method != "DELETE")
 		throw 501;
-	std::cout << "bestLoc: " << bestLoc->path << "get allowance: " << bestLoc->allow_get << std::endl;//debug
+	// std::cout << "bestLoc: " << bestLoc->path << "get allowance: " << bestLoc->allow_get << std::endl;//debug
 	if ((getRequest().method == "GET" && !bestLoc->allow_get) ||
 		(getRequest().method == "POST" && !bestLoc->allow_post) || 
 		(getRequest().method == "DELETE" && !bestLoc->allow_delete))
 	{
-		std::cout << "405 throw trigger" << std::endl; //debug
+		// std::cout << "405 throw trigger" << std::endl; //debug
 		throw 405; //will throw crash server or handle that one client only
 	}
  	_bestLocation = bestLoc;
 	std::cout << "best location path: " << _bestLocation->path << std::endl; //debug
-	std::cout << "check best location doesnt throw" << std::endl; //debug
+	// std::cout << "check best location doesnt throw" << std::endl; //debug
 }
 
 t_location*		Client::getBestLocation()

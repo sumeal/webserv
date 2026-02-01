@@ -35,7 +35,7 @@
 
 CgiExecute::CgiExecute(Client* client, std::string protocol)
 	: _request(client->getRequest()), /*_locate(client->getCgiLocation())*/ _locate(*client->getBestLocation()), _client(client), _pid(-1), _pipeToCgi(-1), 
-	_pipeFromCgi(-1), _protocol(protocol), _bodySizeSent(0), _writeEnded(false), _readEnded(false), 
+	_pipeFromCgi(-1), _protocol(protocol), _output(""), _bodySizeSent(0), _writeEnded(false), _readEnded(false), 
 	_exitStatus(0)
 {}
 
@@ -98,7 +98,6 @@ void	CgiExecute::execChild()
 //extra is the PATH info
 char**	CgiExecute::createEnvp()
 {
-	// std::cout << "\nQUERY_STRING=" << _request.query << "\n" << std::endl; //debug
 	std::vector<std::string> envpVector;
 	envpVector.push_back("REQUEST_METHOD=" + _request.method);
 	envpVector.push_back("QUERY_STRING=" + _request.query);
@@ -157,24 +156,13 @@ void	CgiExecute::writeExec()
 {
 	if (_request.body.empty() || _writeEnded)
 	{
-		// if (_request.body.empty()) //debug
-		// {
-		// 	std::cout << "content_length: " << _request.content_length << std::endl; //debug
-		// 	std::cout << "_request body empty()" << std::endl; //debug
-		// }
-		// else
-		// 	std::cout << "write ended" << std::endl; //debug
 		_writeEnded = true;
 		return ;
 	}
 	size_t	bytesLeft = _request.body.size() - _bodySizeSent;
 	ssize_t	written = write(_pipeToCgi, _request.body.c_str() + _bodySizeSent, bytesLeft);
 	if (written > 0)
-	{
-		// std::string writtenstring = _request.body.substr(_bodySizeSent, written); //debug
-		// std::cout << "cgi written:  " <<  writtenstring << std::endl; //debug
 		_bodySizeSent += written;
-	}
 	if (written == -1)
 	{
 		if (errno == EAGAIN || errno == EWOULDBLOCK)
@@ -206,14 +194,9 @@ void	CgiExecute::preExecute()
 	//					ROOT END NOT /
 	if (!_locate.root.empty() && _locate.root[_locate.root.size() - 1] == '/')
 		root.erase(root.size() - 1,  1);
-	std::cout << "script name: " << script_name << ". root: " << _locate.root << std::endl; //debug
-	std::cout << "abs path: " << _absPath << std::endl; //debug
 	//					CHECK EXISTENCE
 	if (access(_absPath.c_str(), F_OK) == -1)
-	{
-		std::cout << "this 404 trigger. abs path: " << _absPath << std::endl; //debug
 		throw(404);
-	}
 	//					CHECK EXISTENCE & EXEC
 	if (access(_absPath.c_str(), X_OK) == -1)
 		throw(403);

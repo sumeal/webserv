@@ -1,48 +1,75 @@
 #!/usr/bin/env python3
 import cgi
 import os
+import sys
 
-# Directory where files will be saved
-UPLOAD_DIR = "../uploads"  # relative to CGI script
-
-# Make sure the upload directory exists
+# 1. Setup Directory
+# Note: This is relative to where you run ./anonymous.exe
+UPLOAD_DIR = "./www/uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# Create FieldStorage instance to parse POST data
+# 2. Parse Form Data
 form = cgi.FieldStorage()
-
-# Get the file item from the form (name="myfile")
 fileitem = form['myfile'] if 'myfile' in form else None
 
-# Debug: print all keys in form
-print("Content-Type: text/plain\n")  # print as plain text to see easily
-print("DEBUG: form keys:", list(form.keys()))
+# 3. Prepare Response Body with Dark Mode CSS
+# Using the same color palette as your HTML
+css = """
+<style>
+    body { 
+        font-family: sans-serif; 
+        background-color: #0f172a; 
+        color: #f1f5f9; 
+        display: flex; 
+        justify-content: center; 
+        padding-top: 50px;
+    }
+    .card {
+        background-color: #1e293b;
+        padding: 2rem;
+        border-radius: 1rem;
+        border: 1px solid rgba(255,255,255,0.1);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        max-width: 500px;
+        width: 100%;
+    }
+    h1 { color: #38bdf8; margin-top: 0; }
+    code { background: #0f172a; padding: 2px 5px; border-radius: 4px; color: #7dd3fc; }
+    .debug { color: #94a3b8; font-size: 0.8rem; margin-top: 2rem; border-top: 1px solid #475569; pt: 1rem; }
+    a { color: #38bdf8; text-decoration: none; border: 1px solid #38bdf8; padding: 5px 10px; border-radius: 5px; display: inline-block; margin-top: 10px; }
+    a:hover { background: #38bdf8; color: #0f172a; }
+</style>
+"""
 
-# Print detailed info about each field
-for key in form.keys():
-    item = form[key]
-    print(f"Field name: {key}")
-    print(f"  filename: {getattr(item, 'filename', None)}")
-    print(f"  type: {type(item)}")
+response_html = f"<html><head><title>Upload Result</title>{css}</head><body><div class='card'>"
 
-# Start response
-print("Content-Type: text/html\n")
-print("<html><head><title>Upload Result</title></head><body>")
-
-if fileitem and fileitem.filename:
-    # Extract just the filename (avoid full path)
+# The fix: explicitly check "is not None" to avoid the __bool__ TypeError
+if fileitem is not None and getattr(fileitem, 'filename', None):
     filename = os.path.basename(fileitem.filename)
-
-    # Create file path
     filepath = os.path.join(UPLOAD_DIR, filename)
 
-    # Save the file content
-    with open(filepath, 'wb') as f:
-        f.write(fileitem.file.read())
-
-    print(f"<h1>File '{filename}' uploaded successfully!</h1>")
-    print(f"<p>Saved at: {os.path.abspath(filepath)}</p>")
+    try:
+        with open(filepath, 'wb') as f:
+            f.write(fileitem.file.read())
+        
+        response_html += f"<h1>Success!</h1>"
+        response_html += f"<p>File <code>{filename}</code> has been uploaded.</p>"
+        response_html += f"<p>Path: <code>{os.path.abspath(filepath)}</code></p>"
+    except Exception as e:
+        response_html += f"<h1>Upload Error</h1>"
+        response_html += f"<p style='color: #ef4444;'>{str(e)}</p>"
 else:
-    print("<h1>No file uploaded!</h1>")
+    response_html += "<h1>Missing File</h1>"
+    response_html += "<p>No file was selected or the field name was incorrect.</p>"
 
-print("</body></html>")
+response_html += '<a href="javascript:history.back()">&larr; Go Back</a>'
+
+# Debugging info
+response_html += "<div class='debug'><h3>CGI Debug Info:</h3>"
+response_html += f"<p>Form Keys: {list(form.keys())}</p></div>"
+response_html += "</div></body></html>"
+
+# 4. Output Headers and Body
+print("Content-Type: text/html")
+print() # The mandatory blank line
+print(response_html)

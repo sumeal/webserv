@@ -33,7 +33,7 @@ int SocketUtils::create_listening_socket(int port)
         return -(1);
     }
     
-    std::cout << "Socket created and listening on port " << port << std::endl;
+    // std::cout << "Socket created and listening on port " << port << std::endl;
     return (server_fd);
 }
 

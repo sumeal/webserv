@@ -30,7 +30,8 @@ int Parse::parse_server(const std::string& line, int current_state, Server& serv
 		int error_code = atoi(tokens[1].c_str());
 		server_config.error_pages[error_code] = tokens[2];
 	}
-	else if (tokens[0] == "client_max_body_size" && tokens.size() >= 2) {
+	else if (tokens[0] == "client_max_body_size" && tokens.size() >= 2) 
+	{
 		std::string value = tokens[1];
         std::istringstream ss(value);
         size_t size;
@@ -45,7 +46,7 @@ int Parse::parse_server(const std::string& line, int current_state, Server& serv
             size *= 1024 * 1024 * 1024;
         }
         server_config.client_max_body_size = size;
-        std::cout << "   client_max_body_size: " << size << " bytes" << std::endl;
+        // std::cout << "   client_max_body_size: " << size << " bytes" << std::endl;
 	}
     else if (tokens[0] == "location" && tokens.size() >= 2 && line.find("{") != std::string::npos) {
         return LOCATION;
