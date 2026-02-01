@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 17:17:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/01 18:04:25 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/01 23:46:06 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -337,7 +337,7 @@ void	Respond::procNormalOutput(std::string protocol)
 	}
 	else if (_client->getRequest().method == "DELETE")
 	{
-		std::cout << "File Path: " << filePath << std::endl; //debug
+		// std::cout << "File Path: " << filePath << std::endl; //debug
 		if (std::remove(filePath.c_str()) == 0)
 		{
 			_statusCode = 204;
@@ -526,17 +526,17 @@ void	Respond::findErrorBody(std::string errorPath)
 void	Respond::printResponse()
 {
 	std::cout << "\n==========RESPOND===============" << std::endl;
-	std::cout << "Status Code : " << _statusCode << std::endl;
-	std::cout << "Protocol: " << _protocol << std::endl;
-	std::cout << "Body: " << (_body.length() > 50 ? _body.substr(0, 50) + "..." : _body) << std::endl;
-	std::cout << "Content Length: " << _contentLength << std::endl;
-	std::cout << "Content Type: " << _contentType << std::endl;
-	std::cout << "Date: " << _currentTime << std::endl;
-	if (!_lastModified.empty())
-		std::cout << "Last Modified: " << _lastModified << std::endl;
-	std::cout << "Server Name: " << _serverName << std::endl;
-	std::cout << "Connection Status: " << _connStatus << std::endl;
-	std::cout << "Socket Fd: " << _socketFd;
+	// std::cout << "Status Code : " << _statusCode << std::endl;
+	// std::cout << "Protocol: " << _protocol << std::endl;
+	// std::cout << "Body: " << (_body.length() > 50 ? _body.substr(0, 50) + "..." : _body) << std::endl;
+	// std::cout << "Content Length: " << _contentLength << std::endl;
+	// std::cout << "Content Type: " << _contentType << std::endl;
+	// std::cout << "Date: " << _currentTime << std::endl;
+	// if (!_lastModified.empty())
+	// 	std::cout << "Last Modified: " << _lastModified << std::endl;
+	// std::cout << "Server Name: " << _serverName << std::endl;
+	// std::cout << "Connection Status: " << _connStatus << std::endl;
+	// std::cout << "Socket Fd: " << _socketFd;
 	std::cout << "\n\nFull Response: \n" << (_fullResponse.length() > 10000 ? _fullResponse.substr(0, 100) + "..." : _fullResponse) << std::endl;
 	std::cout << "\n==========FINISH================" << std::endl;
 }
