@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 16:58:34 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/31 18:33:16 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/01 14:40:32 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -44,6 +44,8 @@ private:
 	//send data
 	int			_socketFd;
 	size_t		_bytesSent;
+	Respond&	operator=(const Respond& other);
+	Respond(Respond& other);
 public:
 	Respond(t_server& serverConf);
 	~Respond();

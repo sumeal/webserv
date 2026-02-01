@@ -1,0 +1,22 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   Helper.cpp                                         :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/02/01 16:14:41 by mbani-ya          #+#    #+#             */
+/*   Updated: 2026/02/01 17:47:37 by mbani-ya         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include "Helper.h"
+#include <csignal>
+
+extern volatile sig_atomic_t g_shutdown;
+
+void	Helper::signalHandler(int signum)
+{
+	(void) signum;
+	g_shutdown = 1;
+}

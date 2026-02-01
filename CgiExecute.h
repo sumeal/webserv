@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/22 00:37:30 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/24 14:24:54 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/01 17:59:02 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,13 +21,9 @@ class Client;
 
 class CgiExecute {
 private:
-	//Client data
-	// const t_request&	_request;
 	s_HttpRequest _request;
 	t_location _locate;
-	// t_CGI*		_cgi;
 	Client*		_client;
-	
 	//Object data
 	//CGI pre
 	pid_t	_pid;
@@ -45,7 +41,6 @@ private:
 	bool		_writeEnded;
 	bool		_readEnded;
 	int			_exitStatus;
-	//execve.CGI script(eg. py)
 public:
 	CgiExecute(Client* client, std::string protocol);
 	~CgiExecute();
@@ -74,5 +69,3 @@ public:
 };
 
 #endif
-
-// t_CGI*	getCgiStruct() const;

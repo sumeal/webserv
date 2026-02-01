@@ -6,7 +6,8 @@ SRCS = SocketUtils.cpp \
 	   Core.cpp \
 	   Client.cpp \
 	   CgiExecute.cpp \
-	   Respond.cpp
+	   Respond.cpp \
+	   Helper.cpp
 
 OBJS = $(SRCS:.cpp=.o)
 CXX = g++

@@ -6,12 +6,9 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/31 18:44:56 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/01 18:00:21 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
-
-
-
 
 #include "Client.h"
 #include "CGI_data.h"
@@ -23,28 +20,26 @@
 #include <poll.h>
 #include <sys/socket.h>
 #include <errno.h>
-#include <sstream>
 #include <iostream>
 #include <cstdio>
 #include <cctype>
 
-Client::Client(t_server server_config) : _serverConfig(server_config), _executor(NULL),	_responder(new Respond(_serverConfig)), _socket(0), _hasCgi(false), _lastActivity(time(NULL)),
-	 _connStatus(CLOSE), _bestLocation(NULL), _headersParsed(false), _expectedBodyLength(0), _currentBodyLength(0), 
-	 _requestComplete(false), _disconnected(false), _isChunked(false), _chunkedComplete(false),
-	 _maxBodySize(server_config.client_max_body_size), revived(false) //FromMuzz
+Client::Client(t_server& server_config) : _serverConfig(server_config), 
+	_executor(NULL), _responder(_serverConfig), _socket(0), 
+	_hasCgi(false), _lastActivity(time(NULL)), _connStatus(CLOSE), 
+	_bestLocation(NULL), _headersParsed(false), _expectedBodyLength(0), 
+	_currentBodyLength(0), _requestComplete(false), _disconnected(false), 
+	_isChunked(false), _chunkedComplete(false), 
+	_maxBodySize(server_config.client_max_body_size), revived(false)
 {
 	state = READ_REQUEST;
-	_responder->setClient(this);
+	_responder.setClient(this);
 }
 
 Client::~Client()
 {
-	// if (_requestor)
-	// 	delete _requestor;
 	if (_executor)
 		delete _executor;
-	if (_responder)
-		delete _responder;
 }
 
 //i = index of Fds
@@ -54,11 +49,7 @@ void	Client::procInput(int i, struct pollfd& pFd)
 {
 	(void)i;
 	(void)pFd;
-	// int pipeFromCgi = 0; // Initialize to avoid accessing NULL executor
-	// if (_executor) {
-	// 	pipeFromCgi = GetCgiExec()->getpipeFromCgi();
-	// }
-	if (state == HANDLE_REQUEST) //check
+	if (state == HANDLE_REQUEST)
 	{
 		if (!_hasCgi)
 		{
@@ -105,7 +96,6 @@ void	Client::procOutput(int i, struct pollfd& pFd)
 	
 	if (state == WAIT_CGI && _executor)
 	{
-		// std::cout << "method: " << request.method << std::endl; //debug
 		int pipeToCgi = GetCgiExec()->getpipeToCgi();
 		if (pFd.fd == pipeToCgi) {
 			GetCgiExec()->writeExec();
@@ -133,7 +123,7 @@ void	Client::procOutput(int i, struct pollfd& pFd)
 		}
 		else if (status)
 		{
-			getRespond().printResponse(); //important debug
+			//getRespond().printResponse(); //importantdebug
 			state = FINISHED;
 		}
 	}
@@ -182,8 +172,7 @@ void	Client::resetClient()
 		delete _executor;
 		_executor = NULL;
 	}
-	if (_responder)
-		_responder->resetResponder();
+	_responder.resetResponder();
 	_hasCgi = false;
 	_lastActivity = time(NULL);
 	_connStatus = KEEP_ALIVE;
@@ -217,11 +206,6 @@ void	Client::setCgiExec(CgiExecute* executor)
 	_executor = executor;
 }
 
-// CgiRequest*		Client::GetCgiReq()
-// {
-// 	return _requestor;
-// }	
-
 CgiExecute*		Client::GetCgiExec()
 {
 	return _executor;
@@ -229,7 +213,7 @@ CgiExecute*		Client::GetCgiExec()
 
 Respond&	Client::getRespond()
 {
-	return* _responder;
+	return _responder;
 }
 
 bool	Client::getHasCgi()
@@ -237,7 +221,7 @@ bool	Client::getHasCgi()
 	return _hasCgi;
 }
 
-bool	Client::isCgiExecuted()  //mcm x perlu
+bool	Client::isCgiExecuted()
 {
 	return _executor;
 }
@@ -566,7 +550,7 @@ std::string Client::getRoot() {
 	return (_serverConfig.root);
 }
 
-t_server	Client::getServerConfig()
+t_server&	Client::getServerConfig()
 {
 	return (_serverConfig);
 }
@@ -577,7 +561,7 @@ void	Client::checkBestLocation()
 	// std::cout << "check best location enter" << std::endl; //debug
 	t_location*		bestLoc = NULL;
 	size_t			bestLen = 0;
-	s_HttpRequest	request = getRequest();
+	s_HttpRequest&	request = getRequest();
 
 	// std::cout << "Request Path: " << request.path << std::endl;//debug
 	for (size_t i = 0; i < _serverConfig.locations.size();i++)

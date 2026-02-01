@@ -21,7 +21,6 @@
 
 class Core {
 private:
-	// std::map<int, CgiExecute*> _cgiMap;
 	std::map<int, Client*> _clients;
 	std::vector<struct pollfd> _fds;
 	std::vector<struct pollfd> _stagedFds; //sementara
@@ -38,12 +37,12 @@ private:
 	int new_socket;
 	void debugHttpRequest(const t_HttpRequest& request);
     void putIntoCached(s_HttpRequest& request);
-
+	Core(const Core& other);
+	Core& operator=(const Core& other);
 public:
 	Core();
 	~Core();
 	void	handleTransition(Client* client);
-	// void	launchCgi(Client* client, t_location& locate, t_request& request);
 	void	cgiRegister(Client* client);
 	void	run();
 	//Geminied. muzz part

@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 17:17:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/01 00:24:49 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/01 18:04:25 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,7 +37,7 @@ Respond::~Respond()
 //first line check?
 void	Respond::procCgiOutput(std::string cgiOutput)
 {
-	std::cout << "cgiOutput: " << cgiOutput << std::endl; //debug
+	// std::cout << "cgiOutput: " << cgiOutput << std::endl; //debug
 	if (cgiOutput.empty())
 	{
 		buildErrorResponse(502);
@@ -113,7 +113,7 @@ void	Respond::procCgiOutput(std::string cgiOutput)
 	}
 	//				EXTRACT BODY	
 	_body = cgiOutput.substr(separatorPos + offset);
-	std::cout << "only body check. body: " << _body << "\nonly body check ends" << std::endl; //debug
+	// std::cout << "only body check. body: " << _body << "\nonly body check ends" << std::endl; //debug
 	_contentLength = _body.length();
 	setCurrentTime();
 }
@@ -412,10 +412,10 @@ void	Respond::buildResponse()
 	// Content-Length: Content-Length: + body.size() + \r\n
 	ss << "Content-Length: " << _body.size() << "\r\n";
 	// CGI Headers: Add the Content-Type you found earlier.
-	if (_contentType.empty()) //debug
-		std::cout << "content type empty" << std::endl; //debug
-	else //debug
-	 	std::cout << "content type: " << _contentType << std::endl; //debug
+	// if (_contentType.empty()) //debug
+	// 	std::cout << "content type empty" << std::endl; //debug
+	// else //debug
+	//  	std::cout << "content type: " << _contentType << std::endl; //debug
 	std::string ct = (_contentType.empty()) ? "text/html" : _contentType;
 	ss << "Content-Type: " << ct << "\r\n";
 	if (_statusCode >= 300 && _statusCode < 400) 

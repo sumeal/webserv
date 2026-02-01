@@ -6,24 +6,19 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/14 10:54:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/29 12:55:58 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/01 18:02:42 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-// #include "CgiExecute.h"
-// #include "CgiRequest.h"
 #include "CGI_data.h"
 #include "Core.h"
+#include <csignal>
 #include <exception>
 #include <iostream>
+#include <csignal>
+#include "Helper.h"
 
-// Testing functions (commented out - using new s_HttpRequest struct)
-// void	cgitest_data(t_location& _location, s_HttpRequest& _request);
-// void	test_static_get(t_location& loc, s_HttpRequest& req);
-// void 	test_static_post(t_location& loc, s_HttpRequest& req);
-// void	test_cgi_get(t_location& loc, s_HttpRequest& req);
-// void 	test_cgi_post(t_location& loc, s_HttpRequest& req);
-
+volatile sig_atomic_t g_shutdown = 0;
 
 int main(int argc, char **argv)
 {
@@ -34,18 +29,15 @@ int main(int argc, char **argv)
 	}
 
 	std::string config_file = argv[1];
-	// t_data		data;
-	// t_location	locate;
-	// t_request	request;
 
 	Core core;
-	// cgitest_data(locate, request);
 
 	core.parse_config(config_file);
 	// core.print_all_locations();
 	core.initialize_server();
 	try 
 	{
+		signal(SIGINT, Helper::signalHandler);
 		core.run();
 	} 
 	catch (const std::exception& e) 
@@ -54,6 +46,13 @@ int main(int argc, char **argv)
 	}
 	// core.pathCheck("/index.html");
 }
+
+// Testing functions (commented out - using new s_HttpRequest struct)
+// void	cgitest_data(t_location& _location, s_HttpRequest& _request);
+// void	test_static_get(t_location& loc, s_HttpRequest& req);
+// void 	test_static_post(t_location& loc, s_HttpRequest& req);
+// void	test_cgi_get(t_location& loc, s_HttpRequest& req);
+// void 	test_cgi_post(t_location& loc, s_HttpRequest& req);
 
 // void cgitest_data(t_location& loc, t_request& req)
 // {

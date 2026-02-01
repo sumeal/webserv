@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/31 16:39:46 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/01 18:02:14 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,11 +22,8 @@
 #include <unistd.h>
 #include "Respond.h"
 #include <ctime>
-// #include <cstdint>
-// #include <stdexcept>
-// #include <set>
-// #include <chrono> //havetodelete
-// #include "CgiRequest.h"
+
+extern volatile sig_atomic_t g_shutdown;
 
 Core::Core() : _needCleanup(false)
 {}
@@ -39,12 +36,14 @@ void	Core::run()
 	int			clientCount = 0;
 	
 	int loopCount = 0;
-	while (1)
+	while (g_shutdown == 0)
 	{
 
 		int result = poll(&_fds[0], _fds.size(), 400000);
 		if (result < 0) {
-			perror("Poll error");
+			if (errno == EINTR)
+				return ;
+			perror("Polls error");
 			continue;
 		}
 		//handleTimeout(); //better put before poll so poll dont run timeout client
@@ -612,7 +611,7 @@ void Core::parse_http_request(Client* current_client, const std::string raw_req)
     }
 	
 	//putIntoCached(current_request); //importantdebug
-	debugHttpRequest(current_request); //importantdebug
+	//debugHttpRequest(current_request); //importantdebug
 	current_client->checkBestLocation();
 	current_client->state = HANDLE_REQUEST;
 }
@@ -923,139 +922,6 @@ void Core::putIntoCached(s_HttpRequest& request)
     std::cout << "    Keep-Alive: " << (request.keep_alive ? "TRUE" : "FALSE") << std::endl;
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// void	Core::run( t_location& locate, t_request& request)
-// {
-// 	int			clientCount = 0;
-// 	std::vector<Client*> activeClients;
-	
-// 	int loopCount = 0;
-// 	while (1)
-// 	{
-// 		acceptMockConnections(locate, request, clientCount);
-// 		int result = poll(&_fds[0], _fds.size(), 4000);
-// 		forceMockEvents();
-// 		//					ACTUAL LOOP
-// 		for (int i = 0; i < _fds.size(); i++)
-// 		{
-// 			int	*fd = &_fds[i].fd;
-// 			if (*fd == -1)
-// 				continue ;
-// 			int	revents = _fds[i].revents;
-// 			Client* client = _clients[*fd];
-// 			int	pipeFromCgi = -1;
-// 			int pipeToCgi = -1;
-// 			if (client->GetCgiExec())
-// 			{
-// 				pipeFromCgi = client->GetCgiExec()->getpipeFromCgi();
-// 				pipeToCgi = client->GetCgiExec()->getpipeToCgi();
-// 			}
-// 			// if (!revents)
-// 			// 	continue;
-// 			try
-// 			{
-// 				if (revents & POLLIN || revents & POLLHUP)
-// 				{
-// 					if (client->state == READ_REQUEST)
-// 					{
-// 						//parser/config part.used to read http
-// 						// if (/*read request finished*/)
-// 						if (!client->GetCgiExec()->isCGI())
-// 						{
-// 							client->getRespond().procNormalOutput();
-// 							client->getRespond().buildResponse();
-// 							respondRegister(client);
-// 							client->state = SEND_RESPONSE;
-// 						}
-// 						else
-// 							client->state = EXECUTE_CGI;
-// 						//if execute CGI state
-// 						if (client->state == EXECUTE_CGI)
-// 						{
-// 							if (!client->GetCgiExec()->isCGI())
-// 							{
-// 								client->state = SEND_RESPONSE; //need to ask muzz
-// 							}
-// 							launchCgi(client, locate, request);
-// 							client->state = WAIT_CGI;
-// 						}
-// 					}
-// 					if (client->state == WAIT_CGI && *fd == pipeFromCgi)
-// 					{
-// 						client->GetCgiExec()->readExec();
-// 						client->GetCgiExec()->cgiState();
-// 						if (client->GetCgiExec()->isReadDone())
-// 						{
-// 							//removeFd(pipeFromCgi);
-// 							fdPreCleanup(pipeFromCgi, i);
-// 							if (client->GetCgiExec()->isDone())
-// 							{
-// 								client->getRespond().procCgiOutput(client->GetCgiExec()->getOutput());
-// 								client->getRespond().buildResponse();
-// 								respondRegister(client);
-// 								client->state = SEND_RESPONSE;
-// 							}
-// 						}
-// 					}
-// 				}
-// 				if (_fds[i].revents & POLLOUT || revents & POLLHUP)
-// 				{
-// 					if (client->state == WAIT_CGI && *fd == pipeToCgi)
-// 					{
-// 						client->GetCgiExec()->writeExec();
-// 						client->GetCgiExec()->cgiState();
-// 						if (client->GetCgiExec()->isWriteDone())
-// 						{
-// 							fdPreCleanup(pipeToCgi, i);
-// 							if (client->GetCgiExec()->isDone())
-// 							{
-// 								client->getRespond().procCgiOutput(client->GetCgiExec()->getOutput());
-// 								client->getRespond().buildResponse();
-// 								respondRegister(client);
-// 								client->state = SEND_RESPONSE;
-// 							}
-// 						}
-// 					}
-// 					if (client->state == SEND_RESPONSE /*&& *fd == client->getSocket()*/)
-// 					{
-// 						int status = client->getRespond().sendResponse();
-// 						if (status)
-// 						{
-// 							client->getRespond().printResponse();
-// 							client->state = FINISHED;
-// 						}
-// 					}
-// 				}
-// 			}
-// 			catch (int statusCode)
-// 			{
-// 				handleClientError(client, statusCode);
-// 			}
-// 			if (client->state == SEND_RESPONSE /*&& *fd == client->getSocket()*/)
-// 			{
-// 				int status = client->getRespond().sendResponse();
-// 				if (status)
-// 				{
-// 					client->getRespond().printResponse();
-// 					client->state = FINISHED;
-// 				}
-// 			}
-// 			if (client->state == FINISHED) // timeout only need to trigger this
-// 			{
-// 				//clear/delete/break
-// 				deleteClient(client);
-// 			}
-// 		}
-// 		//delete all in the delete list
-// 		fdCleanup();
-// 		addStagedFds();
-// 		if(clientCount >= 10 && _clients.empty())
-// 			break ;
-// 	}
-// }
-
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Another way of remove instead of iterating loop
 // struct IsInvalid 
@@ -1101,41 +967,3 @@ void Core::putIntoCached(s_HttpRequest& request)
 // 	_cgiMap.erase(fd);
 // }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-// // Testing only
-// void Core::acceptMockConnections(t_location& locate, t_request& request, int& clientCount)
-// {
-//     // Only create new clients if we are under our test limit
-//     if (clientCount < 2) 
-//     {
-//         int dummyFd = clientCount + 200;
-//         Client* client = new Client();
-        
-//         // Setup CGI (simulation of a CGI request)
-//         client->setCgiExec(new CgiExecute(client, request, locate));
-        
-//         // clientRegister should add the FD to your vector 
-//         // and set _fds[i].events = POLLIN
-//         clientRegister(dummyFd, client); 
-        
-//         clientCount++;
-//     }
-// }
-
-// //Testing
-// void Core::forceMockEvents()
-// {
-//     for (size_t i = 0; i < _fds.size(); i++)
-//     {
-//         // We look up the client associated with this specific FD
-//         Client* c = _clients[_fds[i].fd];
-
-        // If the client exists and is waiting to be read, we 'fake' 
-        // the activity that the OS would normally detect.
-//         if (c && c->state == READ_REQUEST && !c->revived) 
-//         {
-//             _fds[i].revents = POLLIN; 
-//         }
-//     }
-// }

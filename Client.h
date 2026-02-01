@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:03:33 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/31 18:40:25 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/01 15:01:10 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,12 +16,11 @@
 #define CLIENT_TIMEOUT 5
 
 #include "CGI_data.h"
-// #include "CgiRequest.h"
 #include <ctime>
 #include <cstdlib>
+#include "Respond.h"
 
 class CgiExecute;
-class Respond;
 
 enum e_State {
 READ_REQUEST,
@@ -36,33 +35,35 @@ DISCONNECTED,
 
 class Client {
 private:
-	t_server	_serverConfig;//do we need to hold as reference or as copy per client?
+	t_server&	_serverConfig;
 	CgiExecute* _executor;
 	s_HttpRequest request;
-	Respond*	_responder;
+	Respond		_responder;
 	int			_socket; //FromMuzz
 	bool		_hasCgi;
 	time_t		_lastActivity;
 	int			_connStatus;
 	t_location*	_bestLocation;
-	std::string		_rawBuffer;
-	std::string		_currentRequest;
-	bool			_headersParsed;
-	size_t			_expectedBodyLength;
-	size_t			_currentBodyLength;
-	bool			_requestComplete;
-	bool			_disconnected;
-	
-	bool			_isChunked;
-	bool			_chunkedComplete;
-	std::string		_chunkedBody;
-	size_t _maxBodySize;
-	size_t			parseContentLength(const std::string& headers);
-	bool			parseTransferEncoding(const std::string& headers);
-	bool			isChunkedComplete();
+	std::string	_rawBuffer;
+	std::string	_currentRequest;
+	bool		_headersParsed;
+	size_t		_expectedBodyLength;
+	size_t		_currentBodyLength;
+	bool		_requestComplete;
+	bool		_disconnected;
+
+	bool		_isChunked;
+	bool		_chunkedComplete;
+	std::string	_chunkedBody;
+	size_t		_maxBodySize;
+	size_t		parseContentLength(const std::string& headers);
+	bool		parseTransferEncoding(const std::string& headers);
+	bool		isChunkedComplete();
+	Client(const Client& other);
+	Client&		operator=(const Client& other);
 public:
 	e_State state;
-	Client(t_server server_config);
+	Client(t_server& server_config);
 	bool		revived; //testing
 	~Client();
 	void	procInput(int i, struct pollfd& pFd);
@@ -74,7 +75,7 @@ public:
 	CgiExecute* GetCgiExec();
 	void	setCgiExec(CgiExecute* executor);
 	Respond&	getRespond();
-	bool	isCgiExecuted(); //mcm x perlu
+	bool	isCgiExecuted();
 	void	setHasCgi(bool status);
 	bool	getHasCgi();
 	bool	isIdle(time_t now);
@@ -92,7 +93,7 @@ public:
 	std::string 	readRawRequest();
 	s_HttpRequest& 	getRequest();
 	std::string 	getRoot();
-	t_server		getServerConfig();
+	t_server&		getServerConfig();
 	t_location&		getCgiLocation();
 	void	setMaxBodySize(size_t maxSize);
 	bool	isCGI(const s_HttpRequest& request, const t_location& locate) const; // check
