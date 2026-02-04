@@ -25,7 +25,7 @@ private:
 	std::vector<struct pollfd> _fds;
 	std::vector<struct pollfd> _stagedFds; //sementara
 	std::vector<t_server> server_config;
-	std::map<std::string, std::string> _cookies; _cookie[abc123]
+	std::map<std::string, std::string> _cookies;
 	t_server temp_server;
 	t_location temp_location;
 	std::map<int, size_t> _serverFd;

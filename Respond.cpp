@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Respond.cpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
+/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 17:17:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/04 13:13:04 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/04 14:31:39 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -293,9 +293,11 @@ void	Respond::procGet(std::string filePath)
 void	Respond::fileServe(std::string filePath)
 {
 	std::ifstream file(filePath.c_str());
-	if (!file.is_open()) 
+	std::cout << "filePath in fileserve: " << filePath << std::endl; //debug
+	if (!file.is_open()) {
+		std::cout << "TRIGGER \n"; //debug
 		throw 404;
-
+	}
 	std::stringstream buffer;
 	buffer << file.rdbuf();
 	file.close();
@@ -370,6 +372,7 @@ void	Respond::buildResponse()
 	// CGI Headers: Add the Content-Type you found earlier.
 	if (!_setCookie.empty())
 		ss << "Set-Cookie: " << _setCookie << "\r\n"; 
+	std::cout << "Set-Cookie: " << _setCookie << std::endl; //debug
 	// if (_contentType.empty()) //debug
 	// 	std::cout << "content type empty" << std::endl; //debug
 	// else //debug
@@ -484,7 +487,7 @@ void	Respond::findErrorBody(std::string errorPath)
 void	Respond::printResponse()
 {
 	std::cout << "\n==========RESPOND===============" << std::endl;
-	// std::cout << "Status Code : " << _statusCode << std::endl;
+	 std::cout << "Status Code : " << _statusCode << std::endl;
 	// std::cout << "Protocol: " << _protocol << std::endl;
 	// std::cout << "Body: " << (_body.length() > 50 ? _body.substr(0, 50) + "..." : _body) << std::endl;
 	// std::cout << "Content Length: " << _contentLength << std::endl;
@@ -495,7 +498,7 @@ void	Respond::printResponse()
 	// std::cout << "Server Name: " << _serverName << std::endl;
 	// std::cout << "Connection Status: " << _connStatus << std::endl;
 	// std::cout << "Socket Fd: " << _socketFd;
-	std::cout << "\n\nFull Response: \n" << (_fullResponse.length() > 10000 ? _fullResponse.substr(0, 100) + "..." : _fullResponse) << std::endl;
+	//std::cout << "\n\nFull Response: \n" << (_fullResponse.length() > 10000 ? _fullResponse.substr(0, 100) + "..." : _fullResponse) << std::endl;
 	std::cout << "\n==========FINISH================" << std::endl;
 }
 

@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Core.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
+/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/04 00:42:03 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/04 14:31:31 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -354,7 +354,7 @@ void	Core::handleClientError(Client* client, int statusCode)
 {
 	//How do Muzz store in map for the custom error file
 	// std::string errorPath = error_pages[statusCode]; //will do map later
-	std::string errorPath = "Tiputiputipu"; //will do map later
+	std::string errorPath = client->getServerConfig().error_pages[statusCode];
 	//Generate.
 	if (!errorPath.empty())
 		client->getRespond().findErrorBody(errorPath);
@@ -480,8 +480,9 @@ void	Core::pathCheck(std::string path)
 	}
 	else if(S_ISREG(fileInfo.st_mode))
 	{
-		if (access(fullPath.c_str(), F_OK) != 0)
+		if (access(fullPath.c_str(), F_OK) != 0) {
 			throw (404);
+		}
 		if (access(fullPath.c_str(), R_OK) != 0)
 		{
 			std::cout << "403 here 6" << std::endl; //debug
