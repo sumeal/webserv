@@ -113,7 +113,7 @@ char**	CgiExecute::createEnvp()
 		envpVector.push_back("GATEWAY_INTERFACE=CGI/1.1");
 		envpVector.push_back("SCRIPT_FILENAME=" + _scriptPath);
 	}
-	std::cout << "AbsPath: " << _scriptPath << ". Request Path: " << _request.path << std::endl; //debug
+	// std::cout << "AbsPath: " << _scriptPath << ". Request Path: " << _request.path << std::endl; //debug
 
 	//				FORMAT HEADER
 	//add HTTP_, upper char & push every headers from struct to the envp list
@@ -160,7 +160,7 @@ void	CgiExecute::readExec()
 		if (errno == EAGAIN || errno == EWOULDBLOCK)
 			return ;
 
-		std::cerr << "CGI Read Error: " << strerror(errno) << std::endl; //debug
+		// std::cerr << "CGI Read Error: " << strerror(errno) << std::endl; //debug
 		throw(502);
 	}
 }
@@ -213,13 +213,13 @@ void	CgiExecute::preExecute()
 	//					CHECK EXISTENCE & EXEC
 	if (access(_scriptPath.c_str(), X_OK) == -1)
 	{
-		std::cout << "absPath: " << _scriptPath << std::endl; //debug
-		std::cout << "403 here 1" << std::endl; //debug
+		// std::cout << "absPath: " << _scriptPath << std::endl; //debug
+		// std::cout << "403 here 1" << std::endl; //debug
 		throw(403);
 	}
 	if (access(interp.c_str(), X_OK) == -1)
 	{
-		std::cout << "403 here 2" << std::endl; //debug	
+		// std::cout << "403 here 2" << std::endl; //debug	
 		throw(403);
 	}
 }

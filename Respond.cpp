@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Respond.cpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
+/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 17:17:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/04 14:31:39 by abin-moh         ###   ########.fr       */
+/*   Updated: 2026/02/04 16:15:08 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -134,6 +134,14 @@ void Respond::buildNormalCookie()
 		std::string randomGreet = greetings[rand() % 3];
 		
 		setSession(result, randomGreet);
+		std::map<std::string, std::string>::iterator it;
+		std::cout << "before map printing 1" <<std::endl; //debug
+    	// 2. Use a standard for-loop from begin() to end()
+    	for (it = _sessions.begin(); it != _sessions.end(); ++it) 
+		{
+    	    // 3. it->first is the Key, it->second is the Value
+    	    std::cout << it->first << ": " << it->second << std::endl;
+		}
 	}
 }
 
@@ -235,20 +243,36 @@ void	Respond::procGet(std::string filePath)
 		return ;
 	}
 	//			COOKIE
-	//do finding session id and replace cookie in data.  below is what gemini suggest
 	///////////////////////////////////////////////////////////////////////////////
-	// std::string raw = _client->getRequest().cookie;
-	// std::string id = "";
-	// size_t pos = raw.find("_session_id=");
-	// if (pos != std::string::npos) {
-	//     id = raw.substr(pos + 12); // Move past "_session_id="
-	//     size_t end = id.find(";");
-	//     if (end != std::string::npos) id = id.substr(0, end);
-	// }
+	std::string raw = _client->getRequest().cookie;
+	std::cout << "cookie from request: " << raw << std::endl; //debug
+	std::string id = "";
+	size_t pos = raw.find("_session_id=");
+	if (pos != std::string::npos) 
+	{
+	    id = raw.substr(pos + 12); // Move past "_session_id="
+		std::cout << "id:" << id << std::endl; //debug
+	    size_t end = id.find(";");
+	    if (end != std::string::npos) 
+			id = id.substr(0, end);
+		std::cout << "id1:" << id << std::endl; //debug
+	}
 	////////////////////////////////////////////////////////////////////////
-	std::string sessionValue = getSession(_client->getRequest().cookie);
+	std::string sessionValue = getSession(id);
+    // 1. You must declare the iterator explicitly
+    std::map<std::string, std::string>::iterator it;
+	std::cout << "before map printing" <<std::endl; //debug
+    // 2. Use a standard for-loop from begin() to end()
+    for (it = _sessions.begin(); it != _sessions.end(); ++it) 
+	{
+        // 3. it->first is the Key, it->second is the Value
+        std::cout << it->first << ": " << it->second << std::endl;
+	}
 	if (!sessionValue.empty())
+	{
 		_sessionValue = sessionValue;
+		std::cout << "Session Value updated: " << _sessionValue << std::endl; //debug
+	}
 	//				HANDLE DIRECTORY
 	std::string requestPath = getRequestPath();
 	if (isDirectory(filePath))
@@ -285,7 +309,20 @@ void	Respond::procGet(std::string filePath)
 		fileServe(filePath);
 	if (!sessionValue.empty())
 	{
-		_body = "<hr><p> " + _sessionValue + "</p>" + _body;
+		std::string greetingHtml = 
+        	"<div style='"
+        	"position: fixed; " // Stay in one place
+        	"top: 20px; "       // 20px from the top
+        	"width: 100%; "     // Full width
+        	"text-align: center; "
+        	"color: white; "    // Visible on your dark/gradient backgrounds
+        	"font-family: Arial; "
+        	"font-weight: bold; "
+        	"z-index: 9999;"    // Make sure it sits on top of everything
+        	"'> "
+        	"   " + _sessionValue + ", Our Fans!"
+        	"</div>";
+		_body = greetingHtml + _body;
     	_contentLength = _body.size();
 	}
 }
@@ -488,6 +525,7 @@ void	Respond::printResponse()
 {
 	std::cout << "\n==========RESPOND===============" << std::endl;
 	 std::cout << "Status Code : " << _statusCode << std::endl;
+	 std::cout << "Set-cookie: " << _setCookie << std::endl; 
 	// std::cout << "Protocol: " << _protocol << std::endl;
 	// std::cout << "Body: " << (_body.length() > 50 ? _body.substr(0, 50) + "..." : _body) << std::endl;
 	// std::cout << "Content Length: " << _contentLength << std::endl;
