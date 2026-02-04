@@ -6,7 +6,7 @@
 /*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/04 14:31:31 by abin-moh         ###   ########.fr       */
+/*   Updated: 2026/02/04 14:46:12 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -587,6 +587,9 @@ void Core::parse_http_request(Client* current_client, const std::string raw_req)
 				header_value.erase(header_value.length() - 1);
 			}
 			current_request.headers[header_name] = header_value;
+			if (header_name == "Cookie") {
+				current_request.cookie = header_value;
+			}
 		}
 	}
 	
@@ -625,7 +628,7 @@ void Core::parse_http_request(Client* current_client, const std::string raw_req)
     }
 	
 	//putIntoCached(current_request); //importantdebug
-	// debugHttpRequest(current_request); //importantdebug
+	debugHttpRequest(current_request); //importantdebug
 	current_client->checkBestLocation();
 	current_client->state = HANDLE_REQUEST;
 }
