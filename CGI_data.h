@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/16 15:03:57 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/01/29 14:53:25 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/04 00:29:31 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -57,6 +57,7 @@ typedef struct s_HttpRequest
     std::string path;            // "/uploads/file.txt"
     std::string query;           // "x=1"
     std::string http_version;    // "HTTP/1.1"
+	std::string	cookie;
 
     // Headers
     std::map<std::string, std::string> headers;

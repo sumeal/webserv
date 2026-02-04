@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/01 23:34:48 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/04 11:49:23 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,8 +24,9 @@
 #include <cstdio>
 #include <cctype>
 
-Client::Client(t_server& server_config) : _serverConfig(server_config), 
-	_executor(NULL), _responder(_serverConfig), _socket(0), 
+Client::Client(t_server& server_config, std::map<std::string, std::string>& cookies) : 
+	_serverConfig(server_config), _executor(NULL), 
+	_responder(_serverConfig, cookies), _socket(0), 
 	_hasCgi(false), _lastActivity(time(NULL)), _connStatus(CLOSE), 
 	_bestLocation(NULL), _headersParsed(false), _expectedBodyLength(0), 
 	_currentBodyLength(0), _requestComplete(false), _disconnected(false), 
@@ -419,7 +420,7 @@ size_t Client::parseContentLength(const std::string& headers)
 					}
 					
 					if (start < value.length()) {
-						std::cout << "📏 Found Content-Length: " << value.substr(start) << std::endl;
+						// std::cout << "📏 Found Content-Length: " << value.substr(start) << std::endl;
 						return static_cast<size_t>(atoi(value.substr(start).c_str()));
 					}
 				}
@@ -462,7 +463,7 @@ bool Client::isChunkedComplete()
 	// Simple check for final chunk: look for "0\r\n\r\n" or "0\n\n"
 	if (body.find("0\r\n\r\n") != std::string::npos || 
 		body.find("0\n\n") != std::string::npos) {
-		std::cout << "🏁 Chunked request final chunk detected" << std::endl;
+		// std::cout << "🏁 Chunked request final chunk detected" << std::endl;
 		return true;
 	}
 	
@@ -527,13 +528,13 @@ std::string Client::readRawRequest()
 	if (bytes_read > 0) {
 		buffer[bytes_read] = '\0';
 		_lastActivity = time(NULL);
-		std::cout << std::endl << "📥 Received " << bytes_read << " bytes from FD " << _socket << ":" << std::endl;
-        std::cout << "\"" << std::string(buffer) << "\"" << std::endl;
-        std::cout << "--- End Request ---" << std::endl;
+		// std::cout << std::endl << "📥 Received " << bytes_read << " bytes from FD " << _socket << ":" << std::endl;
+        // std::cout << "\"" << std::string(buffer) << "\"" << std::endl;
+        // std::cout << "--- End Request ---" << std::endl;
 		return (std::string(buffer));
 	}
 	else if (bytes_read == 0) {
-		std::cout << "Client closed connection (FD: " << _socket << ")" << std::endl;
+		// std::cout << "Client closed connection (FD: " << _socket << ")" << std::endl;
 		return ("");
 	}
 	else {
@@ -600,6 +601,7 @@ void	Client::checkBestLocation()
 	}
  	_bestLocation = bestLoc;
 	std::cout << "best location path: " << _bestLocation->path << std::endl; //debug
+	std::cout << "root: " << _bestLocation->root << std::endl; //debug
 	// std::cout << "check best location doesnt throw" << std::endl; //debug
 }
 

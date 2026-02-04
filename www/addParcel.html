@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta charset="utf-8" />
+		<title>Add Parcel</title>
+
+		<style>
+			body {
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			min-height: 100vh;
+			padding: 24px;
+			/* flex-direction: column; */
+			/* gap: 10px; */
+			position: relative;
+			background: linear-gradient(
+				237deg,
+				rgba(184, 255, 220, 1) 0%,
+				rgba(130, 139, 255, 1) 100%
+				);
+			}
+
+			.card {
+			display: flex;
+			flex-direction: column;
+			width: 100%;
+			max-width: 520px;
+			padding: 48px;
+			gap: 32px;
+			background-color: #ffffff;
+			border-radius: 16px;
+			padding: clamp(24px, 5vw, 48px);
+			}
+
+			.desc {
+			gap: 8px;
+			display: flex;
+			flex-direction: column;
+			align-items: flex-start;
+			position: relative;
+			align-self: stretch;
+			width: 100%;
+			flex: 0 0 auto;
+			}
+
+			h1, p {
+				margin: 0;
+			}
+			h1 {
+			position: relative;
+			align-self: stretch;
+			margin-top: -1.00px;
+			font-family: "Inter-Bold", Helvetica;
+			font-weight: 700;
+			color: #4d1799;
+			font-size: 36px;
+			text-align: center;
+			letter-spacing: 0;
+			line-height: normal;
+			}
+
+			p {
+			position: relative;
+			align-self: stretch;
+			font-family: "Inter-Regular", Helvetica;
+			font-weight: 400;
+			color: #4d1799;
+			font-size: 24px;
+			text-align: center;
+			letter-spacing: 0;
+			line-height: normal;
+			}
+
+			.input-field-group {
+			display: flex;
+			flex-direction: column;
+			align-items: flex-start;
+			justify-content: center;
+			gap: 16px;
+			position: relative;
+			align-self: stretch;
+			width: 100%;
+			flex: 0 0 auto;
+			}
+
+			.input-field {
+			display: flex;
+			height: 54px;
+			align-items: center;
+			padding: 4px 16px;
+			position: relative;
+			align-self: stretch;
+			border-radius: 12px;
+			border: 1px solid;
+			border-color: #aeaeae;
+			}
+
+			.input-text-wrapper {
+			border: none;
+			background: transparent;
+			width: 100%;
+			position: relative;
+			color: #5f48f9;
+			text-align: left;
+			font-family: "Inter-Regular", Helvetica;
+			font-weight: 100;
+			font-size: 18px;
+			letter-spacing: 0;
+			line-height: normal;
+			}
+
+			.input-text-wrapper::placeholder {
+			color: #c2b3ce;
+			opacity: 1;
+			}
+
+			.input-text-wrapper:focus {
+			outline: none;
+			}
+
+			.input-field:focus-within {
+			border-color: #717bff;
+			box-shadow: 0 0 0 2px rgba(113, 123, 255, 0.2);
+			}
+
+			.navigation {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: flex-end;
+			justify-content: center;
+			gap: 8px 8px;
+			position: relative;
+			align-self: stretch;
+			width: 100%;
+			flex: 0 0 auto;
+			}
+
+			.button-text {
+			position: relative;
+			width: fit-content;
+			font-family: "Inter-Bold", Helvetica;
+			font-weight: 700;
+			color: #ffffff;
+			font-size: 18px;
+			text-align: center;
+			letter-spacing: 0;
+			line-height: normal;
+			}
+
+			.btn {
+			all: unset;
+			/* box-sizing: border-box; */
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			gap: 10px;
+			padding: 14px 16px;
+			position: relative;
+			flex: 0 0 auto;
+			border-radius: 8px;
+			cursor: pointer;
+			transition: background-color 0.2s ease;
+			}
+
+			.btn-primary {
+				background-color: #717bff;
+			}
+
+			.btn-secondary {
+				background-color: #86c7da;
+			}
+
+			.btn-primary:hover {
+			background-color: #5a66e6;
+			}
+
+			.btn-primary:active {
+			background-color: #a05aeb;
+			}
+
+			.btn-primary:focus-visible {
+			outline: 2px solid #4a90e2;
+			outline-offset: 2px;
+			}
+
+			.btn-secondary:hover {
+			background-color: #6fb3c9;
+			}
+
+			.btn-secondary:active {
+			background-color: #5a9fb8;
+			}
+
+			.btn-secondary:focus-visible {
+			outline: 2px solid #4a90e2;
+			outline-offset: 2px;
+			}
+
+			.visually-hidden {
+			position: absolute;
+			width: 1px;
+			height: 1px;
+			padding: 0;
+			margin: -1px;
+			overflow: hidden;
+			clip: rect(0, 0, 0, 0);
+			white-space: nowrap;
+			border-width: 0;
+			}
+
+			.error {
+			color: #f38265;
+			text-align: left;
+			font-family: "Inter-Regular", Helvetica;
+			font-size: 14px;
+			display: none;
+			}
+
+			.error.active {
+			display: inline;
+			}
+		</style>
+
+	</head>
+	<body>
+		<section class="card">
+			<header class="desc">
+				<h1>Add a Parcel</h1>
+				<p>Fill in your name and item weight below.</p>
+			</header>
+
+			<form class="input-field-group" action="/cgi-bin/addParcel.php" method="post">
+				<div class="input-field">
+					<label for="sender" class="visually-hidden">Sender</label>
+					<input
+						type="text"
+						id="sender"
+						class="input-text-wrapper"
+						placeholder="Sender's name"
+						name="sender"
+						required
+						aria-required="true"
+					/>
+				</div>
+
+				<div class="input-field">
+					<label for="weight" class="visually-hidden">Weight</label>
+					<input
+						type="number"
+						id="weight"
+						class="input-text-wrapper"
+						placeholder="Item weight"
+						name="weight"
+						required
+						aria-required="true"
+					/>
+				</div>
+				<span class="error">Please enter a valid number</span>
+
+				<div class="navigation">
+					<button type="submit" class="btn btn-primary">
+						<span class="button-text">Add Parcel</span>
+					</button>
+					<button type="button" class="btn btn-secondary" onclick="location.href='/'">
+						<span class="button-text">Back to Home</span>
+					</button>
+				</div>
+
+			</form>
+
+			<script>
+				// error check
+				const ageInput = document.getElementById('weight');
+				const ageError = document.querySelector('.error');
+
+				ageInput.addEventListener('input', () => {
+				const isValid = /^[0-9]+$/.test(ageInput.value);
+				if (ageInput.value === '' || isValid) {
+					ageError.classList.remove('active');
+				} else {
+					ageError.classList.add('active');
+				}
+				});
+
+				// mouse reactive bg
+				// document.addEventListener('mousemove', (e) => {
+				// const xRatio = e.clientX / window.innerWidth; // 0 to 1
+				// const angle = xRatio * 360; // map to 0-360 degrees
+				// document.body.style.background = `linear-gradient(${angle}deg, rgba(184, 255, 220, 1) 0%, rgba(130, 139, 255, 1) 100%)`;
+				// });
+			</script>
+
+		</section>
+	</body>
+</html>

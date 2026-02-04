@@ -25,6 +25,7 @@ private:
 	std::vector<struct pollfd> _fds;
 	std::vector<struct pollfd> _stagedFds; //sementara
 	std::vector<t_server> server_config;
+	std::map<std::string, std::string> _cookies; _cookie[abc123]
 	t_server temp_server;
 	t_location temp_location;
 	std::map<int, size_t> _serverFd;
@@ -57,13 +58,13 @@ public:
 	void	addStagedFds();
 	void	fdCleanup(); //delStagedFd better naming?
 	void	pathCheck(std::string path);
-
+	std::map<std::string, std::string>& getCookiesMap();
 
 	//muzz part real
 	void	parse_config(const std::string &filename);
 	void	parse_http_request(Client* current_client, std::string raw_request);
-	void initialize_server();
-	void accepter(int server_fd, size_t server_index);
+	void 	initialize_server();
+	void 	accepter(int server_fd, size_t server_index);
 	void 	clientRegister(int clientFd, Client* client, size_t server_index);
 
 

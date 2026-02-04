@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 17:17:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/01 23:46:06 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/04 13:13:04 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,9 +24,11 @@
 #include <iostream>
 #include <sys/stat.h>  // For directory operations
 #include <dirent.h>    // For directory listing
+#include <unistd.h>
 
 //initialize the status code
-Respond::Respond(t_server& serverConf) : _server(serverConf), _client(NULL), _statusCode(0), //consider removing _server
+Respond::Respond(t_server& serverConf, std::map<std::string, std::string>& cookiesMap) : 
+	_server(serverConf), _client(NULL), _sessions(cookiesMap), _statusCode(0), //consider removing _server
 	_protocol("HTTP/1.1"), _contentLength(0), _serverName("localhost"), 
 	_connStatus(KEEP_ALIVE), _socketFd(0), _bytesSent(0)
 {}
@@ -37,11 +39,11 @@ Respond::~Respond()
 //first line check?
 void	Respond::procCgiOutput(std::string cgiOutput)
 {
-	// std::cout << "cgiOutput: " << cgiOutput << std::endl; //debug
+	std::cout << "cgiOutput: " << cgiOutput << std::endl; //debug
 	if (cgiOutput.empty())
 	{
-		buildErrorResponse(502);
-		return ;
+		std::cout << "CGI Output empty" << std::endl; //debug
+		return buildErrorResponse(502);
 	}
 	//			FIND SEPARATOR(usually \r\n\r\n)
 	size_t	separatorPos = cgiOutput.find("\r\n\r\n");
@@ -53,142 +55,107 @@ void	Respond::procCgiOutput(std::string cgiOutput)
 	}
 	if (separatorPos == std::string::npos)
 	{
-		buildErrorResponse(502);
-		return ;
+		std::cout << "CGI No separator" << std::endl; //debug
+		return buildErrorResponse(502);
 	}
 	//				EXTRACT HEADER		
 	std::string	header = cgiOutput.substr(0, separatorPos);
 	std::string headerLow = header;
 	for (size_t i = 0; i < headerLow.length(); i++)
 		headerLow[i] = std::tolower(headerLow[i]);
-	//				FIND STATUS
+	//				FIND STATUS#
 	size_t	statusPos = headerLow.find("status");
 	if (statusPos == std::string::npos)
 		_statusCode = 200;
 	else
 	{
 		// std::string statusStr = header.substr(statusPos + 8, 3);
-		size_t	statusDigitPos = header.find_first_of("1234567890", statusPos);
+		size_t	statusDigitPos = header.find_first_of("1234567890", statusPos); //defensive for "Error Code 500 Gateway"
 		std::string statusStr = header.substr(statusDigitPos, 3);
 		_statusCode = std::atoi(statusStr.c_str());
-		// std::cout << "status code check:" << _statusCode << std::endl; //debug
 	}
 	if (_statusCode < 100 || _statusCode > 599)
+	{
+		std::cout << "status code: " << _statusCode << std::endl; //debug
 		_statusCode = 502;
-	//				FIND CONTENT TYPE
-	size_t contentTypePos = headerLow.find("content-type");
-	if (contentTypePos != std::string::npos)
-	{
-		size_t	start = contentTypePos + 13;
-		while (start < header.length() && (header[start] == ' ' || header[start] == '\t'))
-			start++;
-		size_t	end = header.find("\n", start); //by searching \n, can handle both
-		if (end == std::string::npos)
-			_contentType = header.substr(start);
-		else
-		{
-			_contentType = header.substr(start, end - start);
-			if (!_contentType.empty() && _contentType[_contentType.size() - 1] == '\r')
-        		_contentType.erase(_contentType.size() - 1); //need to recheck
-		}
 	}
-	else
+	//				FIND CONTENT TYPE#
+	_contentType = getKeyValue(header, headerLow, "content-type");
+	if (_contentType.empty())
 		_contentType = "text/html";
-	// ---------------- FIND LOCATION ----------------
-	size_t locationPos = headerLow.find("location");
-	if (locationPos != std::string::npos)
-	{
-		size_t start = locationPos + 9;
-		while (start < header.length() && (header[start] == ' ' || header[start] == '\t'))
-			start++;
-		size_t end = header.find("\n", start);
-		if (end == std::string::npos)
-			_location = header.substr(start);
-		else
-		{
-			_location = header.substr(start, end - start);
-			if (!_location.empty() && _location[_location.size() - 1] == '\r')
-				_location.erase(_location.size() - 1);
-		}
-	}
+	// ---------------- FIND LOCATION# ----------------
+	_location = getKeyValue(header, headerLow, "location");
+	//				EXTRACT COOKIE
+	_setCookie = getKeyValue(header, headerLow, "set-cookie");
+	std::cout << "Cookie: " << _setCookie << std::endl; //debug
 	//				EXTRACT BODY	
 	_body = cgiOutput.substr(separatorPos + offset);
-	// std::cout << "only body check. body: " << _body << "\nonly body check ends" << std::endl; //debug
 	_contentLength = _body.length();
 	setCurrentTime();
 }
 
-	// size_t locationPos = headerLow.find("location");
-	// if (locationPos != std::string::npos)
-	// {
-    // 	// "location" is 8 characters long + colon is 9
-    // 	size_t start = locationPos + 9; 
-    // 	while (start < header.length() && (header[start] == ' ' || header[start] == '\t' || header[start] == ':'))
-    // 	    start++;
+std::string	Respond::getKeyValue(std::string &header, std::string &headerLow, std::string key)
+{
+	size_t pos = headerLow.find(key);
+	if (pos == std::string::npos)
+		return "";
+	size_t start = pos + key.size();
+	while (start < header.length() && (header[start] == ' ' 
+		|| header[start] == '\t' || header[start] == ':'))
+		start++;
+	size_t end = header.find("\n", start);
+	std::string value;
+	if (end == std::string::npos)
+		value = header.substr(start);
+	else
+		value = header.substr(start, end - start);
+	if (!value.empty() && value[value.size() - 1] == '\r')
+		value.erase(value.size() - 1);
+	return value;
+}
+
+void Respond::buildNormalCookie()
+{
+	if (_client->getRequest().cookie.empty())
+	{
+		std::string	charset	= "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+		std::string result = "";
 		
-    // 	size_t end = header.find("\n", start);
-    // 	if (end == std::string::npos)
-    // 	    _location = header.substr(start);
-    // 	else
-    // 	{
-    // 	    _location = header.substr(start, end - start);
-    // 	    // Trim trailing \r if it exists
-    // 	    if (!_location.empty() && _location[_location.size() - 1] == '\r')
-    // 	        _location.erase(_location.size() - 1);
-    // 	}
+		while(true)
+		{
+			result = "";
+			for (int i = 0; i < 8; i++)
+				result += charset[rand() % charset.size()];
+			if (getSession(result).empty())
+				break ;
+		}
+		_setCookie = "_session_id=" + result + "; Max-Age=3600; Path=/";
+		std::string greetings[] = {"Hello", "Wassup", "Yow"};
+		std::string randomGreet = greetings[rand() % 3];
+		
+		setSession(result, randomGreet);
+	}
+}
+
+void	Respond::setSession(std::string key, std::string value)
+{
+	_sessions[key] = value;
+}
+
+std::string	Respond::getSession(std::string key)
+{
+	std::map<std::string, std::string>::iterator it = _sessions.find(key);
+
+	if (it != _sessions.end())
+		return it->second;
+	return "";
+}
 
 //chatgpt
 void Respond::setSocketFd(int socketFd)
 {
 	_socketFd = socketFd;
 }
-
-// void	Respond::procNormalOutput(const t_request& request, const t_location& locate)
-// {
-// 	std::string script_name = request.path.substr(locate.path.size()); 
-// 	std::string	root 		= locate.root;
-
-// 	//script_name should be /test.py. locate.root should be ./www.
-// 	//					SCRIPT START W /
-// 	if (script_name[0] != '/')
-// 		script_name = "/" + script_name;
-// 	std::string absPath = root + script_name; 
-// 	//					ROOT END NOT /
-// 	if (!root.empty() && root[root.size() - 1] == '/')
-// 		root.erase(root.size() - 1,  1);
-	
-// 	_filePath = absPath; //FromMuzz
-// 	if (request.method == "POST")
-// 	{
-// 		std::ofstream outfile(_filePath.c_str(), std::ios::out | std::ios::trunc);
-// 		if (!outfile.is_open())
-// 			throw (500);
-// 		outfile << request.body;
-// 		outfile.close();
-// 		_statusCode = 201;
-// 		_body = "<html><head><title>201 Created</title></head><body>"
-//         "<h1>File Created Successfully</h1><p>The resource has been uploaded.</p>"
-//         "<hr><address>Webserv/1.0</address></body></html>";
-// 		_contentLength = _body.size();
-// 		_contentType = "text/html";
-// 	}
-// 	else if (request.method == "GET")
-// 	{
-// 		//read file and take path
-// 		std::ifstream file(_filePath.c_str());
-// 		if (!file.is_open())
-// 			throw(404);
-// 		std::stringstream ss;
-// 		ss << file.rdbuf();
-// 		//set status
-// 		_statusCode = 200;
-// 		//set body
-// 		_body = ss.str();
-// 		_contentLength = _body.size();
-// 		//set content type based on the file extension
-// 		setContentType();
-// 	}
-// }
 
 void Respond::setClient(Client* client)
 {
@@ -231,172 +198,161 @@ void Respond::setContentType(const std::string& filePath)
     }
 }
 
-//muzz why change
 void	Respond::procNormalOutput(std::string protocol)
 {
 	std::string requestPath = getRequestPath();
-	std::string documentRoot = getServerRoot();
+	std::string documentRoot = _client->getBestLocation()->root;
+	std::cout << documentRoot << std::endl;//debug
 	std::string filePath;
+	_protocol = protocol;
 
 	if (requestPath == "/" || requestPath.empty())
 		filePath = documentRoot + "/index.html";
 	else
 		filePath = documentRoot + requestPath;
-	// 	// Regular file handling
-	// 	std::ifstream file(filePath.c_str());
-	// 	if (!file.is_open())
-	// std::cout << _client->getRequest().method << std::endl; //debug
+	
 	if (_client->getRequest().method == "GET")
+		procGet(filePath);
+	else if (_client->getRequest().method == "POST")
+		procPost(filePath);
+	else if (_client->getRequest().method == "DELETE")
+		procDelete(filePath);
+	buildNormalCookie();
+	setCurrentTime();
+}
+
+//handle redirect
+//directory. if got index.html show it. if no, check autoindex permission. if yes, do autoindex. if no throw
+//handle normal file
+void	Respond::procGet(std::string filePath)
+{
+	std::cout << "filePath: " << filePath << std::endl; //debug
+	//			REDIRECT
+	if (_client->getBestLocation()->has_redirect)
 	{
-		if (_client->getBestLocation()->has_redirect)
+		_statusCode = _client->getBestLocation()->redir_status;
+		_contentLength = 0;
+		return ;
+	}
+	//			COOKIE
+	//do finding session id and replace cookie in data.  below is what gemini suggest
+	///////////////////////////////////////////////////////////////////////////////
+	// std::string raw = _client->getRequest().cookie;
+	// std::string id = "";
+	// size_t pos = raw.find("_session_id=");
+	// if (pos != std::string::npos) {
+	//     id = raw.substr(pos + 12); // Move past "_session_id="
+	//     size_t end = id.find(";");
+	//     if (end != std::string::npos) id = id.substr(0, end);
+	// }
+	////////////////////////////////////////////////////////////////////////
+	std::string sessionValue = getSession(_client->getRequest().cookie);
+	if (!sessionValue.empty())
+		_sessionValue = sessionValue;
+	//				HANDLE DIRECTORY
+	std::string requestPath = getRequestPath();
+	if (isDirectory(filePath))
+	{
+		// Try to serve index file
+		std::string indexPath = filePath;
+		if (!indexPath.empty() && indexPath[indexPath.length() - 1] != '/') 
+			indexPath += "/";
+		indexPath += "index.html";
+		// std::cout << "indexPath: " << indexPath << std::endl; //debug
+		if (access(indexPath.c_str(), F_OK) == 0)
+			fileServe(indexPath);
+		else
 		{
-			_statusCode = _client->getBestLocation()->redir_status;
-			_protocol = protocol;
-			_contentLength = 0;
-		}
-		else if (isDirectory(filePath))
-		{
-			// Try to serve index file
-			std::string indexPath = filePath;
-			if (indexPath[indexPath.length() - 1] != '/') {
-				indexPath += "/";
-			}
-			indexPath += "index.html";
-			
-			std::ifstream indexFile(indexPath.c_str());
-			if (indexFile.is_open()) {
-				// Serve index file
-				std::stringstream buffer;
-				buffer << indexFile.rdbuf();
-				indexFile.close();
-				
-				_body = buffer.str();
-				_statusCode = 200;
-				_protocol = protocol;
-				_contentLength = _body.size();
-				
-				setContentType(indexPath);
-				std::cout << "✅ " <<  indexPath << " served"  << std::endl;
-				return;
-			}
-			
-			// No index file, check if autoindex is enabled
+			//			NO INDEXFILE, AUTOINDEX IF PERMISSIBLE
 			t_location* location = getCurrentLocation();
-			if (location && location->auto_index) {
-				// Generate directory listing
+			if (location && location->auto_index) 
+			{
 				_body = generateDirectoryListing(filePath, requestPath);
 				_statusCode = 200;
-				_protocol = protocol;
 				_contentLength = _body.size();
 				_contentType = "text/html";
-				std::cout << "✅ Directory listing for " << requestPath << " generated" << std::endl;
-				return;
-			} else {
-				// Autoindex disabled, return 403
-				handleError(403);
-				return;
 			}
-		}
-		else 
-		{
-			std::ifstream file(filePath.c_str());
-			if (!file.is_open())
-			{
-				handleError(404);
-				return;
-			}
-			std::stringstream buffer;
-			buffer << file.rdbuf();
-			file.close();
-			
-			_body = buffer.str();
-			_statusCode = 200;
-			_protocol = protocol;
-			_contentLength = _body.size();
-		
-			setContentType(filePath);
-			
-			std::cout << "✅ " <<  filePath << " served"  << std::endl;
-		}
-	} 
-	else if (_client->getRequest().method == "POST")
-	{
-		// std::cout << "trigger normal POST" << std::endl; //debug
-		// std::cout << "file Path: " << filePath << std::endl; //debug
-		std::ofstream outfile(filePath.c_str(), std::ios::out | std::ios::trunc);
-		if (!outfile.is_open())
-			throw (500);
-		outfile << _client->getRequest().body;
-		outfile.close();
-		_statusCode = 201;
-		_body = "<html><head><title>201 Created</title></head><body>"
-		"<h1>File Created Successfully</h1><p>The resource has been uploaded.</p>"
-		"<hr><address>Webserv/1.0</address></body></html>";
-		_contentLength = _body.size();
-		_contentType = "text/html";		
-	}
-	else if (_client->getRequest().method == "DELETE")
-	{
-		// std::cout << "File Path: " << filePath << std::endl; //debug
-		if (std::remove(filePath.c_str()) == 0)
-		{
-			_statusCode = 204;
-			_body.clear();
-			_contentLength = 0;
-			_contentType.clear();
-		}
-		else 
-		{
-			if (errno == ENOENT)
-			{
-				// std::cout << "here" << std::endl; //debug
-				throw (404);
-			}
-			else if (errno == EACCES)
-				throw (403);
+			//			THROW IF AUTOINDEX IS PROHIBITED
 			else
-				throw (500);
+			{
+				std::cout << "403 here 7" << std::endl; //debug
+				throw 403;
+			}
 		}
 	}
-	setCurrentTime();
+	//			HANDLE REGULAR FILE	
+	else 
+		fileServe(filePath);
+	if (!sessionValue.empty())
+	{
+		_body = "<hr><p> " + _sessionValue + "</p>" + _body;
+    	_contentLength = _body.size();
+	}
+}
+
+void	Respond::fileServe(std::string filePath)
+{
+	std::ifstream file(filePath.c_str());
+	if (!file.is_open()) 
+		throw 404;
+
+	std::stringstream buffer;
+	buffer << file.rdbuf();
+	file.close();
+	
+	_body = buffer.str();
+	_statusCode = 200;
+	_contentLength = _body.size();
+	
+	setContentType(filePath);
 	setLastModified(filePath);
 }
 
-	// std::string filePath = "FromMuzz";
-	// //read file and take path
-	// std::ifstream file(filePath.c_str());
-	// if (!file.is_open())
-	// 	throw(404);
-	// std::stringstream ss;
-	// ss << file.rdbuf();
-	// _body = ss.str();
-	// _contentLength = _body.size();
-	// //set status and body
-	// _statusCode = 200;
-	// //set content type based on the file extension
-	// size_t pos = filePath.rfind(".");
-	// if (pos != std::string::npos)
-	// {
-	// 	std::string ext = filePath.substr(pos);
-	// 	if (ext == ".html")
-	// 		_contentType = "text/html";
-	// 	else if (ext == ".css")
-	// 		_contentType = "text/css";
-	// 	else if (ext == ".js")
-	// 		_contentType = "application/javascript";
-	// 	else if (ext == ".jpeg")
-	// 		_contentType = "image/jpeg";
-	// 	else if (ext == ".png")
-	// 		_contentType = "image/png";
-	// 	else
-	// 	 	_contentType = "text/plain"; //it wouldnt try to execute
-	// }
-	// else
-	// {
-	// 	//trigger to save/downlaod the file only
-	// 	_contentType = "application/octet-stream";
-	// 	//throw (404);
-	// }
+void	Respond::procPost(std::string filePath)
+{
+	if (isDirectory(filePath))
+		throw 405;
+	std::ofstream outfile(filePath.c_str(), std::ios::out | std::ios::trunc);
+	if (!outfile.is_open())
+	{
+		std::cout << "FilePath: " << filePath << " procPost trigger" << std::endl; //debug
+		throw (500);
+	}
+	outfile << _client->getRequest().body;
+	outfile.close();
+	_statusCode = 201;
+	_body = "<html><head><title>201 Created</title></head><body>"
+			"<h1>File Created Successfully</h1><p>The resource has been uploaded.</p>"
+			"<hr><address>Webserv/1.0</address></body></html>";
+	_contentLength = _body.size();
+	_contentType = "text/html";		
+}
+
+void	Respond::procDelete(std::string filePath)
+{
+	if (std::remove(filePath.c_str()) == 0)
+	{
+		_statusCode = 204;
+		_body.clear();
+		_contentLength = 0;
+		_contentType.clear();
+	}
+	else 
+	{
+		if (errno == ENOENT) 		//File doesnt exist
+			throw (404);
+		else if (errno == EACCES) 	//Permission denied
+		{
+			std::cout << "403 here 8" << std::endl; //debug
+			throw (403);
+		}
+		else						//Other system error
+		{
+			std::cout << "procDelete trigger 500" << std::endl; //debug
+			throw (500);
+		}
+	}
+}
 
 void	Respond::buildResponse()
 {
@@ -412,6 +368,8 @@ void	Respond::buildResponse()
 	// Content-Length: Content-Length: + body.size() + \r\n
 	ss << "Content-Length: " << _body.size() << "\r\n";
 	// CGI Headers: Add the Content-Type you found earlier.
+	if (!_setCookie.empty())
+		ss << "Set-Cookie: " << _setCookie << "\r\n"; 
 	// if (_contentType.empty()) //debug
 	// 	std::cout << "content type empty" << std::endl; //debug
 	// else //debug
@@ -577,9 +535,14 @@ void	Respond::resetResponder()
 	_contentType.clear();
 	_contentLength = 0;
 	_currentTime.clear();
-	_location.clear();
 	_serverName.clear();
 	_connStatus = 0;
+	_filePath.clear();
+	_location.clear();
+	_currentTime.clear();
+	_lastModified.clear();
+	_setCookie.clear();
+	_sessionValue.clear();
 	_bytesSent = 0;
 }
 
@@ -646,11 +609,11 @@ std::string Respond::getServerRoot() {
 	return ("./www");
 }
 
-bool Respond::isDirectory(const std::string& path) {
+bool Respond::isDirectory(const std::string& path) 
+{
 	struct stat statbuf;
-	if (stat(path.c_str(), &statbuf) != 0) {
+	if (stat(path.c_str(), &statbuf) != 0)
 		return false;
-	}
 	return S_ISDIR(statbuf.st_mode);
 }
 
@@ -784,3 +747,311 @@ t_location* Respond::getCurrentLocation() {
 	
 	return bestMatch;
 }
+
+	// size_t locationPos = headerLow.find("location");
+	// if (locationPos != std::string::npos)
+	// {
+    // 	// "location" is 8 characters long + colon is 9
+    // 	size_t start = locationPos + 9; 
+    // 	while (start < header.length() && (header[start] == ' ' || header[start] == '\t' || header[start] == ':'))
+    // 	    start++;
+		
+    // 	size_t end = header.find("\n", start);
+    // 	if (end == std::string::npos)
+    // 	    _location = header.substr(start);
+    // 	else
+    // 	{
+    // 	    _location = header.substr(start, end - start);
+    // 	    // Trim trailing \r if it exists
+    // 	    if (!_location.empty() && _location[_location.size() - 1] == '\r')
+    // 	        _location.erase(_location.size() - 1);
+    // 	}
+
+	//muzz why change
+// void	Respond::procNormalOutput(std::string protocol)
+// {
+// 	std::string requestPath = getRequestPath();
+// 	std::string documentRoot = getServerRoot();
+// 	std::string filePath;
+
+// 	if (requestPath == "/" || requestPath.empty())
+// 		filePath = documentRoot + "/index.html";
+// 	else
+// 		filePath = documentRoot + requestPath;
+// 	// 	// Regular file handling
+// 	// 	std::ifstream file(filePath.c_str());
+// 	// 	if (!file.is_open())
+// 	// std::cout << _client->getRequest().method << std::endl; //debug
+// 	if (_client->getRequest().method == "GET")
+// 	{
+// 		if (_client->getBestLocation()->has_redirect)
+// 		{
+// 			_statusCode = _client->getBestLocation()->redir_status;
+// 			_protocol = protocol;
+// 			_contentLength = 0;
+// 		}
+// 		else if (isDirectory(filePath))
+// 		{
+// 			// Try to serve index file
+// 			std::string indexPath = filePath;
+// 			if (indexPath[indexPath.length() - 1] != '/') {
+// 				indexPath += "/";
+// 			}
+// 			indexPath += "index.html";
+			
+// 			std::ifstream indexFile(indexPath.c_str());
+// 			if (indexFile.is_open()) {
+// 				// Serve index file
+// 				std::stringstream buffer;
+// 				buffer << indexFile.rdbuf();
+// 				indexFile.close();
+				
+// 				_body = buffer.str();
+// 				_statusCode = 200;
+// 				_protocol = protocol;
+// 				_contentLength = _body.size();
+				
+// 				setContentType(indexPath);
+// 				std::cout << "✅ " <<  indexPath << " served"  << std::endl;
+// 				return;
+// 			}
+			
+// 			// No index file, check if autoindex is enabled
+// 			t_location* location = getCurrentLocation();
+// 			if (location && location->auto_index) {
+// 				// Generate directory listing
+// 				_body = generateDirectoryListing(filePath, requestPath);
+// 				_statusCode = 200;
+// 				_protocol = protocol;
+// 				_contentLength = _body.size();
+// 				_contentType = "text/html";
+// 				std::cout << "✅ Directory listing for " << requestPath << " generated" << std::endl;
+// 				return;
+// 			} else {
+// 				// Autoindex disabled, return 403
+// 				handleError(403);
+// 				return;
+// 			}
+// 		}
+// 		else 
+// 		{
+// 			std::ifstream file(filePath.c_str());
+// 			if (!file.is_open())
+// 			{
+// 				handleError(404);
+// 				return;
+// 			}
+// 			std::stringstream buffer;
+// 			buffer << file.rdbuf();
+// 			file.close();
+			
+// 			_body = buffer.str();
+// 			_statusCode = 200;
+// 			_protocol = protocol;
+// 			_contentLength = _body.size();
+		
+// 			setContentType(filePath);
+			
+// 			std::cout << "✅ " <<  filePath << " served"  << std::endl;
+// 		}
+// 	} 
+// 	else if (_client->getRequest().method == "POST")
+// 	{
+// 		// std::cout << "trigger normal POST" << std::endl; //debug
+// 		// std::cout << "file Path: " << filePath << std::endl; //debug
+// 		std::ofstream outfile(filePath.c_str(), std::ios::out | std::ios::trunc);
+// 		if (!outfile.is_open())
+// 			throw (500);
+// 		outfile << _client->getRequest().body;
+// 		outfile.close();
+// 		_statusCode = 201;
+// 		_body = "<html><head><title>201 Created</title></head><body>"
+// 		"<h1>File Created Successfully</h1><p>The resource has been uploaded.</p>"
+// 		"<hr><address>Webserv/1.0</address></body></html>";
+// 		_contentLength = _body.size();
+// 		_contentType = "text/html";		
+// 	}
+// 	else if (_client->getRequest().method == "DELETE")
+// 	{
+// 		// std::cout << "File Path: " << filePath << std::endl; //debug
+// 		if (std::remove(filePath.c_str()) == 0)
+// 		{
+// 			_statusCode = 204;
+// 			_body.clear();
+// 			_contentLength = 0;
+// 			_contentType.clear();
+// 		}
+// 		else 
+// 		{
+// 			if (errno == ENOENT)
+// 			{
+// 				// std::cout << "here" << std::endl; //debug
+// 				throw (404);
+// 			}
+// 			else if (errno == EACCES)
+// 				throw (403);
+// 			else
+// 				throw (500);
+// 		}
+// 	}
+// 	setCurrentTime();
+// 	setLastModified(filePath);
+// }
+
+// std::string filePath = "FromMuzz";
+// //read file and take path
+// std::ifstream file(filePath.c_str());
+// if (!file.is_open())
+// 	throw(404);
+// std::stringstream ss;
+// ss << file.rdbuf();
+// _body = ss.str();
+// _contentLength = _body.size();
+// //set status and body
+// _statusCode = 200;
+// //set content type based on the file extension
+// size_t pos = filePath.rfind(".");
+// if (pos != std::string::npos)
+// {
+// 	std::string ext = filePath.substr(pos);
+// 	if (ext == ".html")
+// 		_contentType = "text/html";
+// 	else if (ext == ".css")
+// 		_contentType = "text/css";
+// 	else if (ext == ".js")
+// 		_contentType = "application/javascript";
+// 	else if (ext == ".jpeg")
+// 		_contentType = "image/jpeg";
+// 	else if (ext == ".png")
+// 		_contentType = "image/png";
+// 	else
+// 	 	_contentType = "text/plain"; //it wouldnt try to execute
+// }
+// else
+// {
+// 	//trigger to save/downlaod the file only
+// 	_contentType = "application/octet-stream";
+// 	//throw (404);
+// }
+
+// void	Respond::procNormalOutput(const t_request& request, const t_location& locate)
+// {
+// 	std::string script_name = request.path.substr(locate.path.size()); 
+// 	std::string	root 		= locate.root;
+
+// 	//script_name should be /test.py. locate.root should be ./www.
+// 	//					SCRIPT START W /
+// 	if (script_name[0] != '/')
+// 		script_name = "/" + script_name;
+// 	std::string absPath = root + script_name; 
+// 	//					ROOT END NOT /
+// 	if (!root.empty() && root[root.size() - 1] == '/')
+// 		root.erase(root.size() - 1,  1);
+	
+// 	_filePath = absPath; //FromMuzz
+// 	if (request.method == "POST")
+// 	{
+// 		std::ofstream outfile(_filePath.c_str(), std::ios::out | std::ios::trunc);
+// 		if (!outfile.is_open())
+// 			throw (500);
+// 		outfile << request.body;
+// 		outfile.close();
+// 		_statusCode = 201;
+// 		_body = "<html><head><title>201 Created</title></head><body>"
+//         "<h1>File Created Successfully</h1><p>The resource has been uploaded.</p>"
+//         "<hr><address>Webserv/1.0</address></body></html>";
+// 		_contentLength = _body.size();
+// 		_contentType = "text/html";
+// 	}
+// 	else if (request.method == "GET")
+// 	{
+// 		//read file and take path
+// 		std::ifstream file(_filePath.c_str());
+// 		if (!file.is_open())
+// 			throw(404);
+// 		std::stringstream ss;
+// 		ss << file.rdbuf();
+// 		//set status
+// 		_statusCode = 200;
+// 		//set body
+// 		_body = ss.str();
+// 		_contentLength = _body.size();
+// 		//set content type based on the file extension
+// 		setContentType();
+// 	}
+// }
+
+// void	Respond::procCgiOutput(std::string cgiOutput)
+// {
+// 	// std::cout << "cgiOutput: " << cgiOutput << std::endl; //debug
+// 	if (cgiOutput.empty())
+// 		return buildErrorResponse(502);
+// 	//			FIND SEPARATOR(usually \r\n\r\n)
+// 	size_t	separatorPos = cgiOutput.find("\r\n\r\n");
+// 	size_t	offset = 4;
+// 	if (separatorPos == std::string::npos)
+// 	{
+// 		separatorPos = cgiOutput.find("\n\n");
+// 		offset = 2;
+// 	}
+// 	if (separatorPos == std::string::npos)
+// 		return buildErrorResponse(502);
+// 	//				EXTRACT HEADER		
+// 	std::string	header = cgiOutput.substr(0, separatorPos);
+// 	std::string headerLow = header;
+// 	for (size_t i = 0; i < headerLow.length(); i++)
+// 		headerLow[i] = std::tolower(headerLow[i]);
+// 	//				FIND STATUS#
+// 	size_t	statusPos = headerLow.find("status");
+// 	if (statusPos == std::string::npos)
+// 		_statusCode = 200;
+// 	else
+// 	{
+// 		// std::string statusStr = header.substr(statusPos + 8, 3);
+// 		size_t	statusDigitPos = header.find_first_of("1234567890", statusPos);
+// 		std::string statusStr = header.substr(statusDigitPos, 3);
+// 		_statusCode = std::atoi(statusStr.c_str());
+// 	}
+// 	if (_statusCode < 100 || _statusCode > 599)
+// 		_statusCode = 502;
+// 	//				FIND CONTENT TYPE#
+// 	size_t contentTypePos = headerLow.find("content-type");
+// 	if (contentTypePos != std::string::npos)
+// 	{
+// 		size_t	start = contentTypePos + 13;
+// 		while (start < header.length() && (header[start] == ' ' || header[start] == '\t'))
+// 			start++;
+// 		size_t	end = header.find("\n", start); //by searching \n, can handle both
+// 		if (end == std::string::npos)
+// 			_contentType = header.substr(start);
+// 		else
+// 		{
+// 			_contentType = header.substr(start, end - start);
+// 			if (!_contentType.empty() && _contentType[_contentType.size() - 1] == '\r')
+//         		_contentType.erase(_contentType.size() - 1); //need to recheck
+// 		}
+// 	}
+// 	else
+// 		_contentType = "text/html";
+// 	// ---------------- FIND LOCATION# ----------------
+// 	size_t locationPos = headerLow.find("location");
+// 	if (locationPos != std::string::npos)
+// 	{
+// 		size_t start = locationPos + 9;
+// 		while (start < header.length() && (header[start] == ' ' || header[start] == '\t'))
+// 			start++;
+// 		size_t end = header.find("\n", start);
+// 		if (end == std::string::npos)
+// 			_location = header.substr(start);
+// 		else
+// 		{
+// 			_location = header.substr(start, end - start);
+// 			if (!_location.empty() && _location[_location.size() - 1] == '\r')
+// 				_location.erase(_location.size() - 1);
+// 		}
+// 	}
+// 	//				EXTRACT BODY	
+// 	_body = cgiOutput.substr(separatorPos + offset);
+// 	_contentLength = _body.length();
+// 	setCurrentTime();
+// }

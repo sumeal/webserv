@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 16:58:34 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/01 14:40:32 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/04 01:17:51 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,6 +29,7 @@ class Respond {
 private:
 	t_server&	_server;
     Client* 	_client;
+	std::map<std::string, std::string>& _sessions;
 	std::string	_fullResponse;
 	int			_statusCode;
 	std::string	_protocol;
@@ -41,17 +42,24 @@ private:
 	std::string _location;
 	std::string	_currentTime;
 	std::string	_lastModified;
+	std::string	_setCookie;
+	std::string	_sessionValue;
 	//send data
 	int			_socketFd;
 	size_t		_bytesSent;
 	Respond&	operator=(const Respond& other);
 	Respond(Respond& other);
 public:
-	Respond(t_server& serverConf);
+	Respond(t_server& serverConf, std::map<std::string, std::string>& cookiesMap);
 	~Respond();
 	void	buildErrorResponse(int statusCode);
 	void	procCgiOutput(std::string cgiOutput);
+	std::string	getKeyValue(std::string &header, std::string &headerLow, std::string key);
 	void	procNormalOutput(std::string protocol);
+	void	procGet(std::string filePath);
+	void	procPost(std::string filePath);
+	void	procDelete(std::string filePath);
+	void	fileServe(std::string filePath);
 	void	findErrorBody(std::string errorPath);
 	void	setContentType(const std::string& filePath);
 	int		sendResponse();
@@ -66,11 +74,14 @@ public:
 	void	setProtocol(const std::string& protocol);
 	void	setCurrentTime();
 	void	setLastModified(const std::string& path);
+	void	setSession(std::string key, std::string value);
+	void	buildNormalCookie();
 	void	handleError(int statusCode);
 	std::string getServerRoot();
 	std::string generateDirectoryListing(const std::string& dirPath, const std::string& requestPath);
 	bool isDirectory(const std::string& path);
 	t_location* getCurrentLocation(); // Get matching location for current request
+	std::string	getSession(std::string key);
 };
 
 #endif

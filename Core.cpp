@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/01 18:02:14 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/04 00:42:03 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -57,7 +57,8 @@ void	Core::run()
 				continue;
 			try
 			{
-				if (_serverFd.find(oriFd) != _serverFd.end()) {
+				if (_serverFd.find(oriFd) != _serverFd.end()) 
+				{
 					if (revents & POLLIN)
 					{
 						size_t server_index = _serverFd[oriFd];
@@ -65,8 +66,8 @@ void	Core::run()
 						continue ;
 					}
 				}
-				else {
-					
+				else 
+				{	
 					Client* client = _clients[oriFd];
 
 					if (!client) {
@@ -82,7 +83,8 @@ void	Core::run()
 					}
 					if (revents & POLLIN || revents & POLLHUP)  //POLLHUP for CGI
 					{
-						if (client->state == READ_REQUEST) {
+						if (client->state == READ_REQUEST) 
+						{
 							bool request_ready = client->readHttpRequest();
 							if (client->isDisconnected()) {
 								std::cout << "💀 Client disconnected, marking for cleanup" << std::endl;
@@ -116,9 +118,8 @@ void	Core::run()
 			catch (int statusCode)
 			{
 				Client* client = _clients[oriFd];
-				if (client) {
+				if (client) 
 					handleClientError(client, statusCode);
-				}
 			}
 			if (_fds[i].fd == -1)
 			{
@@ -282,7 +283,7 @@ void	Core::deleteClient(Client* client)
 		// _clients.erase(pipeFromCgi);
 		// _clients.erase(pipeToCgi);
 	}
-	std::cout << "Client " << socketFd << " deleted from poll" << std::endl;
+	std::cout << "Client " << socketFd << " deleted from poll" << std::endl; 
 	_clients.erase(socketFd);
 	fdPreCleanup(socketFd, 0);
 	delete client;
@@ -449,7 +450,10 @@ void	Core::pathCheck(std::string path)
 	}
 	struct stat fileInfo;
 	if (stat(fullPath.c_str(), &fileInfo) != 0)
+	{		
+		std::cout << "403 here 3" << std::endl; //debug
 		throw (403);
+	}
 	if(S_ISDIR(fileInfo.st_mode))
 	{
 		//check default file usually defined in config
@@ -460,11 +464,17 @@ void	Core::pathCheck(std::string path)
 		struct stat defaultInfo;
 		//if custom file  not there send error
 		if (stat(defaultPath.c_str(), &defaultInfo) != 0)
+		{
+				std::cout << "403 here 4" << std::endl; //debug
 			throw (403);
+		}
 		else
 		{
 			if (access(defaultPath.c_str(), R_OK) != 0)
+			{
+				std::cout << "403 here 5" << std::endl; //debug
 				throw (403);
+			}
 			fullPath = defaultPath;
 		}
 	}
@@ -473,7 +483,10 @@ void	Core::pathCheck(std::string path)
 		if (access(fullPath.c_str(), F_OK) != 0)
 			throw (404);
 		if (access(fullPath.c_str(), R_OK) != 0)
-			throw (403);		
+		{
+			std::cout << "403 here 6" << std::endl; //debug
+			throw (403);
+		}		
 	}
 	
 }
@@ -603,15 +616,15 @@ void Core::parse_http_request(Client* current_client, const std::string raw_req)
         
         current_client->setHasCgi(true);
         current_request.is_cgi = true;  // Set the flag in request too
-        std::cout << "CGI request: " << path << std::endl;
+        // std::cout << "CGI request: " << path << std::endl;
     } else {
         current_client->setHasCgi(false);
         current_request.is_cgi = false; // Set to false for non-CGI
-        std::cout << "Normal file request: " << path << std::endl;
+        // std::cout << "Normal file request: " << path << std::endl;
     }
 	
 	//putIntoCached(current_request); //importantdebug
-	//debugHttpRequest(current_request); //importantdebug
+	// debugHttpRequest(current_request); //importantdebug
 	current_client->checkBestLocation();
 	current_client->state = HANDLE_REQUEST;
 }
@@ -655,7 +668,7 @@ void Core::accepter(int server_fd, size_t server_index)
 		return;
 	}
 	
-	Client* new_client = new Client(server_config[server_index]);
+	Client* new_client = new Client(server_config[server_index], _cookies);
 	clientRegister(new_socket, new_client, server_index);
 	
 	// std::cout << "Client registered seccessfully !" << std::endl;
@@ -759,10 +772,10 @@ void Core::parseConnectionHeader(Client* client, const s_HttpRequest& request)
         
         if (conn_value.find("keep-alive") != std::string::npos) {
             keepAlive = true;
-            std::cout << "🔄 Keep-Alive requested by client" << std::endl;
+            // std::cout << "🔄 Keep-Alive requested by client" << std::endl;
         } else if (conn_value.find("close") != std::string::npos) {
             keepAlive = false;
-            std::cout << "❌ Connection close requested by client" << std::endl;
+            // std::cout << "❌ Connection close requested by client" << std::endl;
         }
     }
     
@@ -920,6 +933,11 @@ void Core::putIntoCached(s_HttpRequest& request)
         }
     }
     std::cout << "    Keep-Alive: " << (request.keep_alive ? "TRUE" : "FALSE") << std::endl;
+}
+
+std::map<std::string, std::string>& Core::getCookiesMap()
+{
+	return _cookies;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////

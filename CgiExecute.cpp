@@ -44,6 +44,7 @@ CgiExecute::~CgiExecute()
 
 void	CgiExecute::execute()
 {
+	// std::cout << "start cgi execute" << std::endl; //debug
 	//				PIPE & FORK
 	if (pipe(_pipeIn) == -1)
 		throw (500);
@@ -69,6 +70,7 @@ void	CgiExecute::execute()
 	if (fcntl(_pipeToCgi, F_SETFL, O_NONBLOCK) == -1
 		|| fcntl(_pipeFromCgi, F_SETFL, O_NONBLOCK) == -1)
 		throw(500);
+	// std::cout << "end cgi execute" << std::endl; //debug
 }
 
 void	CgiExecute::execChild()
@@ -80,7 +82,7 @@ void	CgiExecute::execChild()
 	//				EXEC CGI
 	// _locate.interp = "/usr/bin/python3"; //hardcode askMuzz
 	char*	interpreter = const_cast<char*>(_locate.interp.c_str());
-	char*	scriptPath = const_cast<char *>(_absPath.c_str());
+	char*	scriptPath = const_cast<char *>(_scriptPath.c_str());
 	char*	args[] = { interpreter, scriptPath,NULL};
 	char**	envp = createEnvp();
 	execve(interpreter, args, envp);
@@ -103,6 +105,15 @@ char**	CgiExecute::createEnvp()
 	envpVector.push_back("QUERY_STRING=" + _request.query);
 	envpVector.push_back("SCRIPT_NAME=" + _request.path);
 	envpVector.push_back("SERVER_PROTOCOL=" + _protocol); //PROTOCOL VERSION
+	if (!_client->getRequest().cookie.empty())
+		envpVector.push_back("HTTP_COOKIE=" + _client->getRequest().cookie);
+	if (_locate.interp == "/usr/bin/php-cgi")
+	{
+		envpVector.push_back("REDIRECT_STATUS=200");
+		envpVector.push_back("GATEWAY_INTERFACE=CGI/1.1");
+		envpVector.push_back("SCRIPT_FILENAME=" + _scriptPath);
+	}
+	std::cout << "AbsPath: " << _scriptPath << ". Request Path: " << _request.path << std::endl; //debug
 
 	//				FORMAT HEADER
 	//add HTTP_, upper char & push every headers from struct to the envp list
@@ -148,6 +159,8 @@ void	CgiExecute::readExec()
 	{
 		if (errno == EAGAIN || errno == EWOULDBLOCK)
 			return ;
+
+		std::cerr << "CGI Read Error: " << strerror(errno) << std::endl; //debug
 		throw(502);
 	}
 }
@@ -183,29 +196,37 @@ void	CgiExecute::preExecute()
 	if (ext == ".py")
 		_locate.interp = "/usr/bin/python3"; //hardcode askMuzz
 	else if (ext == ".php")
-		_locate.interp = "/usr/bin/php";
+		_locate.interp = "/usr/bin/php-cgi";
 	std::string	interp	= _locate.interp;
 
 	//script_name should be /test.py. locate.root should be ./www.
 	//					SCRIPT START W /
 	if (script_name[0] != '/')
 		script_name = "/" + script_name;
-	_absPath = root + _locate.path + script_name; 
+	_scriptPath = root + _locate.path + script_name; 
 	//					ROOT END NOT /
 	if (!_locate.root.empty() && _locate.root[_locate.root.size() - 1] == '/')
 		root.erase(root.size() - 1,  1);
 	//					CHECK EXISTENCE
-	if (access(_absPath.c_str(), F_OK) == -1)
+	if (access(_scriptPath.c_str(), F_OK) == -1)
 		throw(404);
 	//					CHECK EXISTENCE & EXEC
-	if (access(_absPath.c_str(), X_OK) == -1)
+	if (access(_scriptPath.c_str(), X_OK) == -1)
+	{
+		std::cout << "absPath: " << _scriptPath << std::endl; //debug
+		std::cout << "403 here 1" << std::endl; //debug
 		throw(403);
+	}
 	if (access(interp.c_str(), X_OK) == -1)
+	{
+		std::cout << "403 here 2" << std::endl; //debug	
 		throw(403);
+	}
 }
 
 void	CgiExecute::cgiState()
 {
+	// std::cout << "start cgistate" << std::endl; //debug
 	if (_pid != -1)
 	{
 		int status;
@@ -230,6 +251,7 @@ void	CgiExecute::cgiState()
 	}
 	if (/*_cgi->pid == -1 &&*/ _readEnded && _writeEnded)
 		_client->state = SEND_RESPONSE;
+	// std::cout << "end cgistate. _exitstatus: " << _exitStatus << std::endl; //debug
 }
 
 //check 2 things

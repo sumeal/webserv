@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:03:33 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/01 15:01:10 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/04 00:40:02 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -63,7 +63,7 @@ private:
 	Client&		operator=(const Client& other);
 public:
 	e_State state;
-	Client(t_server& server_config);
+	Client(t_server& server_config, std::map<std::string, std::string>& cookies);
 	bool		revived; //testing
 	~Client();
 	void	procInput(int i, struct pollfd& pFd);
