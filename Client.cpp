@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Client.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
+/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/04 16:26:33 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/05 15:01:25 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,7 +29,7 @@ Client::Client(t_server& server_config, std::map<std::string, std::string>& cook
 	_responder(_serverConfig, cookies), _socket(0), 
 	_hasCgi(false), _lastActivity(time(NULL)), _connStatus(CLOSE), 
 	_bestLocation(NULL), _headersParsed(false), _expectedBodyLength(0), 
-	_currentBodyLength(0), _requestComplete(false), _disconnected(false), 
+	_currentBodyLength(0), _requestComplete(false), 
 	_isChunked(false), _chunkedComplete(false), 
 	_maxBodySize(server_config.client_max_body_size), revived(false)
 {
@@ -289,10 +289,11 @@ bool Client::readHttpRequest()
 					_expectedBodyLength = 0; // Unknown for chunked
 				} else {
 					_expectedBodyLength = parseContentLength(headers_only);
+					std::cout << " TRIGGER Expected Body Length: " << _expectedBodyLength << std::endl; //debug
 					if (_expectedBodyLength > _maxBodySize) {
 						// std::cout << "Request body too large" <<std::endl;
 						_requestComplete = false;
-						_disconnected = true;
+						state = DISCONNECTED;
 						throw(413);
 					}
 					// std::cout << "📋 Headers parsed - Expected body: " << _expectedBodyLength << " bytes";
@@ -339,8 +340,10 @@ bool Client::readHttpRequest()
 	}
 	else if (bytes_read == 0) {
 		// std::cout << "📤 Client closed connection (FD: " << _socket << ")" << std::endl;
-		_disconnected = true;
+		state = DISCONNECTED;
 		_requestComplete = false;
+		resetRequestBuffer();
+		setConnStatus(false);
 		return false;
 	}
 	else {
@@ -359,11 +362,6 @@ bool Client::isRequestComplete()
 	return _requestComplete;
 }
 
-bool Client::isDisconnected()
-{
-	return _disconnected;
-}
-
 std::string Client::getCompleteRequest()
 {
 	if (_requestComplete) {
@@ -380,8 +378,7 @@ void Client::resetRequestBuffer()
 	_expectedBodyLength = 0;
 	_currentBodyLength = 0;
 	_requestComplete = false;
-	_disconnected = false;
-		_isChunked = false;
+	_isChunked = false;
 	_chunkedComplete = false;
 	_chunkedBody.clear();
 }
@@ -391,6 +388,8 @@ size_t Client::parseContentLength(const std::string& headers)
 	size_t pos = 0;
 	size_t line_start = 0;
 	
+	std::cout << "Inside parseContentLength()" << std::endl; //debug
+	std::cout << "Headers " << headers << std::endl; //debug
 	while (pos < headers.length()) {
 		size_t line_end = headers.find('\n', pos);
 		if (line_end == std::string::npos) {
@@ -420,7 +419,7 @@ size_t Client::parseContentLength(const std::string& headers)
 					}
 					
 					if (start < value.length()) {
-						// std::cout << "📏 Found Content-Length: " << value.substr(start) << std::endl;
+						std::cout << "📏 Found Content-Length: " << value.substr(start) << std::endl;
 						return static_cast<size_t>(atoi(value.substr(start).c_str()));
 					}
 				}

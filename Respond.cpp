@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Respond.cpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
+/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 17:17:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/04 16:15:08 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/05 15:01:10 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -536,7 +536,7 @@ void	Respond::printResponse()
 	// std::cout << "Server Name: " << _serverName << std::endl;
 	// std::cout << "Connection Status: " << _connStatus << std::endl;
 	// std::cout << "Socket Fd: " << _socketFd;
-	//std::cout << "\n\nFull Response: \n" << (_fullResponse.length() > 10000 ? _fullResponse.substr(0, 100) + "..." : _fullResponse) << std::endl;
+	std::cout << "\n\nFull Response: \n" << (_fullResponse.length() > 10000 ? _fullResponse.substr(0, 100) + "..." : _fullResponse) << std::endl;
 	std::cout << "\n==========FINISH================" << std::endl;
 }
 
@@ -577,7 +577,7 @@ void	Respond::resetResponder()
 	_contentLength = 0;
 	_currentTime.clear();
 	_serverName.clear();
-	_connStatus = 0;
+	// _connStatus = 0; //debug
 	_filePath.clear();
 	_location.clear();
 	_currentTime.clear();
