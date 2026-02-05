@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:03:33 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/04 00:40:02 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/05 14:29:38 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -79,7 +79,7 @@ public:
 	void	setHasCgi(bool status);
 	bool	getHasCgi();
 	bool	isIdle(time_t now);
-	bool	isKeepAlive();
+	int	isKeepAlive();
     void	setConnStatus(bool status);
 	void	checkBestLocation();
 

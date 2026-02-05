@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 17:17:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/04 16:15:08 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/05 13:24:49 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -39,12 +39,8 @@ Respond::~Respond()
 //first line check?
 void	Respond::procCgiOutput(std::string cgiOutput)
 {
-	std::cout << "cgiOutput: " << cgiOutput << std::endl; //debug
 	if (cgiOutput.empty())
-	{
-		std::cout << "CGI Output empty" << std::endl; //debug
 		return buildErrorResponse(502);
-	}
 	//			FIND SEPARATOR(usually \r\n\r\n)
 	size_t	separatorPos = cgiOutput.find("\r\n\r\n");
 	size_t	offset = 4;
@@ -55,7 +51,6 @@ void	Respond::procCgiOutput(std::string cgiOutput)
 	}
 	if (separatorPos == std::string::npos)
 	{
-		std::cout << "CGI No separator" << std::endl; //debug
 		return buildErrorResponse(502);
 	}
 	//				EXTRACT HEADER		
@@ -75,10 +70,7 @@ void	Respond::procCgiOutput(std::string cgiOutput)
 		_statusCode = std::atoi(statusStr.c_str());
 	}
 	if (_statusCode < 100 || _statusCode > 599)
-	{
-		std::cout << "status code: " << _statusCode << std::endl; //debug
 		_statusCode = 502;
-	}
 	//				FIND CONTENT TYPE#
 	_contentType = getKeyValue(header, headerLow, "content-type");
 	if (_contentType.empty())
@@ -87,7 +79,6 @@ void	Respond::procCgiOutput(std::string cgiOutput)
 	_location = getKeyValue(header, headerLow, "location");
 	//				EXTRACT COOKIE
 	_setCookie = getKeyValue(header, headerLow, "set-cookie");
-	std::cout << "Cookie: " << _setCookie << std::endl; //debug
 	//				EXTRACT BODY	
 	_body = cgiOutput.substr(separatorPos + offset);
 	_contentLength = _body.length();
@@ -134,14 +125,6 @@ void Respond::buildNormalCookie()
 		std::string randomGreet = greetings[rand() % 3];
 		
 		setSession(result, randomGreet);
-		std::map<std::string, std::string>::iterator it;
-		std::cout << "before map printing 1" <<std::endl; //debug
-    	// 2. Use a standard for-loop from begin() to end()
-    	for (it = _sessions.begin(); it != _sessions.end(); ++it) 
-		{
-    	    // 3. it->first is the Key, it->second is the Value
-    	    std::cout << it->first << ": " << it->second << std::endl;
-		}
 	}
 }
 
@@ -210,7 +193,6 @@ void	Respond::procNormalOutput(std::string protocol)
 {
 	std::string requestPath = getRequestPath();
 	std::string documentRoot = _client->getBestLocation()->root;
-	std::cout << documentRoot << std::endl;//debug
 	std::string filePath;
 	_protocol = protocol;
 
@@ -234,7 +216,6 @@ void	Respond::procNormalOutput(std::string protocol)
 //handle normal file
 void	Respond::procGet(std::string filePath)
 {
-	std::cout << "filePath: " << filePath << std::endl; //debug
 	//			REDIRECT
 	if (_client->getBestLocation()->has_redirect)
 	{
@@ -243,36 +224,7 @@ void	Respond::procGet(std::string filePath)
 		return ;
 	}
 	//			COOKIE
-	///////////////////////////////////////////////////////////////////////////////
-	std::string raw = _client->getRequest().cookie;
-	std::cout << "cookie from request: " << raw << std::endl; //debug
-	std::string id = "";
-	size_t pos = raw.find("_session_id=");
-	if (pos != std::string::npos) 
-	{
-	    id = raw.substr(pos + 12); // Move past "_session_id="
-		std::cout << "id:" << id << std::endl; //debug
-	    size_t end = id.find(";");
-	    if (end != std::string::npos) 
-			id = id.substr(0, end);
-		std::cout << "id1:" << id << std::endl; //debug
-	}
-	////////////////////////////////////////////////////////////////////////
-	std::string sessionValue = getSession(id);
-    // 1. You must declare the iterator explicitly
-    std::map<std::string, std::string>::iterator it;
-	std::cout << "before map printing" <<std::endl; //debug
-    // 2. Use a standard for-loop from begin() to end()
-    for (it = _sessions.begin(); it != _sessions.end(); ++it) 
-	{
-        // 3. it->first is the Key, it->second is the Value
-        std::cout << it->first << ": " << it->second << std::endl;
-	}
-	if (!sessionValue.empty())
-	{
-		_sessionValue = sessionValue;
-		std::cout << "Session Value updated: " << _sessionValue << std::endl; //debug
-	}
+	cookieHandler();
 	//				HANDLE DIRECTORY
 	std::string requestPath = getRequestPath();
 	if (isDirectory(filePath))
@@ -282,7 +234,6 @@ void	Respond::procGet(std::string filePath)
 		if (!indexPath.empty() && indexPath[indexPath.length() - 1] != '/') 
 			indexPath += "/";
 		indexPath += "index.html";
-		// std::cout << "indexPath: " << indexPath << std::endl; //debug
 		if (access(indexPath.c_str(), F_OK) == 0)
 			fileServe(indexPath);
 		else
@@ -298,16 +249,13 @@ void	Respond::procGet(std::string filePath)
 			}
 			//			THROW IF AUTOINDEX IS PROHIBITED
 			else
-			{
-				std::cout << "403 here 7" << std::endl; //debug
 				throw 403;
-			}
 		}
 	}
 	//			HANDLE REGULAR FILE	
 	else 
 		fileServe(filePath);
-	if (!sessionValue.empty())
+	if (!_sessionValue.empty())
 	{
 		std::string greetingHtml = 
         	"<div style='"
@@ -327,14 +275,39 @@ void	Respond::procGet(std::string filePath)
 	}
 }
 
+void	Respond::cookieHandler()
+{
+	std::string raw = _client->getRequest().cookie;
+	std::string id = "";
+	size_t pos = raw.find("_session_id=");
+	if (pos != std::string::npos) 
+	{
+	    id = raw.substr(pos + 12); // Move past "_session_id="
+	    size_t end = id.find(";");
+	    if (end != std::string::npos) 
+			id = id.substr(0, end);
+	}
+	std::string sessionValue = getSession(id);
+	if (!id.empty() && sessionValue.empty()) //means got cookie but not from our webserv
+		_client->getRequest().cookie.clear();
+	//printing
+    // 1. You must declare the iterator explicitly
+    std::map<std::string, std::string>::iterator it;
+    // 2. Use a standard for-loop from begin() to end()
+    for (it = _sessions.begin(); it != _sessions.end(); ++it) 
+	{
+        // 3. it->first is the Key, it->second is the Value
+        std::cout << it->first << ": " << it->second << std::endl;
+	}
+	if (!sessionValue.empty())
+		_sessionValue = sessionValue;
+}
+
 void	Respond::fileServe(std::string filePath)
 {
 	std::ifstream file(filePath.c_str());
-	std::cout << "filePath in fileserve: " << filePath << std::endl; //debug
-	if (!file.is_open()) {
-		std::cout << "TRIGGER \n"; //debug
+	if (!file.is_open())
 		throw 404;
-	}
 	std::stringstream buffer;
 	buffer << file.rdbuf();
 	file.close();
@@ -354,7 +327,6 @@ void	Respond::procPost(std::string filePath)
 	std::ofstream outfile(filePath.c_str(), std::ios::out | std::ios::trunc);
 	if (!outfile.is_open())
 	{
-		std::cout << "FilePath: " << filePath << " procPost trigger" << std::endl; //debug
 		throw (500);
 	}
 	outfile << _client->getRequest().body;
@@ -381,15 +353,9 @@ void	Respond::procDelete(std::string filePath)
 		if (errno == ENOENT) 		//File doesnt exist
 			throw (404);
 		else if (errno == EACCES) 	//Permission denied
-		{
-			std::cout << "403 here 8" << std::endl; //debug
 			throw (403);
-		}
 		else						//Other system error
-		{
-			std::cout << "procDelete trigger 500" << std::endl; //debug
 			throw (500);
-		}
 	}
 }
 
@@ -408,12 +374,7 @@ void	Respond::buildResponse()
 	ss << "Content-Length: " << _body.size() << "\r\n";
 	// CGI Headers: Add the Content-Type you found earlier.
 	if (!_setCookie.empty())
-		ss << "Set-Cookie: " << _setCookie << "\r\n"; 
-	std::cout << "Set-Cookie: " << _setCookie << std::endl; //debug
-	// if (_contentType.empty()) //debug
-	// 	std::cout << "content type empty" << std::endl; //debug
-	// else //debug
-	//  	std::cout << "content type: " << _contentType << std::endl; //debug
+		ss << "Set-Cookie: " << _setCookie << "\r\n";
 	std::string ct = (_contentType.empty()) ? "text/html" : _contentType;
 	ss << "Content-Type: " << ct << "\r\n";
 	if (_statusCode >= 300 && _statusCode < 400) 
@@ -503,7 +464,6 @@ void	Respond::buildErrorResponse(int statusCode)
 	ss << "Content-Type: " << "text/html" << "\r\n";
 	ss << "Content-Length: " << _body.size() << "\r\n";
 	ss << "Connection: " << "close" << "\r\n";
-
 	ss << "\r\n";
 	ss << _body;
 	_fullResponse = ss.str();
@@ -564,7 +524,6 @@ void	Respond::setLastModified(const std::string& path)
 	char buffer[100];
 	strftime(buffer, sizeof(buffer), "%a,  %d  %b %Y %H:%M:%S GMT", gmt);
 	_lastModified = std::string(buffer);
-	std::cout << _lastModified << std::endl; //debug
 }
 
 void	Respond::resetResponder()

@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/14 10:54:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/01 18:02:42 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/05 14:05:35 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,7 +29,7 @@ int main(int argc, char **argv)
 	}
 
 	std::string config_file = argv[1];
-
+	srand(time(NULL));
 	Core core;
 
 	core.parse_config(config_file);
@@ -39,6 +39,8 @@ int main(int argc, char **argv)
 	{
 		signal(SIGINT, Helper::signalHandler);
 		core.run();
+		if (g_shutdown == 1)
+			core.CleanupAll();
 	} 
 	catch (const std::exception& e) 
 	{

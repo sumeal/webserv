@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/04 16:26:24 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/05 15:03:09 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,9 +33,6 @@ Core::~Core()
 
 void	Core::run()
 {
-	int			clientCount = 0;
-	
-	int loopCount = 0;
 	while (g_shutdown == 0)
 	{
 
@@ -130,9 +127,6 @@ void	Core::run()
 		//delete all in the delete list
 		fdCleanup();
 		addStagedFds(); //handle all sementara
-		if(clientCount >= 10 && _clients.empty())
-			break ;
-		loopCount++;
 	}
 }
 
@@ -273,6 +267,7 @@ void Core::serverRegister(int serverFd)
 void	Core::deleteClient(Client* client)
 {
 	int	socketFd = client->getSocket();
+	std::cout << client->isKeepAlive() << std::endl; //debug
 	
 	if (client->getHasCgi()) //supposely dont need since all have closed their CGI
 	{
@@ -451,7 +446,6 @@ void	Core::pathCheck(std::string path)
 	struct stat fileInfo;
 	if (stat(fullPath.c_str(), &fileInfo) != 0)
 	{		
-		std::cout << "403 here 3" << std::endl; //debug
 		throw (403);
 	}
 	if(S_ISDIR(fileInfo.st_mode))
@@ -465,14 +459,12 @@ void	Core::pathCheck(std::string path)
 		//if custom file  not there send error
 		if (stat(defaultPath.c_str(), &defaultInfo) != 0)
 		{
-				std::cout << "403 here 4" << std::endl; //debug
 			throw (403);
 		}
 		else
 		{
 			if (access(defaultPath.c_str(), R_OK) != 0)
 			{
-				std::cout << "403 here 5" << std::endl; //debug
 				throw (403);
 			}
 			fullPath = defaultPath;
@@ -485,7 +477,6 @@ void	Core::pathCheck(std::string path)
 		}
 		if (access(fullPath.c_str(), R_OK) != 0)
 		{
-			std::cout << "403 here 6" << std::endl; //debug
 			throw (403);
 		}		
 	}
@@ -942,6 +933,24 @@ void Core::putIntoCached(s_HttpRequest& request)
 std::map<std::string, std::string>& Core::getCookiesMap()
 {
 	return _cookies;
+}
+
+void	Core::CleanupAll()
+{
+	std::map<int, Client*>::iterator it;
+	it = _clients.begin();
+	while (it != _clients.end())
+	{
+		Client* client = it->second;
+		_clients.erase(it++);
+		
+		if (client)
+		{
+			deleteClient(client);
+			std::cout << "deleted client" << std::endl; //debug
+		}
+	}
+std::cout << "cleanupall" << std::endl; //debug
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -57,6 +57,7 @@ public:
 	void	handleSocketDc();
 	void	addStagedFds();
 	void	fdCleanup(); //delStagedFd better naming?
+	void	CleanupAll();
 	void	pathCheck(std::string path);
 	std::map<std::string, std::string>& getCookiesMap();
 

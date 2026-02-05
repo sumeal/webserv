@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/04 16:26:33 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/05 14:29:28 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -124,7 +124,7 @@ void	Client::procOutput(int i, struct pollfd& pFd)
 		}
 		else if (status)
 		{
-			//getRespond().printResponse(); //importantdebug
+			getRespond().printResponse(); //importantdebug
 			state = FINISHED;
 		}
 	}
@@ -239,7 +239,7 @@ bool	Client::isIdle(time_t now)
 	return false;
 }
 
-bool	Client::isKeepAlive()
+int	Client::isKeepAlive()
 {
 	return _connStatus;
 }
@@ -559,19 +559,14 @@ t_server&	Client::getServerConfig()
 //what to compare to get the matching location. something from request?
 void	Client::checkBestLocation()
 {
-	// std::cout << "check best location enter" << std::endl; //debug
 	t_location*		bestLoc = NULL;
 	size_t			bestLen = 0;
 	s_HttpRequest&	request = getRequest();
 
-	// std::cout << "Request Path: " << request.path << std::endl;//debug
 	for (size_t i = 0; i < _serverConfig.locations.size();i++)
 	{
 		t_location& loc =  _serverConfig.locations[i];
 
-		// std::cout << "server path: " << loc.path << std::endl; //debug
-		// std::cout << "must same. location path: " << loc.path ; //debug
-		// std::cout << "request path: " << request.path << std::endl; //debug
 		if (request.path.compare(0, loc.path.size(), loc.path) == 0) // 1. img 2.img/
 		{
 			bool boundary = (request.path.size() == loc.path.size() //cases where match both. req: img and loc: img, /img and /img 
@@ -581,8 +576,6 @@ void	Client::checkBestLocation()
 			{
 				bestLen = loc.path.length();  
 				bestLoc = &_serverConfig.locations[i];
-				// std::cout << "best location path 1: " << bestLoc->path << std::endl;  //debug
-				// std::cout << "inside if " << i << std::endl;//debug
 			}
 		}
 	}
@@ -591,18 +584,13 @@ void	Client::checkBestLocation()
 	if (getRequest().method != "GET" && getRequest().method != "POST" 
 		&& getRequest().method != "DELETE")
 		throw 501;
-	// std::cout << "bestLoc: " << bestLoc->path << "get allowance: " << bestLoc->allow_get << std::endl;//debug
 	if ((getRequest().method == "GET" && !bestLoc->allow_get) ||
 		(getRequest().method == "POST" && !bestLoc->allow_post) || 
 		(getRequest().method == "DELETE" && !bestLoc->allow_delete))
 	{
-		// std::cout << "405 throw trigger" << std::endl; //debug
 		throw 405; //will throw crash server or handle that one client only
 	}
  	_bestLocation = bestLoc;
-	std::cout << "best location path: " << _bestLocation->path << std::endl; //debug
-	std::cout << "root: " << _bestLocation->root << std::endl; //debug
-	// std::cout << "check best location doesnt throw" << std::endl; //debug
 }
 
 t_location*		Client::getBestLocation()
