@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/05 14:29:28 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/05 16:50:20 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -580,7 +580,10 @@ void	Client::checkBestLocation()
 		}
 	}
 	if (!bestLoc)
+	{
+		std::cout << "this 404 2" << std::endl; //debug
 		throw 404;
+	}
 	if (getRequest().method != "GET" && getRequest().method != "POST" 
 		&& getRequest().method != "DELETE")
 		throw 501;

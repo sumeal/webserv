@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 17:17:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/05 13:24:49 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/05 16:52:15 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -307,7 +307,10 @@ void	Respond::fileServe(std::string filePath)
 {
 	std::ifstream file(filePath.c_str());
 	if (!file.is_open())
+	{
+		std::cout << "filePath: " << filePath << "this 404  4" << std::endl; //debug
 		throw 404;
+	}
 	std::stringstream buffer;
 	buffer << file.rdbuf();
 	file.close();

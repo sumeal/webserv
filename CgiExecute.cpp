@@ -204,7 +204,10 @@ void	CgiExecute::preExecute()
 		root.erase(root.size() - 1,  1);
 	//					CHECK EXISTENCE
 	if (access(_scriptPath.c_str(), F_OK) == -1)
+	{
+		std::cout << "this 404" << std::endl; //debug
 		throw(404);
+	}
 	//					CHECK EXISTENCE & EXEC
 	if (access(_scriptPath.c_str(), X_OK) == -1)
 		throw(403);

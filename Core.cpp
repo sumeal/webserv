@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/05 15:03:09 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/05 16:50:23 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -445,9 +445,7 @@ void	Core::pathCheck(std::string path)
 	}
 	struct stat fileInfo;
 	if (stat(fullPath.c_str(), &fileInfo) != 0)
-	{		
 		throw (403);
-	}
 	if(S_ISDIR(fileInfo.st_mode))
 	{
 		//check default file usually defined in config
@@ -458,9 +456,7 @@ void	Core::pathCheck(std::string path)
 		struct stat defaultInfo;
 		//if custom file  not there send error
 		if (stat(defaultPath.c_str(), &defaultInfo) != 0)
-		{
 			throw (403);
-		}
 		else
 		{
 			if (access(defaultPath.c_str(), R_OK) != 0)
@@ -473,6 +469,7 @@ void	Core::pathCheck(std::string path)
 	else if(S_ISREG(fileInfo.st_mode))
 	{
 		if (access(fullPath.c_str(), F_OK) != 0) {
+			std::cout << "this 404 3" << std::endl; //debug
 			throw (404);
 		}
 		if (access(fullPath.c_str(), R_OK) != 0)
