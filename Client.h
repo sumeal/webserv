@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Client.h                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
+/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:03:33 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/04 00:40:02 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/05 13:48:22 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -50,8 +50,6 @@ private:
 	size_t		_expectedBodyLength;
 	size_t		_currentBodyLength;
 	bool		_requestComplete;
-	bool		_disconnected;
-
 	bool		_isChunked;
 	bool		_chunkedComplete;
 	std::string	_chunkedBody;
@@ -86,7 +84,6 @@ public:
 	
 	bool			readHttpRequest();
 	bool			isRequestComplete();
-	bool			isDisconnected();
 	std::string		getCompleteRequest();
 	void			resetRequestBuffer();
 	

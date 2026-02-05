@@ -6,7 +6,7 @@
 /*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/04 14:46:12 by abin-moh         ###   ########.fr       */
+/*   Updated: 2026/02/05 14:23:50 by abin-moh         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -86,10 +86,7 @@ void	Core::run()
 						if (client->state == READ_REQUEST) 
 						{
 							bool request_ready = client->readHttpRequest();
-							if (client->isDisconnected()) {
-								std::cout << "💀 Client disconnected, marking for cleanup" << std::endl;
-								client->state = DISCONNECTED;
-							} else if (request_ready && client->isRequestComplete()) {
+							if (request_ready && client->isRequestComplete()) {
 								std::string raw_request = client->getCompleteRequest();
 								if (!raw_request.empty()) {
 									// std::cout << "🚀 Processing complete HTTP request..." << std::endl;
@@ -98,7 +95,7 @@ void	Core::run()
 								} else {
 									client->state = DISCONNECTED;
 								}
-							} else if (!request_ready && !client->isRequestComplete() && !client->isDisconnected()) {
+							} else if (!request_ready && !client->isRequestComplete()) {
 								// std::cout << "📂 HTTP request incomplete, waiting for more data..." << std::endl;
 							}
 						}
@@ -815,13 +812,12 @@ void Core::debugHttpRequest(const t_HttpRequest& request)
                       << " \"" << it->second << "\"" << std::endl;
         }
     }
-
-    std::cout << "\n🎯 PARSED HEADER CACHE:" << std::endl;
-    std::cout << "   Host:           \"" << request.host << "\"" << std::endl;
-    std::cout << "   Port:           " << request.port << std::endl;
-    std::cout << "   Content-Length: " << request.content_length << std::endl;
-    std::cout << "   Content-Type:   \"" << request.content_type << "\"" << std::endl;
-    std::cout << "   Keep-Alive:     " << (request.keep_alive ? "TRUE" : "FALSE") << std::endl;
+    // std::cout << "\n🎯 PARSED HEADER CACHE:" << std::endl; //delete
+    // std::cout << "   Host:           \"" << request.host << "\"" << std::endl;
+    // std::cout << "   Port:           " << request.port << std::endl;
+    // std::cout << "   Content-Length: " << request.content_length << std::endl;
+    // std::cout << "   Content-Type:   \"" << request.content_type << "\"" << std::endl;
+    // std::cout << "   Keep-Alive:     " << (request.keep_alive ? "TRUE" : "FALSE") << std::endl;
     
     std::cout << "\n📄 BODY INFORMATION:" << std::endl;
     std::cout << "   Body Size:      " << request.body.length() << " bytes" << std::endl;
@@ -869,75 +865,73 @@ void Core::debugHttpRequest(const t_HttpRequest& request)
     std::cout << std::string(60, '=') << "\n" << std::endl;
 }
 
-void Core::putIntoCached(s_HttpRequest& request)
-{
-    std::cout << "🔄 Caching parsed headers..." << std::endl;
+// void Core::putIntoCached(s_HttpRequest& request) //delete
+// {
+//     std::cout << "🔄 Caching parsed headers..." << std::endl;
     
-    // 1. Cache Host header and extract port
-    std::map<std::string, std::string>::iterator host_it = request.headers.find("Host");
-    if (host_it != request.headers.end()) {
-        std::string host_header = host_it->second;
+//     std::map<std::string, std::string>::iterator host_it = request.headers.find("Host");
+//     if (host_it != request.headers.end()) {
+//         std::string host_header = host_it->second;
         
-        // Check if port is specified in Host header (e.g., "localhost:8088")
-        size_t port_pos = host_header.find(':');
-        if (port_pos != std::string::npos) {
-            request.host = host_header.substr(0, port_pos);
-            std::string port_str = host_header.substr(port_pos + 1);
-            request.port = atoi(port_str.c_str());
-        } else {
-            request.host = host_header;
-            request.port = 80;  // Default for HTTP
-        }
-        std::cout << "   ✅ Host: \"" << request.host << ":" << request.port << "\"" << std::endl;
-    } else {
-        request.host = "";
-        request.port = 0;
-        std::cout << "   ⚠️ No Host header found" << std::endl;
-    }
+//         size_t port_pos = host_header.find(':');
+//         if (port_pos != std::string::npos) {
+//             request.host = host_header.substr(0, port_pos);
+//             std::string port_str = host_header.substr(port_pos + 1);
+//             request.port = atoi(port_str.c_str());
+//         } else {
+//             request.host = host_header;
+//             request.port = 80;
+//         }
+//         std::cout << "   ✅ Host: \"" << request.host << ":" << request.port << "\"" << std::endl;
+//     } else {
+//         request.host = "";
+//         request.port = 0;
+//         std::cout << "   ⚠️ No Host header found" << std::endl;
+//     }
     
-    std::map<std::string, std::string>::iterator cl_it = request.headers.find("Content-Length");
-    if (cl_it != request.headers.end()) {
-        request.content_length = static_cast<size_t>(atoi(cl_it->second.c_str()));
-        std::cout << "    Content-Length: " << request.content_length << " bytes" << std::endl;
-    } else {
-        request.content_length = 0;
-        if (request.method == "POST" || request.method == "PUT" || request.method == "PATCH") {
-            std::cout << "   ⚠️ No Content-Length for " << request.method << " request" << std::endl;
-        }
-    }
+//     std::map<std::string, std::string>::iterator cl_it = request.headers.find("Content-Length");
+//     if (cl_it != request.headers.end()) {
+//         request.content_length = static_cast<size_t>(atoi(cl_it->second.c_str()));
+//         std::cout << "    Content-Length: " << request.content_length << " bytes" << std::endl;
+//     } else {
+//         request.content_length = 0;
+//         if (request.method == "POST" || request.method == "PUT" || request.method == "PATCH") {
+//             std::cout << "   ⚠️ No Content-Length for " << request.method << " request" << std::endl;
+//         }
+//     }
     
-    std::map<std::string, std::string>::iterator ct_it = request.headers.find("Content-Type");
-    if (ct_it != request.headers.end()) {
-        request.content_type = ct_it->second;
-        std::cout << "    Content-Type: \"" << request.content_type << "\"" << std::endl;
-    } else {
-        request.content_type = "";
-        if (request.method == "POST" || request.method == "PUT" || request.method == "PATCH") {
-            std::cout << "   ⚠️ No Content-Type for " << request.method << " request" << std::endl;
-        }
-    }
+//     std::map<std::string, std::string>::iterator ct_it = request.headers.find("Content-Type");
+//     if (ct_it != request.headers.end()) {
+//         request.content_type = ct_it->second;
+//         std::cout << "    Content-Type: \"" << request.content_type << "\"" << std::endl;
+//     } else {
+//         request.content_type = "";
+//         if (request.method == "POST" || request.method == "PUT" || request.method == "PATCH") {
+//             std::cout << "   ⚠️ No Content-Type for " << request.method << " request" << std::endl;
+//         }
+//     }
     
-    request.keep_alive = (request.http_version == "HTTP/1.1");  // Default
+//     request.keep_alive = (request.http_version == "HTTP/1.1");  // Default
     
-    std::map<std::string, std::string>::iterator conn_it = request.headers.find("Connection");
-    if (conn_it == request.headers.end()) {
-        conn_it = request.headers.find("connection");
-    }
+//     std::map<std::string, std::string>::iterator conn_it = request.headers.find("Connection");
+//     if (conn_it == request.headers.end()) {
+//         conn_it = request.headers.find("connection");
+//     }
     
-    if (conn_it != request.headers.end()) {
-        std::string conn_value = conn_it->second;
-        for (size_t i = 0; i < conn_value.length(); i++) {
-            conn_value[i] = std::tolower(conn_value[i]);
-        }
+//     if (conn_it != request.headers.end()) {
+//         std::string conn_value = conn_it->second;
+//         for (size_t i = 0; i < conn_value.length(); i++) {
+//             conn_value[i] = std::tolower(conn_value[i]);
+//         }
         
-        if (conn_value.find("keep-alive") != std::string::npos) {
-            request.keep_alive = true;
-        } else if (conn_value.find("close") != std::string::npos) {
-            request.keep_alive = false;
-        }
-    }
-    std::cout << "    Keep-Alive: " << (request.keep_alive ? "TRUE" : "FALSE") << std::endl;
-}
+//         if (conn_value.find("keep-alive") != std::string::npos) {
+//             request.keep_alive = true;
+//         } else if (conn_value.find("close") != std::string::npos) {
+//             request.keep_alive = false;
+//         }
+//     }
+//     std::cout << "    Keep-Alive: " << (request.keep_alive ? "TRUE" : "FALSE") << std::endl;
+// }
 
 std::map<std::string, std::string>& Core::getCookiesMap()
 {
