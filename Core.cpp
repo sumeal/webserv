@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/05 15:07:41 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/05 16:02:02 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -35,8 +35,7 @@ void	Core::run()
 {
 	while (g_shutdown == 0)
 	{
-
-		int result = poll(&_fds[0], _fds.size(), 400000);
+		int result = poll(&_fds[0], _fds.size(), 4000);
 		if (result < 0) {
 			if (errno == EINTR)
 				return ;
@@ -204,15 +203,6 @@ void	Core::handleTimeout()
         }
     }
 }
-//comment jap ada error
-// void	Core::launchCgi(Client* client, t_location& locate, t_request& request)
-// {
-// 	client->GetCgiExec()->preExecute();
-// 	client->GetCgiExec()->execute();
-// 	//the part im trying to implement
-// 	cgiRegister(client); //in core because it change the struct that hold all the list
-//
-// }
 
 void	Core::cgiRegister(Client* client)
 {
@@ -220,8 +210,6 @@ void	Core::cgiRegister(Client* client)
 	int ToCgi = CgiExec->getpipeToCgi();
 	int FromCgi = CgiExec->getpipeFromCgi();
 	
-	// _cgiMap[ToCgi] = CgiExec;
-	// _cgiMap[FromCgi] = CgiExec;
 	_clients[ToCgi] = client;
 	_clients[FromCgi] = client;
 	struct pollfd pfdRead;
@@ -246,7 +234,6 @@ void	Core::respondRegister(Client* client)
 		if (VecFd == ClientFd)
 		{
 			_fds[i].events = POLLOUT;
-			//do i need to set revent to 0?
 			return;
 		}
 	}
@@ -272,8 +259,6 @@ void	Core::deleteClient(Client* client)
 		int	pipeToCgi	= client->GetCgiExec()->getpipeToCgi();
 		fdPreCleanup(pipeFromCgi, 0);
 		fdPreCleanup(pipeToCgi, 0);
-		// _clients.erase(pipeFromCgi);
-		// _clients.erase(pipeToCgi);
 	}
 	std::cout << "Client " << socketFd << " deleted from poll" << std::endl; 
 	_clients.erase(socketFd);
