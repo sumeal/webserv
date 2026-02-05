@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Respond.h                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
+/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 16:58:34 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/05 14:21:00 by abin-moh         ###   ########.fr       */
+/*   Updated: 2026/02/05 15:09:09 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -53,6 +53,7 @@ public:
 	Respond(t_server& serverConf, std::map<std::string, std::string>& cookiesMap);
 	~Respond();
 	void	buildErrorResponse(int statusCode);
+	void	cookieHandler();
 	void	procCgiOutput(std::string cgiOutput);
 	std::string	getKeyValue(std::string &header, std::string &headerLow, std::string key);
 	void	procNormalOutput(std::string protocol);

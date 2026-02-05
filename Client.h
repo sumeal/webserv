@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Client.h                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
+/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:03:33 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/05 13:48:22 by abin-moh         ###   ########.fr       */
+/*   Updated: 2026/02/05 15:08:00 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -77,7 +77,7 @@ public:
 	void	setHasCgi(bool status);
 	bool	getHasCgi();
 	bool	isIdle(time_t now);
-	bool	isKeepAlive();
+	int	isKeepAlive();
     void	setConnStatus(bool status);
 	void	checkBestLocation();
 
