@@ -6,14 +6,14 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/06 11:41:51 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/06 12:22:30 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "Client.h"
-#include "CGI_data.h"
-#include "CgiExecute.h"
-#include "Respond.h"
+#include "./inc/Client.h"
+#include "./inc/CGI_data.h"
+#include "./inc/CgiExecute.h"
+#include "./inc/Respond.h"
 #include <ctime>
 #include <sys/poll.h>
 #include <unistd.h>
@@ -608,42 +608,3 @@ time_t	Client::getLastActivity()
 {
 	return _lastActivity;
 }
-
-// t_location&	Client::getCgiLocation()
-// {
-// 	size_t i = 0;
-// 	for (; i < _serverConfig.locations.size(); i++)
-// 	{
-// 		if (_serverConfig.locations[i].path == "/cgi-bin")
-// 			return _serverConfig.locations[i];
-// 	}
-// 	return _serverConfig.locations[i]; //suppose not to trigger
-// }
-
-	// // int pipeFromCgi = GetCgiExec()->getpipeFromCgi(); //my old commit
-	//
-	// if (state == READ_REQUEST)
-	// {
-	// 	//check client disconnect using received
-	// 	//READ REQUEST fromMuzz
-	// 	// if (/*read request finished*/)
-	// 	// if (state == HANDLE_REQUEST)
-	// 	// {
-	// 		if (!isCGI(request, locate))
-	// 		{
-	// 			getRespond().procNormalOutput(request, locate);
-	// 			getRespond().buildResponse();
-	// 			state = SEND_RESPONSE;
-	// 			// respondRegister(client);//
-	// 			// state = WAIT_RESPONSE;
-	// 		}
-	// 		else
-	// 		{
-	// 			setCgiExec(new CgiExecute(this, request, locate));
-	// 			GetCgiExec()->preExecute();
-	// 			GetCgiExec()->execute();
-	// 			state = EXECUTE_CGI;
-	// 			// cgiRegister(client);//
-	// 			// state = WAIT_CGI;
-	// 		}
-	// 	// }

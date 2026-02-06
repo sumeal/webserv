@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:03:33 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/06 11:27:56 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/06 12:23:05 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -95,7 +95,6 @@ public:
 	s_HttpRequest& 	getRequest();
 	std::string 	getRoot();
 	t_server&		getServerConfig();
-	t_location&		getCgiLocation();
 	void	setMaxBodySize(size_t maxSize);
 	bool	isCGI(const s_HttpRequest& request, const t_location& locate) const;
 	bool	isCGIextOK(const s_HttpRequest& request, const t_location& locate) const;

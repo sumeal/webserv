@@ -6,16 +6,16 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/14 10:54:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/06 11:29:02 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/06 12:50:18 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "Core.h"
+#include "./inc/Core.h"
+#include "./inc/Helper.h"
 #include <csignal>
 #include <exception>
 #include <iostream>
 #include <csignal>
-#include "Helper.h"
 
 volatile sig_atomic_t g_shutdown = 0;
 

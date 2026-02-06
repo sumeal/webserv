@@ -6,13 +6,13 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 17:17:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/06 12:02:24 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/06 13:08:51 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "Respond.h"
-#include "CGI_data.h"
-#include "Client.h"
+#include "./inc/Respond.h"
+#include "./inc/CGI_data.h"
+#include "./inc/Client.h"
 #include <algorithm>
 #include <cctype>
 #include <cerrno>
@@ -37,10 +37,12 @@ Respond::~Respond()
 {}
 
 //first line check?
+// replace throw 502 with return buildErrorResponse(502); if something happens
 void	Respond::procCgiOutput(std::string cgiOutput)
 {
 	if (cgiOutput.empty())
-		return buildErrorResponse(502);
+		throw(502); //testing.
+
 	//			FIND SEPARATOR(usually \r\n\r\n)
 	size_t	separatorPos = cgiOutput.find("\r\n\r\n");
 	size_t	offset = 4;
@@ -50,9 +52,7 @@ void	Respond::procCgiOutput(std::string cgiOutput)
 		offset = 2;
 	}
 	if (separatorPos == std::string::npos)
-	{
-		return buildErrorResponse(502);
-	}
+		throw(502);
 	//				EXTRACT HEADER		
 	std::string	header = cgiOutput.substr(0, separatorPos);
 	std::string headerLow = header;

@@ -6,21 +6,21 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/06 11:23:47 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/06 12:30:08 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "Core.h"
-#include "CGI_data.h"
+#include "./inc/Core.h"
+#include "./inc/CGI_data.h"
+#include "./inc/CgiExecute.h"
+#include "./inc/Client.h"
+#include "./inc/Respond.h"
 #include <csignal>
 #include <cstddef>
 #include <poll.h>
-#include "CgiExecute.h"
-#include "Client.h"
 #include <iostream>
 #include <sys/stat.h>
 #include <unistd.h>
-#include "Respond.h"
 #include <ctime>
 
 extern volatile sig_atomic_t g_shutdown;
@@ -43,7 +43,7 @@ void	Core::run()
 			perror("Polls error");
 			continue;
 		}
-		handleTimeout(); //better put before poll so poll dont run timeout client
+		handleTimeout(); 
 		for (long unsigned int i = 0; i < _fds.size(); i++)
 		{
 			int	oriFd = _fds[i].fd;
@@ -177,34 +177,12 @@ void	Core::handleTransition(Client* client)
 void	Core::handleTimeout()
 {
 	time_t now = time(NULL);
-    std::vector<int> clients_to_delete; // Store FDs to delete
-    //chatgpt
-    // First pass: identify clients to delete
     for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it)
     {
         Client* client = it->second;
         
         if (client && client->state == 3 && client->isIdle(now))
-        {
-            // if (client->state == READ_REQUEST || client->state == FINISHED)
-            // {
-            //     clients_to_delete.push_back(it->first);
-            // }
-            // else
-            // {
-                handleClientError(client, client->GetCgiExec() && client->GetCgiExec()->getpid() ? 504 : 408);
-            // }
-        }
-    }
-    
-    // Second pass: delete clients
-    for (size_t i = 0; i < clients_to_delete.size(); i++)
-    {
-        int fd = clients_to_delete[i];
-        Client* client = _clients[fd];
-        if (client) {
-            deleteClient(client);
-        }
+			handleClientError(client, client->GetCgiExec() && client->GetCgiExec()->getpid() ? 504 : 408);
     }
 }
 
@@ -239,7 +217,6 @@ void	Core::respondRegister(Client* client)
 		if (VecFd == ClientFd)
 		{
 			_fds[i].events = POLLOUT;
-			//do i need to set revent to 0?
 			return;
 		}
 	}
@@ -257,7 +234,6 @@ void Core::serverRegister(int serverFd)
 void	Core::deleteClient(Client* client)
 {
 	int	socketFd = client->getSocket();
-	std::cout << client->isKeepAlive() << std::endl; //debug
 	
 	if (client->getHasCgi()) //supposely dont need since all have closed their CGI
 	{
@@ -266,7 +242,6 @@ void	Core::deleteClient(Client* client)
 		fdPreCleanup(pipeFromCgi, 0);
 		fdPreCleanup(pipeToCgi, 0);
 	}
-	std::cout << "Client " << socketFd << " deleted from poll" << std::endl; 
 	_clients.erase(socketFd);
 	fdPreCleanup(socketFd, 0);
 	delete client;
@@ -915,56 +890,40 @@ void	Core::CleanupAll()
 		_clients.erase(it++);
 		
 		if (client)
-		{
 			deleteClient(client);
-			std::cout << "deleted client" << std::endl; //debug
-		}
 	}
-std::cout << "cleanupall" << std::endl; //debug
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Another way of remove instead of iterating loop
-// struct IsInvalid 
-//{
-//     // This is the "logic" remove_if uses to decide
-//     bool operator()(const struct pollfd& p) const {
-//         return (p.fd == -1); 
-//     }
-// };
-//
-// void Core::fdCleanup() {
-//     // 1. Mark and move
-//     std::vector<struct pollfd>::iterator new_end = std::remove_if(
-//         _fds.begin(), 
-//         _fds.end(), 
-//         IsInvalid() // This creates a temporary instance of your rule
-//     );
-//     // 2. Actually resize
-//     _fds.erase(new_end, _fds.end());
-// }
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Simplified way but maybe loss slow of preCleanup
-// void	Core::fdPreCleanup(int fd)
+//Delete after fully tested. This one is the latest modifications interms of concepts
+// void	Core::handleTimeout()
 // {
-// 	for (std::vector<struct pollfd>::iterator it = _fds.begin(); it != _fds.end(); ++it)
-// 	{
-// 		if (it->fd == fd)
-// 		{
-// 			close(it->fd);
-// 			_clients.erase(fd);
-// 			_cgiMap.erase(fd);
-// 			it->fd = -1;
-// 			_needCleanup = true;
-// 			return ;
-// 		}
-// 	}
-// 	// Safety: If for some reason the FD wasn't in the poll vector, 
-//     // we still need to close it and clean the maps to avoid leaks.
-// 	close(fd);
-// 	_clients.erase(fd);
-// 	_cgiMap.erase(fd);
+// 	time_t now = time(NULL);
+//     std::vector<int> clients_to_delete; // Store FDs to delete
+//     // First pass: identify clients to delete
+//     for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it)
+//     {
+//         Client* client = it->second;
+        
+//         if (client && client->state == 3 && client->isIdle(now))
+//         {
+//             // if (client->state == READ_REQUEST || client->state == FINISHED)
+//             // {
+//             //     clients_to_delete.push_back(it->first);
+//             // }
+//             // else
+//             // {
+//                 handleClientError(client, client->GetCgiExec() && client->GetCgiExec()->getpid() ? 504 : 408);
+//             // }
+//         }
+//     }
+    
+//     // Second pass: delete clients
+//     for (size_t i = 0; i < clients_to_delete.size(); i++)
+//     {
+//         int fd = clients_to_delete[i];
+//         Client* client = _clients[fd];
+//         if (client) {
+//             deleteClient(client);
+//         }
+//     }
 // }
-///////////////////////////////////////////////////////////////////////////////////////////////////////////

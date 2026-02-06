@@ -1,4 +1,4 @@
-#include "Parse.hpp"
+#include "./inc/Parse.hpp"
 
 int Parse::parse_outside(const std::string& line, int  current_state)
 {

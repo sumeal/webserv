@@ -10,13 +10,12 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-// #include "CgiRequest.h"
-#include "CGI_data.h"
-#include "CgiExecute.h"
+#include "./inc/CGI_data.h"
+#include "./inc/CgiExecute.h"
+#include "./inc/Client.h"
 #include <cerrno>
 #include <cstddef>
 #include <cstdlib>
-#include <stdexcept>
 #include <string>
 #include <sys/poll.h>
 #include <unistd.h>
@@ -25,7 +24,7 @@
 #include <iostream>
 #include <poll.h>
 #include <fcntl.h>
-#include "Client.h"
+// #include <stdexcept>
 
 CgiExecute::CgiExecute(Client* client, std::string protocol)
 	: _request(client->getRequest()), _locate(*client->getBestLocation()), _client(client), _pid(-1), _pipeToCgi(-1), 
