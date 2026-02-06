@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:03:33 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/05 14:29:38 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/06 11:27:56 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -39,7 +39,7 @@ private:
 	CgiExecute* _executor;
 	s_HttpRequest request;
 	Respond		_responder;
-	int			_socket; //FromMuzz
+	int			_socket;
 	bool		_hasCgi;
 	time_t		_lastActivity;
 	int			_connStatus;
@@ -64,7 +64,6 @@ private:
 public:
 	e_State state;
 	Client(t_server& server_config, std::map<std::string, std::string>& cookies);
-	bool		revived; //testing
 	~Client();
 	void	procInput(int i, struct pollfd& pFd);
 	void	procOutput(int i, struct pollfd& pFd);
@@ -79,8 +78,10 @@ public:
 	void	setHasCgi(bool status);
 	bool	getHasCgi();
 	bool	isIdle(time_t now);
-	int	isKeepAlive();
+	int		isKeepAlive();
     void	setConnStatus(bool status);
+	time_t	getLastActivity();
+	void	setLastActivity();
 	void	checkBestLocation();
 
 	
@@ -96,13 +97,9 @@ public:
 	t_server&		getServerConfig();
 	t_location&		getCgiLocation();
 	void	setMaxBodySize(size_t maxSize);
-	bool	isCGI(const s_HttpRequest& request, const t_location& locate) const; // check
-	bool	isCGIextOK(const s_HttpRequest& request, const t_location& locate) const; //check
+	bool	isCGI(const s_HttpRequest& request, const t_location& locate) const;
+	bool	isCGIextOK(const s_HttpRequest& request, const t_location& locate) const;
 	t_location*		getBestLocation();
-	//t_location&		getCgiLocation();
-	// CgiRequest* GetCgiReq();
-	// t_CGI*	getCgi();
-	// void	setCgi(t_CGI* cgi);
 };
 
 #endif

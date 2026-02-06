@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/05 16:50:20 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/06 11:41:51 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,12 +26,12 @@
 
 Client::Client(t_server& server_config, std::map<std::string, std::string>& cookies) : 
 	_serverConfig(server_config), _executor(NULL), 
-	_responder(_serverConfig, cookies), _socket(0), 
+	_responder(cookies), _socket(0), 
 	_hasCgi(false), _lastActivity(time(NULL)), _connStatus(CLOSE), 
 	_bestLocation(NULL), _headersParsed(false), _expectedBodyLength(0), 
 	_currentBodyLength(0), _requestComplete(false), _disconnected(false), 
 	_isChunked(false), _chunkedComplete(false), 
-	_maxBodySize(server_config.client_max_body_size), revived(false)
+	_maxBodySize(server_config.client_max_body_size)
 {
 	state = READ_REQUEST;
 	_responder.setClient(this);
@@ -181,8 +181,6 @@ void	Client::resetClient()
 	
 	// Reset non-blocking request buffer
 	resetRequestBuffer();
-	
-	revived = true; //testing
 }
 
 void	Client::fdPreCleanup(struct pollfd& pFd)
@@ -599,6 +597,16 @@ void	Client::checkBestLocation()
 t_location*		Client::getBestLocation()
 {
 	return _bestLocation;
+}
+
+void	Client::setLastActivity()
+{
+	_lastActivity = time(NULL);
+}
+
+time_t	Client::getLastActivity()
+{
+	return _lastActivity;
 }
 
 // t_location&	Client::getCgiLocation()

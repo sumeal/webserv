@@ -27,14 +27,8 @@
 #include <fcntl.h>
 #include "Client.h"
 
-// CgiExecute::CgiExecute(Client* client, const t_location& locate, const t_request& request)
-// 	: _request(request), _locate(locate), _client(client), _pid(-1), _pipeToCgi(-1), 
-// 	_pipeFromCgi(-1), _bodySizeSent(0), _writeEnded(false), _readEnded(false), 
-// 	_exitStatus(0)
-// {}
-
 CgiExecute::CgiExecute(Client* client, std::string protocol)
-	: _request(client->getRequest()), /*_locate(client->getCgiLocation())*/ _locate(*client->getBestLocation()), _client(client), _pid(-1), _pipeToCgi(-1), 
+	: _request(client->getRequest()), _locate(*client->getBestLocation()), _client(client), _pid(-1), _pipeToCgi(-1), 
 	_pipeFromCgi(-1), _protocol(protocol), _output(""), _bodySizeSent(0), _writeEnded(false), _readEnded(false), 
 	_exitStatus(0)
 {}
@@ -170,7 +164,9 @@ void	CgiExecute::writeExec()
 	size_t	bytesLeft = _request.body.size() - _bodySizeSent;
 	ssize_t	written = write(_pipeToCgi, _request.body.c_str() + _bodySizeSent, bytesLeft);
 	if (written > 0)
+	{
 		_bodySizeSent += written;
+	}
 	if (written == -1)
 	{
 		if (errno == EAGAIN || errno == EWOULDBLOCK)
@@ -189,7 +185,7 @@ void	CgiExecute::preExecute()
 	size_t  dotPos = script_name.find_last_of(".");
 	std::string ext = script_name.substr(dotPos);
 	if (ext == ".py")
-		_locate.interp = "/usr/bin/python3"; //hardcode askMuzz
+		_locate.interp = "/usr/bin/python3";
 	else if (ext == ".php")
 		_locate.interp = "/usr/bin/php-cgi";
 	std::string	interp	= _locate.interp;
@@ -204,10 +200,7 @@ void	CgiExecute::preExecute()
 		root.erase(root.size() - 1,  1);
 	//					CHECK EXISTENCE
 	if (access(_scriptPath.c_str(), F_OK) == -1)
-	{
-		std::cout << "this 404" << std::endl; //debug
 		throw(404);
-	}
 	//					CHECK EXISTENCE & EXEC
 	if (access(_scriptPath.c_str(), X_OK) == -1)
 		throw(403);
@@ -251,18 +244,14 @@ bool	CgiExecute::isCGI() const
 	return (_locate.cgi_enabled && isCGIextOK());
 }
 
-//should at least support one. which we focus on .py
 bool	CgiExecute::isCGIextOK() const
 {
 	const std::string	path		= _request.path;
 	const std::string	interp	= _locate.interp;
 	
-	//manually without taking from config cgi_ext
-	//use rfind to detect the last dot
 	size_t lastDot = path.rfind(".");
-	if (lastDot == std::string::npos) //how to check npos
+	if (lastDot == std::string::npos)
 		return false; 
-	//use path.substr and check
 	std::string ext = path.substr(lastDot);
 	if (ext != ".cgi" && ext != ".php" && ext != ".py"
 		&& ext != ".sh" && ext != ".pl")
@@ -286,16 +275,6 @@ void	CgiExecute::clearCgi()
 		waitpid(_pid, NULL, WNOHANG);
 		_pid = -1;
 	}
-	// if (_pipeFromCgi != -1)
-	// {
-	// 	close(_pipeFromCgi);
-	// 	_pipeFromCgi = -1;
-	// }
-	// if (_pipeToCgi != -1)
-	// {
-	// 	close(_pipeToCgi);
-	// 	_pipeToCgi =  -1;
-	// }
 }
 
 const std::string&	CgiExecute::getOutput() const

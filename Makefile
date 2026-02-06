@@ -10,7 +10,7 @@ SRCS = SocketUtils.cpp \
 	   Helper.cpp
 
 OBJS = $(SRCS:.cpp=.o)
-CXX = g++
+CXX = c++
 CXXFLAGS = -Wall -Wextra -Werror -std=c++98
 
 all: $(NAME)
@@ -26,4 +26,6 @@ fclean: clean
 
 re: fclean all
 
-.PHONY: all clean fclean re
+cleanly: all clean
+
+.PHONY: all clean fclean re cleanly

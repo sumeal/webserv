@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 17:17:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/05 16:52:15 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/06 12:02:24 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,8 +27,8 @@
 #include <unistd.h>
 
 //initialize the status code
-Respond::Respond(t_server& serverConf, std::map<std::string, std::string>& cookiesMap) : 
-	_server(serverConf), _client(NULL), _sessions(cookiesMap), _statusCode(0), //consider removing _server
+Respond::Respond(std::map<std::string, std::string>& cookiesMap) : 
+	_client(NULL), _sessions(cookiesMap), _statusCode(0),
 	_protocol("HTTP/1.1"), _contentLength(0), _serverName("localhost"), 
 	_connStatus(KEEP_ALIVE), _socketFd(0), _bytesSent(0)
 {}
@@ -153,7 +153,8 @@ void Respond::setClient(Client* client)
 	_client = client;
 }
 
-std::string Respond::getRequestPath() {
+std::string Respond::getRequestPath()
+{
 	if (_client)
 		return (_client->getRequest().path);
 	return ("/");
@@ -162,31 +163,31 @@ std::string Respond::getRequestPath() {
 void Respond::setContentType(const std::string& filePath)
 {
     size_t pos = filePath.rfind(".");
-    if (pos != std::string::npos) {
-        std::string ext = filePath.substr(pos);
+    if (pos != std::string::npos)
+	{
+		std::string ext = filePath.substr(pos);
         
-        if (ext == ".html" || ext == ".htm") {
+		if (ext == ".html" || ext == ".htm")
             _contentType = "text/html";
-        } else if (ext == ".css") {
+		else if (ext == ".css")
             _contentType = "text/css";
-        } else if (ext == ".js") {
+		else if (ext == ".js")
             _contentType = "application/javascript";
-        } else if (ext == ".json") {
+		else if (ext == ".json")
             _contentType = "application/json";
-        } else if (ext == ".png") {
+		else if (ext == ".png")
             _contentType = "image/png";
-        } else if (ext == ".jpg" || ext == ".jpeg") {
+		else if (ext == ".jpg" || ext == ".jpeg")
             _contentType = "image/jpeg";
-        } else if (ext == ".gif") {
+		else if (ext == ".gif")
             _contentType = "image/gif";
-        } else if (ext == ".txt") {
+		else if (ext == ".txt")
             _contentType = "text/plain";
-        } else {
+		else
             _contentType = "application/octet-stream"; // Default binary
-        }
-    } else {
+	}
+    else
         _contentType = "text/plain"; // No extension
-    }
 }
 
 void	Respond::procNormalOutput(std::string protocol)
@@ -258,18 +259,8 @@ void	Respond::procGet(std::string filePath)
 	if (!_sessionValue.empty())
 	{
 		std::string greetingHtml = 
-        	"<div style='"
-        	"position: fixed; " // Stay in one place
-        	"top: 20px; "       // 20px from the top
-        	"width: 100%; "     // Full width
-        	"text-align: center; "
-        	"color: white; "    // Visible on your dark/gradient backgrounds
-        	"font-family: Arial; "
-        	"font-weight: bold; "
-        	"z-index: 9999;"    // Make sure it sits on top of everything
-        	"'> "
-        	"   " + _sessionValue + ", Our Fans!"
-        	"</div>";
+			"<div style='position:fixed;top:20px;width:100%;text-align:center;color:white;"
+            "font-family:Arial;font-weight:bold;z-index:9999;'> " + _sessionValue + ", Our Fans!</div>";
 		_body = greetingHtml + _body;
     	_contentLength = _body.size();
 	}
@@ -282,23 +273,14 @@ void	Respond::cookieHandler()
 	size_t pos = raw.find("_session_id=");
 	if (pos != std::string::npos) 
 	{
-	    id = raw.substr(pos + 12); // Move past "_session_id="
+	    id = raw.substr(pos + 12);
 	    size_t end = id.find(";");
 	    if (end != std::string::npos) 
 			id = id.substr(0, end);
 	}
 	std::string sessionValue = getSession(id);
-	if (!id.empty() && sessionValue.empty()) //means got cookie but not from our webserv
+	if (!id.empty() && sessionValue.empty())
 		_client->getRequest().cookie.clear();
-	//printing
-    // 1. You must declare the iterator explicitly
-    std::map<std::string, std::string>::iterator it;
-    // 2. Use a standard for-loop from begin() to end()
-    for (it = _sessions.begin(); it != _sessions.end(); ++it) 
-	{
-        // 3. it->first is the Key, it->second is the Value
-        std::cout << it->first << ": " << it->second << std::endl;
-	}
 	if (!sessionValue.empty())
 		_sessionValue = sessionValue;
 }
@@ -307,10 +289,7 @@ void	Respond::fileServe(std::string filePath)
 {
 	std::ifstream file(filePath.c_str());
 	if (!file.is_open())
-	{
-		std::cout << "filePath: " << filePath << "this 404  4" << std::endl; //debug
 		throw 404;
-	}
 	std::stringstream buffer;
 	buffer << file.rdbuf();
 	file.close();
@@ -329,9 +308,7 @@ void	Respond::procPost(std::string filePath)
 		throw 405;
 	std::ofstream outfile(filePath.c_str(), std::ios::out | std::ios::trunc);
 	if (!outfile.is_open())
-	{
 		throw (500);
-	}
 	outfile << _client->getRequest().body;
 	outfile.close();
 	_statusCode = 201;
@@ -423,21 +400,18 @@ int	Respond::sendResponse()
 	size_t		len = _fullResponse.size() - _bytesSent;
 	
 	ssize_t sent = send( _socketFd, dataToSend, len, 0);
-	//_lastActivity update
 	if (sent == -1)
 	{
 		if (errno == EAGAIN || errno == EWOULDBLOCK)
-            return 0; // Not an error! Just wait for the next POLLOUT.
+            return 0;
 		return -1;
 	}
 	if (sent == 0)
 		return -1;
 	//updates byteSent
 	_bytesSent += sent;
-	if (_bytesSent == _fullResponse.size()) {
-		// if (!_client->isKeepAlive()) {
-		// 	_client->state = FINISHED;
-		// }
+	if (_bytesSent == _fullResponse.size())
+	{
 		_client->state = FINISHED;
 		return 1;
 	}
@@ -476,7 +450,7 @@ void	Respond::buildErrorResponse(int statusCode)
 void	Respond::findErrorBody(std::string errorPath)
 {
 	std::ifstream file(errorPath.c_str());
-	if (!file.is_open()) //since i assumed my parser friend already check it
+	if (!file.is_open())
 		return ;
 	std::stringstream ss; 
 	ss << file.rdbuf();
@@ -563,12 +537,12 @@ void Respond::handleError(int statusCode)
 {	
 	_statusCode = statusCode;
 	
-	if (_protocol.empty()) {
+	if (_protocol.empty())
 		_protocol = "HTTP/1.1";
-	}
 	
 	std::string errorPath;
-	switch(statusCode) {
+	switch(statusCode)
+	{
 		case 403:
 			errorPath = "./www/errors/403.html";
 			break;
@@ -583,11 +557,11 @@ void Respond::handleError(int statusCode)
 			break;
 	}
 
-	if (!errorPath.empty()) {
+	if (!errorPath.empty())
 		findErrorBody(errorPath);
-	}
 	
-	if (_body.empty()) {
+	if (_body.empty())
+	{
 		std::stringstream bodySs;
 		bodySs << "<!DOCTYPE html>\n";
 		bodySs << "<html>\n";
@@ -605,10 +579,10 @@ void Respond::handleError(int statusCode)
 	std::cout << "✅ [ERROR] Error " << statusCode << " handling complete" << std::endl;
 }
 
-std::string Respond::getServerRoot() {
-	if (_client) {
+std::string Respond::getServerRoot()
+{
+	if (_client)
 		return (_client->getRoot());
-	}
 	return ("./www");
 }
 
@@ -620,7 +594,8 @@ bool Respond::isDirectory(const std::string& path)
 	return S_ISDIR(statbuf.st_mode);
 }
 
-std::string Respond::generateDirectoryListing(const std::string& dirPath, const std::string& requestPath) {
+std::string Respond::generateDirectoryListing(const std::string& dirPath, const std::string& requestPath)
+{
 	std::ostringstream html;
 	
 	// HTML header
@@ -639,50 +614,49 @@ std::string Respond::generateDirectoryListing(const std::string& dirPath, const 
 		 << "<hr><pre>\n";
 	
 	// Parent directory link
-	if (requestPath != "/" && !requestPath.empty()) {
+	if (requestPath != "/" && !requestPath.empty()) 
+	{
 		std::string parentPath = requestPath;
-		if (parentPath[parentPath.length() - 1] == '/') {
+		if (parentPath[parentPath.length() - 1] == '/')
 			parentPath = parentPath.substr(0, parentPath.length() - 1);
-		}
+
 		size_t lastSlash = parentPath.find_last_of('/');
-		if (lastSlash != std::string::npos) {
+		if (lastSlash != std::string::npos)
 			parentPath = parentPath.substr(0, lastSlash);
-		}
-		if (parentPath.empty()) {
+
+		if (parentPath.empty())
 			parentPath = "/";
-		}
 		html << "<a href=\"" << parentPath << "\" class=\"dir\">[Parent Directory]</a>\n";
 	}
 	
 	// Open directory
 	DIR* dir = opendir(dirPath.c_str());
-	if (dir == NULL) {
+	if (dir == NULL)
 		html << "Error: Cannot read directory\n";
-	} else {
+	else 
+	{
 		struct dirent* entry;
 		std::vector<std::string> directories;
 		std::vector<std::string> files;
 		
 		// Read directory entries
-		while ((entry = readdir(dir)) != NULL) {
+		while ((entry = readdir(dir)) != NULL) 
+		{
 			std::string name = entry->d_name;
 			
 			// Skip hidden files and current directory
-			if (name[0] == '.') {
+			if (name[0] == '.')
 				continue;
-			}
 			
 			std::string fullPath = dirPath;
-			if (fullPath[fullPath.length() - 1] != '/') {
+			if (fullPath[fullPath.length() - 1] != '/')
 				fullPath += "/";
-			}
 			fullPath += name;
 			
-			if (isDirectory(fullPath)) {
+			if (isDirectory(fullPath))
 				directories.push_back(name);
-			} else {
+			else
 				files.push_back(name);
-			}
 		}
 		closedir(dir);
 		
@@ -692,11 +666,11 @@ std::string Respond::generateDirectoryListing(const std::string& dirPath, const 
 		
 		// Display directories first
 		for (std::vector<std::string>::iterator it = directories.begin(); 
-			 it != directories.end(); ++it) {
+				it != directories.end(); ++it) 
+		{
 			std::string linkPath = requestPath;
-			if (linkPath[linkPath.length() - 1] != '/') {
+			if (linkPath[linkPath.length() - 1] != '/')
 				linkPath += "/";
-			}
 			linkPath += *it + "/";
 			html << "<a href=\"" << linkPath << "\" class=\"dir\">" 
 				 << *it << "/</a>\n";
@@ -704,11 +678,11 @@ std::string Respond::generateDirectoryListing(const std::string& dirPath, const 
 		
 		// Display files
 		for (std::vector<std::string>::iterator it = files.begin(); 
-			 it != files.end(); ++it) {
+			 it != files.end(); ++it) 
+		{
 			std::string linkPath = requestPath;
-			if (linkPath[linkPath.length() - 1] != '/') {
+			if (linkPath[linkPath.length() - 1] != '/')
 				linkPath += "/";
-			}
 			linkPath += *it;
 			html << "<a href=\"" << linkPath << "\" class=\"file\">" 
 				 << *it << "</a>\n";
@@ -716,17 +690,16 @@ std::string Respond::generateDirectoryListing(const std::string& dirPath, const 
 	}
 	
 	// HTML footer
-	html << "</pre><hr>\n"
-		 << "<address>Webserv/1.0</address>\n"
+	html << "</pre><hr>\n" << "<address>Webserv/1.0</address>\n"
 		 << "</body></html>\n";
 	
 	return html.str();
 }
 
-t_location* Respond::getCurrentLocation() {
-	if (!_client) {
+t_location* Respond::getCurrentLocation() 
+{
+	if (!_client)
 		return NULL;
-	}
 	
 	std::string requestPath = getRequestPath();
 	t_server serverConfig = _client->getServerConfig();
@@ -740,8 +713,10 @@ t_location* Respond::getCurrentLocation() {
 		std::string locationPath = it->path;
 		
 		// Check if request path starts with location path
-		if (requestPath.find(locationPath) == 0) {
-			if (locationPath.length() > bestMatchLength) {
+		if (requestPath.find(locationPath) == 0) 
+		{
+			if (locationPath.length() > bestMatchLength) 
+			{
 				bestMatch = &(*it);
 				bestMatchLength = locationPath.length();
 			}
@@ -750,311 +725,3 @@ t_location* Respond::getCurrentLocation() {
 	
 	return bestMatch;
 }
-
-	// size_t locationPos = headerLow.find("location");
-	// if (locationPos != std::string::npos)
-	// {
-    // 	// "location" is 8 characters long + colon is 9
-    // 	size_t start = locationPos + 9; 
-    // 	while (start < header.length() && (header[start] == ' ' || header[start] == '\t' || header[start] == ':'))
-    // 	    start++;
-		
-    // 	size_t end = header.find("\n", start);
-    // 	if (end == std::string::npos)
-    // 	    _location = header.substr(start);
-    // 	else
-    // 	{
-    // 	    _location = header.substr(start, end - start);
-    // 	    // Trim trailing \r if it exists
-    // 	    if (!_location.empty() && _location[_location.size() - 1] == '\r')
-    // 	        _location.erase(_location.size() - 1);
-    // 	}
-
-	//muzz why change
-// void	Respond::procNormalOutput(std::string protocol)
-// {
-// 	std::string requestPath = getRequestPath();
-// 	std::string documentRoot = getServerRoot();
-// 	std::string filePath;
-
-// 	if (requestPath == "/" || requestPath.empty())
-// 		filePath = documentRoot + "/index.html";
-// 	else
-// 		filePath = documentRoot + requestPath;
-// 	// 	// Regular file handling
-// 	// 	std::ifstream file(filePath.c_str());
-// 	// 	if (!file.is_open())
-// 	// std::cout << _client->getRequest().method << std::endl; //debug
-// 	if (_client->getRequest().method == "GET")
-// 	{
-// 		if (_client->getBestLocation()->has_redirect)
-// 		{
-// 			_statusCode = _client->getBestLocation()->redir_status;
-// 			_protocol = protocol;
-// 			_contentLength = 0;
-// 		}
-// 		else if (isDirectory(filePath))
-// 		{
-// 			// Try to serve index file
-// 			std::string indexPath = filePath;
-// 			if (indexPath[indexPath.length() - 1] != '/') {
-// 				indexPath += "/";
-// 			}
-// 			indexPath += "index.html";
-			
-// 			std::ifstream indexFile(indexPath.c_str());
-// 			if (indexFile.is_open()) {
-// 				// Serve index file
-// 				std::stringstream buffer;
-// 				buffer << indexFile.rdbuf();
-// 				indexFile.close();
-				
-// 				_body = buffer.str();
-// 				_statusCode = 200;
-// 				_protocol = protocol;
-// 				_contentLength = _body.size();
-				
-// 				setContentType(indexPath);
-// 				std::cout << "✅ " <<  indexPath << " served"  << std::endl;
-// 				return;
-// 			}
-			
-// 			// No index file, check if autoindex is enabled
-// 			t_location* location = getCurrentLocation();
-// 			if (location && location->auto_index) {
-// 				// Generate directory listing
-// 				_body = generateDirectoryListing(filePath, requestPath);
-// 				_statusCode = 200;
-// 				_protocol = protocol;
-// 				_contentLength = _body.size();
-// 				_contentType = "text/html";
-// 				std::cout << "✅ Directory listing for " << requestPath << " generated" << std::endl;
-// 				return;
-// 			} else {
-// 				// Autoindex disabled, return 403
-// 				handleError(403);
-// 				return;
-// 			}
-// 		}
-// 		else 
-// 		{
-// 			std::ifstream file(filePath.c_str());
-// 			if (!file.is_open())
-// 			{
-// 				handleError(404);
-// 				return;
-// 			}
-// 			std::stringstream buffer;
-// 			buffer << file.rdbuf();
-// 			file.close();
-			
-// 			_body = buffer.str();
-// 			_statusCode = 200;
-// 			_protocol = protocol;
-// 			_contentLength = _body.size();
-		
-// 			setContentType(filePath);
-			
-// 			std::cout << "✅ " <<  filePath << " served"  << std::endl;
-// 		}
-// 	} 
-// 	else if (_client->getRequest().method == "POST")
-// 	{
-// 		// std::cout << "trigger normal POST" << std::endl; //debug
-// 		// std::cout << "file Path: " << filePath << std::endl; //debug
-// 		std::ofstream outfile(filePath.c_str(), std::ios::out | std::ios::trunc);
-// 		if (!outfile.is_open())
-// 			throw (500);
-// 		outfile << _client->getRequest().body;
-// 		outfile.close();
-// 		_statusCode = 201;
-// 		_body = "<html><head><title>201 Created</title></head><body>"
-// 		"<h1>File Created Successfully</h1><p>The resource has been uploaded.</p>"
-// 		"<hr><address>Webserv/1.0</address></body></html>";
-// 		_contentLength = _body.size();
-// 		_contentType = "text/html";		
-// 	}
-// 	else if (_client->getRequest().method == "DELETE")
-// 	{
-// 		// std::cout << "File Path: " << filePath << std::endl; //debug
-// 		if (std::remove(filePath.c_str()) == 0)
-// 		{
-// 			_statusCode = 204;
-// 			_body.clear();
-// 			_contentLength = 0;
-// 			_contentType.clear();
-// 		}
-// 		else 
-// 		{
-// 			if (errno == ENOENT)
-// 			{
-// 				// std::cout << "here" << std::endl; //debug
-// 				throw (404);
-// 			}
-// 			else if (errno == EACCES)
-// 				throw (403);
-// 			else
-// 				throw (500);
-// 		}
-// 	}
-// 	setCurrentTime();
-// 	setLastModified(filePath);
-// }
-
-// std::string filePath = "FromMuzz";
-// //read file and take path
-// std::ifstream file(filePath.c_str());
-// if (!file.is_open())
-// 	throw(404);
-// std::stringstream ss;
-// ss << file.rdbuf();
-// _body = ss.str();
-// _contentLength = _body.size();
-// //set status and body
-// _statusCode = 200;
-// //set content type based on the file extension
-// size_t pos = filePath.rfind(".");
-// if (pos != std::string::npos)
-// {
-// 	std::string ext = filePath.substr(pos);
-// 	if (ext == ".html")
-// 		_contentType = "text/html";
-// 	else if (ext == ".css")
-// 		_contentType = "text/css";
-// 	else if (ext == ".js")
-// 		_contentType = "application/javascript";
-// 	else if (ext == ".jpeg")
-// 		_contentType = "image/jpeg";
-// 	else if (ext == ".png")
-// 		_contentType = "image/png";
-// 	else
-// 	 	_contentType = "text/plain"; //it wouldnt try to execute
-// }
-// else
-// {
-// 	//trigger to save/downlaod the file only
-// 	_contentType = "application/octet-stream";
-// 	//throw (404);
-// }
-
-// void	Respond::procNormalOutput(const t_request& request, const t_location& locate)
-// {
-// 	std::string script_name = request.path.substr(locate.path.size()); 
-// 	std::string	root 		= locate.root;
-
-// 	//script_name should be /test.py. locate.root should be ./www.
-// 	//					SCRIPT START W /
-// 	if (script_name[0] != '/')
-// 		script_name = "/" + script_name;
-// 	std::string absPath = root + script_name; 
-// 	//					ROOT END NOT /
-// 	if (!root.empty() && root[root.size() - 1] == '/')
-// 		root.erase(root.size() - 1,  1);
-	
-// 	_filePath = absPath; //FromMuzz
-// 	if (request.method == "POST")
-// 	{
-// 		std::ofstream outfile(_filePath.c_str(), std::ios::out | std::ios::trunc);
-// 		if (!outfile.is_open())
-// 			throw (500);
-// 		outfile << request.body;
-// 		outfile.close();
-// 		_statusCode = 201;
-// 		_body = "<html><head><title>201 Created</title></head><body>"
-//         "<h1>File Created Successfully</h1><p>The resource has been uploaded.</p>"
-//         "<hr><address>Webserv/1.0</address></body></html>";
-// 		_contentLength = _body.size();
-// 		_contentType = "text/html";
-// 	}
-// 	else if (request.method == "GET")
-// 	{
-// 		//read file and take path
-// 		std::ifstream file(_filePath.c_str());
-// 		if (!file.is_open())
-// 			throw(404);
-// 		std::stringstream ss;
-// 		ss << file.rdbuf();
-// 		//set status
-// 		_statusCode = 200;
-// 		//set body
-// 		_body = ss.str();
-// 		_contentLength = _body.size();
-// 		//set content type based on the file extension
-// 		setContentType();
-// 	}
-// }
-
-// void	Respond::procCgiOutput(std::string cgiOutput)
-// {
-// 	// std::cout << "cgiOutput: " << cgiOutput << std::endl; //debug
-// 	if (cgiOutput.empty())
-// 		return buildErrorResponse(502);
-// 	//			FIND SEPARATOR(usually \r\n\r\n)
-// 	size_t	separatorPos = cgiOutput.find("\r\n\r\n");
-// 	size_t	offset = 4;
-// 	if (separatorPos == std::string::npos)
-// 	{
-// 		separatorPos = cgiOutput.find("\n\n");
-// 		offset = 2;
-// 	}
-// 	if (separatorPos == std::string::npos)
-// 		return buildErrorResponse(502);
-// 	//				EXTRACT HEADER		
-// 	std::string	header = cgiOutput.substr(0, separatorPos);
-// 	std::string headerLow = header;
-// 	for (size_t i = 0; i < headerLow.length(); i++)
-// 		headerLow[i] = std::tolower(headerLow[i]);
-// 	//				FIND STATUS#
-// 	size_t	statusPos = headerLow.find("status");
-// 	if (statusPos == std::string::npos)
-// 		_statusCode = 200;
-// 	else
-// 	{
-// 		// std::string statusStr = header.substr(statusPos + 8, 3);
-// 		size_t	statusDigitPos = header.find_first_of("1234567890", statusPos);
-// 		std::string statusStr = header.substr(statusDigitPos, 3);
-// 		_statusCode = std::atoi(statusStr.c_str());
-// 	}
-// 	if (_statusCode < 100 || _statusCode > 599)
-// 		_statusCode = 502;
-// 	//				FIND CONTENT TYPE#
-// 	size_t contentTypePos = headerLow.find("content-type");
-// 	if (contentTypePos != std::string::npos)
-// 	{
-// 		size_t	start = contentTypePos + 13;
-// 		while (start < header.length() && (header[start] == ' ' || header[start] == '\t'))
-// 			start++;
-// 		size_t	end = header.find("\n", start); //by searching \n, can handle both
-// 		if (end == std::string::npos)
-// 			_contentType = header.substr(start);
-// 		else
-// 		{
-// 			_contentType = header.substr(start, end - start);
-// 			if (!_contentType.empty() && _contentType[_contentType.size() - 1] == '\r')
-//         		_contentType.erase(_contentType.size() - 1); //need to recheck
-// 		}
-// 	}
-// 	else
-// 		_contentType = "text/html";
-// 	// ---------------- FIND LOCATION# ----------------
-// 	size_t locationPos = headerLow.find("location");
-// 	if (locationPos != std::string::npos)
-// 	{
-// 		size_t start = locationPos + 9;
-// 		while (start < header.length() && (header[start] == ' ' || header[start] == '\t'))
-// 			start++;
-// 		size_t end = header.find("\n", start);
-// 		if (end == std::string::npos)
-// 			_location = header.substr(start);
-// 		else
-// 		{
-// 			_location = header.substr(start, end - start);
-// 			if (!_location.empty() && _location[_location.size() - 1] == '\r')
-// 				_location.erase(_location.size() - 1);
-// 		}
-// 	}
-// 	//				EXTRACT BODY	
-// 	_body = cgiOutput.substr(separatorPos + offset);
-// 	_contentLength = _body.length();
-// 	setCurrentTime();
-// }

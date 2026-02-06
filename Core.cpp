@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/05 16:50:23 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/06 11:23:47 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,14 +36,14 @@ void	Core::run()
 	while (g_shutdown == 0)
 	{
 
-		int result = poll(&_fds[0], _fds.size(), 400000);
+		int result = poll(&_fds[0], _fds.size(), 10000);
 		if (result < 0) {
 			if (errno == EINTR)
 				return ;
 			perror("Polls error");
 			continue;
 		}
-		//handleTimeout(); //better put before poll so poll dont run timeout client
+		handleTimeout(); //better put before poll so poll dont run timeout client
 		for (long unsigned int i = 0; i < _fds.size(); i++)
 		{
 			int	oriFd = _fds[i].fd;
@@ -184,16 +184,16 @@ void	Core::handleTimeout()
     {
         Client* client = it->second;
         
-        if (client && client->isIdle(now))
+        if (client && client->state == 3 && client->isIdle(now))
         {
-            if (client->state == READ_REQUEST || client->state == FINISHED)
-            {
-                clients_to_delete.push_back(it->first);
-            }
-            else
-            {
+            // if (client->state == READ_REQUEST || client->state == FINISHED)
+            // {
+            //     clients_to_delete.push_back(it->first);
+            // }
+            // else
+            // {
                 handleClientError(client, client->GetCgiExec() && client->GetCgiExec()->getpid() ? 504 : 408);
-            }
+            // }
         }
     }
     
@@ -207,15 +207,6 @@ void	Core::handleTimeout()
         }
     }
 }
-//comment jap ada error
-// void	Core::launchCgi(Client* client, t_location& locate, t_request& request)
-// {
-// 	client->GetCgiExec()->preExecute();
-// 	client->GetCgiExec()->execute();
-// 	//the part im trying to implement
-// 	cgiRegister(client); //in core because it change the struct that hold all the list
-//
-// }
 
 void	Core::cgiRegister(Client* client)
 {
@@ -223,8 +214,7 @@ void	Core::cgiRegister(Client* client)
 	int ToCgi = CgiExec->getpipeToCgi();
 	int FromCgi = CgiExec->getpipeFromCgi();
 	
-	// _cgiMap[ToCgi] = CgiExec;
-	// _cgiMap[FromCgi] = CgiExec;
+	client->setLastActivity();
 	_clients[ToCgi] = client;
 	_clients[FromCgi] = client;
 	struct pollfd pfdRead;
@@ -275,8 +265,6 @@ void	Core::deleteClient(Client* client)
 		int	pipeToCgi	= client->GetCgiExec()->getpipeToCgi();
 		fdPreCleanup(pipeFromCgi, 0);
 		fdPreCleanup(pipeToCgi, 0);
-		// _clients.erase(pipeFromCgi);
-		// _clients.erase(pipeToCgi);
 	}
 	std::cout << "Client " << socketFd << " deleted from poll" << std::endl; 
 	_clients.erase(socketFd);
@@ -293,7 +281,6 @@ void	Core::removeFd(int fd)
 			close(it->fd);
 			_fds.erase(it);
 			_clients.erase(fd);
-			// _cgiMap.erase(fd);
 			fd = -1;
 			return ;
 		}
@@ -309,7 +296,6 @@ void	Core::fdPreCleanup(int fd, int i)
 			return ;
 		close(fd2);
 		_clients.erase(fd2);
-		// _cgiMap.erase(fd2);
 		_fds[i].fd = -1;
 		_needCleanup = true;
 		return;
@@ -322,7 +308,6 @@ void	Core::fdPreCleanup(int fd, int i)
 			{
 				close(it->fd);
 				_clients.erase(fd);
-				// _cgiMap.erase(fd);
 				it->fd = -1;
 				_needCleanup = true;
 				return ;
@@ -347,8 +332,6 @@ void	Core::fdCleanup()
 
 void	Core::handleClientError(Client* client, int statusCode)
 {
-	//How do Muzz store in map for the custom error file
-	// std::string errorPath = error_pages[statusCode]; //will do map later
 	std::string errorPath = client->getServerConfig().error_pages[statusCode];
 	//Generate.
 	if (!errorPath.empty())
@@ -365,16 +348,6 @@ void	Core::handleClientError(Client* client, int statusCode)
 	client->state = SEND_RESPONSE;
 	respondRegister(client);
 	client->state = WAIT_RESPONSE;
-	//Poll update
-	// for (size_t i = 0; i < _fds.size(); i++)
-	// {
-	// 	if (_fds[i].fd == client->getSocket())
-	// 	{
-	// 		_fds[i].events = POLLIN | POLLOUT;
-	// 		_fds[i].revents = 0;
-	// 		break ;
-	// 	}
-	// }
 }
 
 void	Core::addStagedFds()
