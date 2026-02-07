@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/06 12:30:08 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/07 16:08:54 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -148,11 +148,14 @@ void	Core::handleTransition(Client* client)
 	{
 		if (!client->isKeepAlive())
 		{
+			// sleep(1);//debug
+			std::cout << "deleted client bcus not keep alive" << std::endl; //debug
 			deleteClient(client);
 			return ;
 		}
 		else
 		{
+			std::cout << "reset client bcus keep alive" << std::endl; //debug
 			client->resetClient();
 			client->state = READ_REQUEST;
 			int clientFd = client->getSocket();
@@ -239,56 +242,27 @@ void	Core::deleteClient(Client* client)
 	{
 		int	pipeFromCgi = client->GetCgiExec()->getpipeFromCgi();
 		int	pipeToCgi	= client->GetCgiExec()->getpipeToCgi();
-		fdPreCleanup(pipeFromCgi, 0);
-		fdPreCleanup(pipeToCgi, 0);
+		fdPreCleanup(pipeFromCgi);
+		fdPreCleanup(pipeToCgi);
 	}
 	_clients.erase(socketFd);
-	fdPreCleanup(socketFd, 0);
+	fdPreCleanup(socketFd);
 	delete client;
 }
 
-void	Core::removeFd(int fd)
+void	Core::fdPreCleanup(int fd)
 {
 	for (std::vector<struct pollfd>::iterator it = _fds.begin(); it != _fds.end(); ++it)
 	{
 		if (it->fd == fd)
 		{
 			close(it->fd);
-			_fds.erase(it);
 			_clients.erase(fd);
-			fd = -1;
+			it->fd = -1;
+			_needCleanup = true;
 			return ;
 		}
-	}
-}
-
-void	Core::fdPreCleanup(int fd, int i)
-{
-	if (i)
-	{
-		int fd2 = _fds[i].fd;
-		if (fd2 == -1)
-			return ;
-		close(fd2);
-		_clients.erase(fd2);
-		_fds[i].fd = -1;
-		_needCleanup = true;
-		return;
-	}
-	else 
-	{	
-		for (std::vector<struct pollfd>::iterator it = _fds.begin(); it != _fds.end(); ++it)
-		{
-			if (it->fd == fd)
-			{
-				close(it->fd);
-				_clients.erase(fd);
-				it->fd = -1;
-				_needCleanup = true;
-				return ;
-			}
-		}
-	}
+	}	
 }
 
 void	Core::fdCleanup()
@@ -316,9 +290,10 @@ void	Core::handleClientError(Client* client, int statusCode)
 	if (client->isCgiExecuted())
 	{
 		client->GetCgiExec()->clearCgi();
-		fdPreCleanup(client->GetCgiExec()->getpipeFromCgi(), 0);
-		fdPreCleanup(client->GetCgiExec()->getpipeToCgi(), 0);
+		fdPreCleanup(client->GetCgiExec()->getpipeFromCgi());
+		fdPreCleanup(client->GetCgiExec()->getpipeToCgi());
 	}
+	std::cout << "client iskeepalive inhandleclienterror: " << client->isKeepAlive()  << std::endl; //debug
 	//State update
 	client->state = SEND_RESPONSE;
 	respondRegister(client);
@@ -564,7 +539,7 @@ void Core::parse_http_request(Client* current_client, const std::string raw_req)
     }
 	
 	//putIntoCached(current_request); //importantdebug
-	// debugHttpRequest(current_request); //importantdebug
+	debugHttpRequest(current_request); //importantdebug
 	current_client->checkBestLocation();
 	current_client->state = HANDLE_REQUEST;
 }
@@ -926,4 +901,19 @@ void	Core::CleanupAll()
 //             deleteClient(client);
 //         }
 //     }
+// }
+
+// void	Core::removeFd(int fd)
+// {
+// 	for (std::vector<struct pollfd>::iterator it = _fds.begin(); it != _fds.end(); ++it)
+// 	{
+// 		if (it->fd == fd)
+// 		{
+// 			close(it->fd);
+// 			_fds.erase(it);
+// 			_clients.erase(fd);
+// 			fd = -1;
+// 			return ;
+// 		}
+// 	}
 // }

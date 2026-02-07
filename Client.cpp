@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/06 12:22:30 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/07 15:49:39 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,6 +23,10 @@
 #include <iostream>
 #include <cstdio>
 #include <cctype>
+#include <cstring>
+
+// void force_drain_socket(int client_fd, long long content_length);
+
 
 Client::Client(t_server& server_config, std::map<std::string, std::string>& cookies) : 
 	_serverConfig(server_config), _executor(NULL), 
@@ -66,6 +70,7 @@ void	Client::procInput(int i, struct pollfd& pFd)
 			// For now, just serve as normal file
 			std::string protocol = request.http_version.empty() ? "HTTP/1.1" : request.http_version;
 			setCgiExec(new CgiExecute(this, protocol));
+			std::cout << "protocol check in procinput: " << std::endl; //debug
 			GetCgiExec()->preExecute();
 			GetCgiExec()->execute();
 			state = EXECUTE_CGI;
@@ -168,8 +173,9 @@ bool	Client::isCGIextOK(const s_HttpRequest& request, const t_location& locate) 
 void	Client::resetClient()
 {
 	//reset request struct/class FromMuzz
-	if (_executor)
+	if /*(_executor)*/(isCgiExecuted())
 	{
+		std::cout << "deleted client" << std::endl;
 		delete _executor;
 		_executor = NULL;
 	}
@@ -181,6 +187,7 @@ void	Client::resetClient()
 	
 	// Reset non-blocking request buffer
 	resetRequestBuffer();
+	std::cout << "resetted client" << std::endl; //debug
 }
 
 void	Client::fdPreCleanup(struct pollfd& pFd)
@@ -255,6 +262,7 @@ void Client::setConnStatus(bool status)
 bool Client::readHttpRequest()
 {
 	char buffer[4096];
+	memset(buffer, 0, sizeof(buffer)); //debug
 	ssize_t bytes_read = recv(_socket, buffer, sizeof(buffer) - 1, MSG_DONTWAIT);
 
 	if (bytes_read > 0) {
@@ -288,6 +296,9 @@ bool Client::readHttpRequest()
 				} else {
 					_expectedBodyLength = parseContentLength(headers_only);
 					if (_expectedBodyLength > _maxBodySize) {
+						// long long remaining = _expectedBodyLength - _currentBodyLength; //debug
+						// std::cout << "remaining value: " << remaining << ". contentlength: "<< _expectedBodyLength << "currentbody_length" << _currentBodyLength << std::endl; //debug
+    					// force_drain_socket(_socket, remaining); //debug
 						// std::cout << "Request body too large" <<std::endl;
 						_requestComplete = false;
 						_disconnected = true;
@@ -351,6 +362,38 @@ bool Client::readHttpRequest()
 		}
 	}
 }
+
+//debug
+#include <sys/socket.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <iostream>
+
+void force_drain_socket(int client_fd, long long content_length) {
+    // 1. Set socket to BLOCKING mode 
+    // (This ensures recv waits for the data to arrive)
+    int flags = fcntl(client_fd, F_GETFL, 0);
+    fcntl(client_fd, F_SETFL, flags & ~O_NONBLOCK);
+
+    char buffer[8192];
+    long long total_discarded = 0;
+
+    std::cout << "Draining " << content_length << " bytes..." << std::endl;
+
+    // 2. Loop until all expected data is read or the client closes
+    while (total_discarded < content_length) {
+        ssize_t bytes_received = recv(client_fd, buffer, sizeof(buffer), 0);
+        
+        if (bytes_received <= 0) {
+            break; // Client closed connection or an error occurred
+        }
+        total_discarded += bytes_received;
+    }
+
+    std::cout << "Drain complete. Discarded: " << total_discarded << " bytes." << std::endl;
+}
+//debug
+
 
 bool Client::isRequestComplete()
 {

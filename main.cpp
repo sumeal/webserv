@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/14 10:54:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/06 12:50:18 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/07 15:21:53 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -45,27 +45,4 @@ int main(int argc, char **argv)
 	{
 		std::cerr << e.what() << std::endl;
 	}
-	// core.pathCheck("/index.html");
 }
-
-// 	if (argc != 2)
-// 	{
-// 		std::cerr << "Usage: " << argv[0] << " <config_file>" << std::endl;
-// 		return (1);
-// 	}
-// 	std::string config_file = argv[1];
-// 	TestServer t;
-	
-// 	// Parse config file (COMPONENT 1)
-// 	t.parse_config(config_file);
-	
-// 	// Initialize server with config values
-// 	t.initialize_server();
-	
-// 	// Debug: Print parsed config
-// 	t.print_config();
-	
-// 	// Launch server with correct port and settings
-// 	t.launch();
-// 	return (0);
-// }

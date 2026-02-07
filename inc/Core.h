@@ -49,8 +49,7 @@ public:
 	//Geminied. muzz part
 	void 	serverRegister(int serverFd);
 	void	deleteClient(Client* client);
-	void	fdPreCleanup(int fd, int index);
-	void	removeFd(int fd);//maybe not needed
+	void	fdPreCleanup(int fd);
 	void	respondRegister(Client* client);
 	void	handleClientError(Client* client, int statusCode);
 	void	handleTimeout();
@@ -74,4 +73,5 @@ public:
 	void	forceMockEvents();
     void	print_location_config(const t_location& location, int index = 0);
     void	print_all_locations();
+	// void	removeFd(int fd);//maybe not needed
 };
