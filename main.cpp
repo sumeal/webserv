@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/14 10:54:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/07 15:21:53 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/08 15:08:02 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -34,15 +34,15 @@ int main(int argc, char **argv)
 	core.parse_config(config_file);
 	// core.print_all_locations();
 	core.initialize_server();
-	try 
-	{
+	// try 
+	// {
 		signal(SIGINT, Helper::signalHandler);
 		core.run();
 		if (g_shutdown == 1)
 			core.CleanupAll();
-	} 
-	catch (const std::exception& e) 
-	{
-		std::cerr << e.what() << std::endl;
-	}
+	// } 
+	// catch (const std::exception& e) 
+	// {
+	// 	std::cerr << e.what() << std::endl;
+	// }
 }

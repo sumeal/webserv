@@ -52,6 +52,8 @@ public:
 	void	fdPreCleanup(int fd);
 	void	respondRegister(Client* client);
 	void	handleClientError(Client* client, int statusCode);
+	void	handleEvents();
+	void	handleRequestRead(Client* client);
 	void	handleTimeout();
 	void	handleSocketDc();
 	void	addStagedFds();

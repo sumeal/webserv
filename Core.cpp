@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/07 16:08:54 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/08 23:42:05 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -35,101 +35,120 @@ void	Core::run()
 {
 	while (g_shutdown == 0)
 	{
+		handleTimeout();
 
 		int result = poll(&_fds[0], _fds.size(), 10000);
-		if (result < 0) {
+		if (result < 0) 
+		{
 			if (errno == EINTR)
 				return ;
 			perror("Polls error");
 			continue;
 		}
-		handleTimeout(); 
-		for (long unsigned int i = 0; i < _fds.size(); i++)
-		{
-			int	oriFd = _fds[i].fd;
-			if (oriFd == -1)
-				continue ;
-			int	revents = _fds[i].revents;
-			if (!revents)
-				continue;
-			try
-			{
-				if (_serverFd.find(oriFd) != _serverFd.end()) 
-				{
-					if (revents & POLLIN)
-					{
-						size_t server_index = _serverFd[oriFd];
-						accepter(oriFd, server_index);
-						continue ;
-					}
-				}
-				else 
-				{	
-					Client* client = _clients[oriFd];
-
-					if (!client) {
-						std::cout << "No client found for FD " << oriFd << std::endl;
-						continue;
-					}
-					// Only for client socket (not cgi socket)
-					if ((revents & POLLHUP) && oriFd == client->getSocket())
-					{
-						deleteClient(client); //handle disconnect;
-						i--;
-						continue ;
-					}
-					if (revents & POLLIN || revents & POLLHUP)  //POLLHUP for CGI
-					{
-						if (client->state == READ_REQUEST) 
-						{
-							bool request_ready = client->readHttpRequest();
-							if (client->isDisconnected()) {
-								std::cout << "💀 Client disconnected, marking for cleanup" << std::endl;
-								client->state = DISCONNECTED;
-							} else if (request_ready && client->isRequestComplete()) {
-								std::string raw_request = client->getCompleteRequest();
-								if (!raw_request.empty()) {
-									// std::cout << "🚀 Processing complete HTTP request..." << std::endl;
-									parse_http_request(client, raw_request);
-									client->resetRequestBuffer();
-								} else {
-									client->state = DISCONNECTED;
-								}
-							} else if (!request_ready && !client->isRequestComplete() && !client->isDisconnected()) {
-								// std::cout << "📂 HTTP request incomplete, waiting for more data..." << std::endl;
-							}
-						}
-						client->procInput(i, _fds[i]);
-						if (_clients.find(oriFd) == _clients.end()) 
-						{
-                        	i--;
-                        	continue;
-						}
-					}
-					if (_fds[i].revents & POLLOUT || revents & POLLHUP)
-						client->procOutput(i, _fds[i]);
-					//clean from maps/fd registration queue
-					handleTransition(client);
-				}
-			}
-			catch (int statusCode)
-			{
-				Client* client = _clients[oriFd];
-				if (client) 
-					handleClientError(client, statusCode);
-			}
-			if (_fds[i].fd == -1)
-			{
-				_clients.erase(oriFd);
-				_needCleanup = true;
-			}
-		}
-		//delete all in the delete list
+		if (result > 0)
+			handleEvents();
 		fdCleanup();
-		addStagedFds(); //handle all sementara
+		addStagedFds();
 	}
 }
 
+void	Core::handleEvents()
+{
+	for (long unsigned int i = 0; i < _fds.size(); i++)
+	{
+		int	fd = _fds[i].fd;
+		if (fd == -1)
+			continue ;
+		int	revents = _fds[i].revents;
+		if (!revents)
+			continue;
+		try
+		{
+			if (_serverFd.find(fd) != _serverFd.end()) 
+			{
+				if (revents & POLLIN)
+				{
+					size_t server_index = _serverFd[fd];
+					accepter(fd, server_index);
+					continue ;
+				}
+			}
+			else 
+			{
+				Client* client = _clients[fd];
+				if (!client) 
+				{
+					std::cout << "No client found for FD " << fd << std::endl;
+					continue;
+				}
+				// Only for client socket (not cgi socket)
+				if ((revents & POLLHUP) && fd == client->getSocket())
+				{
+					deleteClient(client); //handle disconnect;
+					i--;
+					continue ;
+				}
+				if (revents & POLLIN || revents & POLLHUP)  //POLLHUP for CGI
+				{
+					handleRequestRead(client);
+					client->procInput(i, _fds[i]);
+					if (_clients.find(fd) == _clients.end()) //what is this for
+					{
+                    	i--;
+                    	continue;
+					}
+				}
+				if (_fds[i].revents & POLLOUT || revents & POLLHUP)
+					client->procOutput(i, _fds[i]);
+				//clean from maps/fd registration queue
+				handleTransition(client);
+			}
+		}
+		catch (int statusCode)
+		{
+			Client* client = _clients[fd];
+			if (client) 
+				handleClientError(client, statusCode);
+		}
+		if (_fds[i].fd == -1) //might be extra check
+		{
+			_clients.erase(fd);
+			_needCleanup = true;
+		}
+	}
+}
+
+// void	Core::handleClientEvent()
+// {
+
+// }
+
+// void	Core::handleServerEvent()
+// {
+	
+// }
+
+void	Core::handleRequestRead(Client* client)
+{
+	if (client->state != READ_REQUEST)
+		return ;
+	bool request_ready = client->readHttpRequest();
+	if (client->isDisconnected()) {
+		std::cout << "💀 Client disconnected, marking for cleanup" << std::endl;
+		client->state = DISCONNECTED;
+	} else if (request_ready && client->isRequestComplete()) {
+		std::string raw_request = client->getCompleteRequest();
+		if (!raw_request.empty()) {
+		// std::cout << "🚀 Processing complete HTTP request..." << std::endl;
+			parse_http_request(client, raw_request);
+			client->resetRequestBuffer();
+		} else {
+			client->state = DISCONNECTED;
+		}
+	} else if (!request_ready && !client->isRequestComplete() && !client->isDisconnected()) {
+		// std::cout << "📂 HTTP request incomplete, waiting for more data..." << std::endl;
+	}
+}
 
 void	Core::handleTransition(Client* client)
 {
@@ -198,16 +217,16 @@ void	Core::cgiRegister(Client* client)
 	client->setLastActivity();
 	_clients[ToCgi] = client;
 	_clients[FromCgi] = client;
-	struct pollfd pfdRead;
-	pfdRead.fd = FromCgi;
-	pfdRead.events = POLLIN;
-	pfdRead.revents = 0;
-	_stagedFds.push_back(pfdRead);
 	struct pollfd pfdWrite;
 	pfdWrite.fd = ToCgi;
 	pfdWrite.events = POLLOUT;
 	pfdWrite.revents = 0;
 	_stagedFds.push_back(pfdWrite);
+	struct pollfd pfdRead;
+	pfdRead.fd = FromCgi;
+	pfdRead.events = POLLIN;
+	pfdRead.revents = 0;
+	_stagedFds.push_back(pfdRead);
 }
 
 void	Core::respondRegister(Client* client)
@@ -915,5 +934,103 @@ void	Core::CleanupAll()
 // 			fd = -1;
 // 			return ;
 // 		}
+// 	}
+// }
+
+// void	Core::run()
+// {
+// 	while (g_shutdown == 0)
+// 	{
+// 		handleTimeout();
+// 		int result = poll(&_fds[0], _fds.size(), 10000);
+// 		if (result < 0) {
+// 			if (errno == EINTR)
+// 				return ;
+// 			perror("Polls error");
+// 			continue;
+// 		} 
+// 		for (long unsigned int i = 0; i < _fds.size(); i++)
+// 		{
+// 			int	oriFd = _fds[i].fd;
+// 			if (oriFd == -1)
+// 				continue ;
+// 			int	revents = _fds[i].revents;
+// 			if (!revents)
+// 				continue;
+// 			try
+// 			{
+// 				if (_serverFd.find(oriFd) != _serverFd.end()) 
+// 				{
+// 					if (revents & POLLIN)
+// 					{
+// 						size_t server_index = _serverFd[oriFd];
+// 						accepter(oriFd, server_index);
+// 						continue ;
+// 					}
+// 				}
+// 				else 
+// 				{	
+// 					Client* client = _clients[oriFd];
+
+// 					if (!client) {
+// 						std::cout << "No client found for FD " << oriFd << std::endl;
+// 						continue;
+// 					}
+// 					// Only for client socket (not cgi socket)
+// 					if ((revents & POLLHUP) && oriFd == client->getSocket())
+// 					{
+// 						deleteClient(client); //handle disconnect;
+// 						i--;
+// 						continue ;
+// 					}
+// 					if (revents & POLLIN || revents & POLLHUP)  //POLLHUP for CGI
+// 					{
+// 						if (client->state == READ_REQUEST) 
+// 						{
+// 							bool request_ready = client->readHttpRequest();
+// 							if (client->isDisconnected()) {
+// 								std::cout << "💀 Client disconnected, marking for cleanup" << std::endl;
+// 								client->state = DISCONNECTED;
+// 							} else if (request_ready && client->isRequestComplete()) {
+// 								std::string raw_request = client->getCompleteRequest();
+// 								if (!raw_request.empty()) {
+// 									// std::cout << "🚀 Processing complete HTTP request..." << std::endl;
+// 									parse_http_request(client, raw_request);
+// 									client->resetRequestBuffer();
+// 								} else {
+// 									client->state = DISCONNECTED;
+// 								}
+// 							} else if (!request_ready && !client->isRequestComplete() && !client->isDisconnected()) {
+// 								// std::cout << "📂 HTTP request incomplete, waiting for more data..." << std::endl;
+// 							}
+// 						}
+// 						client->procInput(i, _fds[i]);
+// 						if (_clients.find(oriFd) == _clients.end()) 
+// 						{
+//                         	i--;
+//                         	continue;
+// 						}
+// 					}
+// 					if (_fds[i].revents & POLLOUT || revents & POLLHUP)
+// 						client->procOutput(i, _fds[i]);
+// 					//clean from maps/fd registration queue
+// 					handleTransition(client);
+// 				}
+// 			}
+// 			catch (int statusCode)
+// 			{
+// 				Client* client = _clients[oriFd];
+// 				if (client) 
+// 					handleClientError(client, statusCode);
+// 			}
+// 			if (_fds[i].fd == -1)
+// 			{
+// 				_clients.erase(oriFd);
+// 				_needCleanup = true;
+// 			}
+// 		}
+// 		//delete all in the delete list
+// 		fdCleanup();
+// 		addStagedFds(); //handle all sementara
 // 	}
 // }

@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/07 15:49:39 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/08 23:33:47 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -56,10 +56,10 @@ void	Client::procInput(int i, struct pollfd& pFd)
 	(void)pFd;
 	if (state == HANDLE_REQUEST)
 	{
+		std::string protocol = request.http_version.empty() ? "HTTP/1.1" : request.http_version;
 		if (!_hasCgi)
 		{
 			// Set protocol from the parsed request - add safety check
-			std::string protocol = request.http_version.empty() ? "HTTP/1.1" : request.http_version;
 			getRespond().procNormalOutput(protocol);
 			getRespond().buildResponse();
 			state = SEND_RESPONSE;
@@ -68,7 +68,7 @@ void	Client::procInput(int i, struct pollfd& pFd)
 		{
 			// For CGI requests, we would need to create and configure the CGI executor
 			// For now, just serve as normal file
-			std::string protocol = request.http_version.empty() ? "HTTP/1.1" : request.http_version;
+			// std::string protocol = request.http_version.empty() ? "HTTP/1.1" : request.http_version;
 			setCgiExec(new CgiExecute(this, protocol));
 			std::cout << "protocol check in procinput: " << std::endl; //debug
 			GetCgiExec()->preExecute();
@@ -82,7 +82,6 @@ void	Client::procInput(int i, struct pollfd& pFd)
 		GetCgiExec()->cgiState();
 		if (GetCgiExec()->isReadDone())
 		{
-			// fdPreCleanup(pipeFromCgi, i);//
 			fdPreCleanup(pFd);
 			if (GetCgiExec()->isDone())
 			{
@@ -611,7 +610,7 @@ void	Client::checkBestLocation()
 		if (request.path.compare(0, loc.path.size(), loc.path) == 0) // 1. img 2.img/
 		{
 			bool boundary = (request.path.size() == loc.path.size() //cases where match both. req: img and loc: img, /img and /img 
-			|| (!loc.path.empty() && loc.path[loc.path.size() - 1] == '/') //cases where loc is img/ and req is only img/... .  so we dont care after loc img/.  why req is only img/? the compare filter it
+			|| (!loc.path.empty() && loc.path[loc.path.size() - 1] == '/') //cases where loc is img/ and req is img/... .  so we dont care after loc img/.  why req is only img/? the compare filter it
 			|| request.path[loc.path.size()] == '/'); //cases where loc: img (no /) will match w/ req: img/ or imga or img.... we only want to allow req: img/
 			if (boundary && loc.path.length() > bestLen)
 			{
@@ -632,7 +631,7 @@ void	Client::checkBestLocation()
 		(getRequest().method == "POST" && !bestLoc->allow_post) || 
 		(getRequest().method == "DELETE" && !bestLoc->allow_delete))
 	{
-		throw 405; //will throw crash server or handle that one client only
+		throw 405; //handle that one client only
 	}
  	_bestLocation = bestLoc;
 }

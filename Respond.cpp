@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 17:17:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/07 14:55:28 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/09 00:10:11 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -308,7 +308,10 @@ void	Respond::procPost(std::string filePath)
 		throw 405;
 	std::ofstream outfile(filePath.c_str(), std::ios::out | std::ios::trunc);
 	if (!outfile.is_open())
+	{
+		std::cout << "this throw 6" <<  std::endl; //debug
 		throw (500);
+	}
 	outfile << _client->getRequest().body;
 	outfile.close();
 	_statusCode = 201;
@@ -335,7 +338,10 @@ void	Respond::procDelete(std::string filePath)
 		else if (errno == EACCES) 	//Permission denied
 			throw (403);
 		else						//Other system error
+		{
+				std::cout << "this throw 10" <<  std::endl; //debug
 			throw (500);
+		}
 	}
 }
 
@@ -344,7 +350,7 @@ void	Respond::buildResponse()
 	std::stringstream ss;
 
 	// Status Line: HTTP/1.1 + parsedCode + OK + \r\n
-	std::cout << "protocol: " << _protocol << std::endl; //debug
+	// std::cout << "protocol: " << _protocol << std::endl; //debug
 	ss << _protocol << " " << _statusCode << " " << getStatusMsg() << "\r\n";
 	ss << "Date: " << _currentTime << "\r\n";
 	if (!_lastModified.empty())
@@ -408,7 +414,7 @@ int	Respond::sendResponse()
             return 0;
 		return -1;
 	}
-	if (sent == 0)
+	if (sent == 0) //disconnected
 		return -1;
 	//updates byteSent
 	_bytesSent += sent;

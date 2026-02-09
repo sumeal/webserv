@@ -37,12 +37,17 @@ CgiExecute::~CgiExecute()
 
 void	CgiExecute::execute()
 {
+	std::cout << "request path in envp: " << _request.path << std::endl; //debug
 	//				PIPE & FORK
 	if (pipe(_pipeIn) == -1)
+	{
+		std::cout << "this throw 5" <<  std::endl; //debug
 		throw (500);
+	}
 	if (pipe(_pipeOut) == -1)
 	{
 		close(_pipeIn[0]); close(_pipeIn[1]);
+		std::cout << "this throw 4" <<  std::endl; //debug
 		throw (500);
 	}
 	_pid = fork();
@@ -50,18 +55,22 @@ void	CgiExecute::execute()
 	{
 		close(_pipeIn[0]); close(_pipeIn[1]);
 		close(_pipeOut[0]); close(_pipeOut[1]);
+		std::cout << "this throw 3" <<  std::endl; //debug
 		throw (500);
 	}
 	else if (_pid == 0)
 		execChild();
 	//			NON-BLOCKING PIPE AND STORE RESULT
-	_client->setHasCgi(true);
+	//_client->setHasCgi(true); //changed
 	close(_pipeIn[0]); close(_pipeOut[1]);
 	_pipeToCgi = _pipeIn[1];
 	_pipeFromCgi = _pipeOut[0];
 	if (fcntl(_pipeToCgi, F_SETFL, O_NONBLOCK) == -1
 		|| fcntl(_pipeFromCgi, F_SETFL, O_NONBLOCK) == -1)
+		{
+		std::cout << "this throw 2" <<  std::endl; //debug
 		throw(500);
+		}
 }
 
 void	CgiExecute::execChild()
@@ -70,6 +79,17 @@ void	CgiExecute::execChild()
 	dup2(_pipeOut[1], STDOUT_FILENO);
 	close(_pipeIn[1]); close(_pipeOut[0]);
 
+	//				MOVE TO CGI DIRECTORY //changed
+	size_t lastSlash = _scriptPath.find_last_of("/");
+	if (lastSlash != std::string::npos)
+	{
+		std::string cgiDir = _scriptPath.substr(0, lastSlash);
+		if (chdir(cgiDir.c_str()) == -1)
+		{
+			std::cerr << "CGI Error: Could not change directory to " << cgiDir << std::endl;
+			exit (1);
+		}
+	}
 	//				EXEC CGI
 	// _locate.interp = "/usr/bin/python3"; //hardcode askMuzz
 	char*	interpreter = const_cast<char*>(_locate.interp.c_str());
@@ -163,13 +183,12 @@ void	CgiExecute::writeExec()
 	size_t	bytesLeft = _request.body.size() - _bodySizeSent;
 	ssize_t	written = write(_pipeToCgi, _request.body.c_str() + _bodySizeSent, bytesLeft);
 	if (written > 0)
-	{
 		_bodySizeSent += written;
-	}
 	if (written == -1)
 	{
 		if (errno == EAGAIN || errno == EWOULDBLOCK)
 			return ;
+		std::cout << "this throw 1" <<  std::endl; //debug
 		throw(500);
 	}
 	if (_bodySizeSent == _request.body.size())
@@ -179,7 +198,7 @@ void	CgiExecute::writeExec()
 //calculate abspath
 void	CgiExecute::preExecute()
 {
-	std::string script_name = _request.path.substr(_locate.path.size()); 
+	std::string script_name = _request.path.substr(_locate.path.size());
 	std::string	root 		= _locate.root;
 	size_t  dotPos = script_name.find_last_of(".");
 	std::string ext = script_name.substr(dotPos);
@@ -190,13 +209,14 @@ void	CgiExecute::preExecute()
 	std::string	interp	= _locate.interp;
 
 	//script_name should be /test.py. locate.root should be ./www.
+	//					ROOT END NOT
+	if (!_locate.root.empty() && _locate.root[_locate.root.size() - 1] == '/') //changed
+		root.erase(root.size() - 1,  1); //changed
 	//					SCRIPT START W /
 	if (script_name[0] != '/')
 		script_name = "/" + script_name;
 	_scriptPath = root + _locate.path + script_name; 
-	//					ROOT END NOT /
-	if (!_locate.root.empty() && _locate.root[_locate.root.size() - 1] == '/')
-		root.erase(root.size() - 1,  1);
+	std::cout << "script path: " << _scriptPath << std::endl; //debug
 	//					CHECK EXISTENCE
 	if (access(_scriptPath.c_str(), F_OK) == -1)
 		throw(404);
@@ -223,13 +243,22 @@ void	CgiExecute::cgiState()
 				if (WEXITSTATUS(status) == 0) //maybe can remove since default is 200
 					_exitStatus = 200;
 				if (WEXITSTATUS(status))
+				{
+						std::cout << "this throw 8" <<  std::endl; //debug
 					_exitStatus = 500;
+				}
 			}
 			else //WIFSIGNALED case
+			{
+					std::cout << "this throw 9" <<  std::endl; //debug
 				_exitStatus = 500;
+			}
 		}
 		else if (res == -1)
+		{
+			std::cout << "this throw 7" <<  std::endl; //debug
 			_exitStatus = 500;
+		}
 	}
 	if (/*_cgi->pid == -1 &&*/ _readEnded && _writeEnded)
 		_client->state = SEND_RESPONSE;
