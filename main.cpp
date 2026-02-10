@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/14 10:54:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/08 15:08:02 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/09 14:53:46 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,7 +32,7 @@ int main(int argc, char **argv)
 	Core core;
 
 	core.parse_config(config_file);
-	// core.print_all_locations();
+	core.print_all_locations();
 	core.initialize_server();
 	// try 
 	// {

@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/08 23:33:47 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/09 16:09:58 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -70,7 +70,6 @@ void	Client::procInput(int i, struct pollfd& pFd)
 			// For now, just serve as normal file
 			// std::string protocol = request.http_version.empty() ? "HTTP/1.1" : request.http_version;
 			setCgiExec(new CgiExecute(this, protocol));
-			std::cout << "protocol check in procinput: " << std::endl; //debug
 			GetCgiExec()->preExecute();
 			GetCgiExec()->execute();
 			state = EXECUTE_CGI;
@@ -186,7 +185,6 @@ void	Client::resetClient()
 	
 	// Reset non-blocking request buffer
 	resetRequestBuffer();
-	std::cout << "resetted client" << std::endl; //debug
 }
 
 void	Client::fdPreCleanup(struct pollfd& pFd)
@@ -621,7 +619,7 @@ void	Client::checkBestLocation()
 	}
 	if (!bestLoc)
 	{
-		std::cout << "this 404 2" << std::endl; //debug
+		std::cout << "checkBestLocation 404" << std::endl; //debug
 		throw 404;
 	}
 	if (getRequest().method != "GET" && getRequest().method != "POST" 

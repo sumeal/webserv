@@ -4,7 +4,7 @@ import os
 import sys
 
 # 1. Setup Directory
-UPLOAD_DIR = "./www/uploads"
+UPLOAD_DIR = "./../uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # 2. Parse Form Data

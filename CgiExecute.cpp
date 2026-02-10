@@ -37,17 +37,14 @@ CgiExecute::~CgiExecute()
 
 void	CgiExecute::execute()
 {
-	std::cout << "request path in envp: " << _request.path << std::endl; //debug
 	//				PIPE & FORK
 	if (pipe(_pipeIn) == -1)
 	{
-		std::cout << "this throw 5" <<  std::endl; //debug
 		throw (500);
 	}
 	if (pipe(_pipeOut) == -1)
 	{
 		close(_pipeIn[0]); close(_pipeIn[1]);
-		std::cout << "this throw 4" <<  std::endl; //debug
 		throw (500);
 	}
 	_pid = fork();
@@ -55,7 +52,6 @@ void	CgiExecute::execute()
 	{
 		close(_pipeIn[0]); close(_pipeIn[1]);
 		close(_pipeOut[0]); close(_pipeOut[1]);
-		std::cout << "this throw 3" <<  std::endl; //debug
 		throw (500);
 	}
 	else if (_pid == 0)
@@ -68,8 +64,7 @@ void	CgiExecute::execute()
 	if (fcntl(_pipeToCgi, F_SETFL, O_NONBLOCK) == -1
 		|| fcntl(_pipeFromCgi, F_SETFL, O_NONBLOCK) == -1)
 		{
-		std::cout << "this throw 2" <<  std::endl; //debug
-		throw(500);
+			throw(500);
 		}
 }
 
@@ -83,7 +78,8 @@ void	CgiExecute::execChild()
 	size_t lastSlash = _scriptPath.find_last_of("/");
 	if (lastSlash != std::string::npos)
 	{
-		std::string cgiDir = _scriptPath.substr(0, lastSlash);
+		std::string cgiDir	= _scriptPath.substr(0, lastSlash);
+		std::string file	= _scriptPath.substr(lastSlash + 1); 
 		if (chdir(cgiDir.c_str()) == -1)
 		{
 			std::cerr << "CGI Error: Could not change directory to " << cgiDir << std::endl;
@@ -93,7 +89,9 @@ void	CgiExecute::execChild()
 	//				EXEC CGI
 	// _locate.interp = "/usr/bin/python3"; //hardcode askMuzz
 	char*	interpreter = const_cast<char*>(_locate.interp.c_str());
-	char*	scriptPath = const_cast<char *>(_scriptPath.c_str());
+	// char*	scriptPath = const_cast<char *>(_scriptPath.c_str()); //old
+	std::string file	= _scriptPath.substr(lastSlash + 1);//changed
+	char*	scriptPath = const_cast<char *>(file.c_str());//changed
 	char*	args[] = { interpreter, scriptPath,NULL};
 	char**	envp = createEnvp();
 	execve(interpreter, args, envp);
@@ -188,7 +186,6 @@ void	CgiExecute::writeExec()
 	{
 		if (errno == EAGAIN || errno == EWOULDBLOCK)
 			return ;
-		std::cout << "this throw 1" <<  std::endl; //debug
 		throw(500);
 	}
 	if (_bodySizeSent == _request.body.size())
@@ -215,7 +212,7 @@ void	CgiExecute::preExecute()
 	//					SCRIPT START W /
 	if (script_name[0] != '/')
 		script_name = "/" + script_name;
-	_scriptPath = root + _locate.path + script_name; 
+	_scriptPath = root + _locate.path + script_name;
 	std::cout << "script path: " << _scriptPath << std::endl; //debug
 	//					CHECK EXISTENCE
 	if (access(_scriptPath.c_str(), F_OK) == -1)
@@ -244,19 +241,16 @@ void	CgiExecute::cgiState()
 					_exitStatus = 200;
 				if (WEXITSTATUS(status))
 				{
-						std::cout << "this throw 8" <<  std::endl; //debug
 					_exitStatus = 500;
 				}
 			}
 			else //WIFSIGNALED case
 			{
-					std::cout << "this throw 9" <<  std::endl; //debug
 				_exitStatus = 500;
 			}
 		}
 		else if (res == -1)
 		{
-			std::cout << "this throw 7" <<  std::endl; //debug
 			_exitStatus = 500;
 		}
 	}

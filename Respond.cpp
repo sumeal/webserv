@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 17:17:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/09 00:10:11 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/09 16:40:13 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -309,7 +309,6 @@ void	Respond::procPost(std::string filePath)
 	std::ofstream outfile(filePath.c_str(), std::ios::out | std::ios::trunc);
 	if (!outfile.is_open())
 	{
-		std::cout << "this throw 6" <<  std::endl; //debug
 		throw (500);
 	}
 	outfile << _client->getRequest().body;
@@ -339,7 +338,6 @@ void	Respond::procDelete(std::string filePath)
 			throw (403);
 		else						//Other system error
 		{
-				std::cout << "this throw 10" <<  std::endl; //debug
 			throw (500);
 		}
 	}
@@ -350,7 +348,6 @@ void	Respond::buildResponse()
 	std::stringstream ss;
 
 	// Status Line: HTTP/1.1 + parsedCode + OK + \r\n
-	// std::cout << "protocol: " << _protocol << std::endl; //debug
 	ss << _protocol << " " << _statusCode << " " << getStatusMsg() << "\r\n";
 	ss << "Date: " << _currentTime << "\r\n";
 	if (!_lastModified.empty())
@@ -431,7 +428,6 @@ void	Respond::buildErrorResponse(int statusCode)
 	_statusCode = statusCode;
 	setCurrentTime();
 	
-	std::cout << "trigger here" << std::endl; //debug
 	std::stringstream bodySs;
 	if(_body.empty())
 	{
@@ -444,7 +440,6 @@ void	Respond::buildErrorResponse(int statusCode)
 	}
 	std::stringstream ss;
 	
-	std::cout << "protocol in build error response: " << _protocol << std::endl; //debug
 	if (_protocol.empty())
 	{
 		std::cout << "protocol hardcoded" << std::endl; //debug
@@ -457,7 +452,6 @@ void	Respond::buildErrorResponse(int statusCode)
 	ss << "Content-Length: " << _body.size() << "\r\n";
 	ss << "Connection: " << (_connStatus == 1 ? "keep-alive":  "close") << "\r\n";
 	// _client->setConnStatus(0);
-	std::cout << "in builderrorresponse. connection hardcoded close but _connstatus(response): " <<  _connStatus << ". Connstatus (client)" << _client->isKeepAlive() << std::endl; ///debug
 	ss << "\r\n";
 	ss << _body;
 	_fullResponse = ss.str();
@@ -490,7 +484,7 @@ void	Respond::printResponse()
 	// std::cout << "Server Name: " << _serverName << std::endl;
 	// std::cout << "Connection Status: " << _connStatus << std::endl;
 	std::cout << "Socket Fd: " << _socketFd;
-	std::cout << "\n\nFull Response: \n" << (_fullResponse.length() > 10000 ? _fullResponse.substr(0, 100) + "..." : _fullResponse) << std::endl;
+	std::cout << "\n\nFull Response: \n" << (_fullResponse.length() > 100 ? _fullResponse.substr(0, 100) + "..." : _fullResponse) << std::endl;
 	std::cout << "\n==========FINISH================" << std::endl;
 }
 

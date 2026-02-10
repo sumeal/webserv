@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/08 23:42:05 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/09 17:13:39 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -168,13 +168,11 @@ void	Core::handleTransition(Client* client)
 		if (!client->isKeepAlive())
 		{
 			// sleep(1);//debug
-			std::cout << "deleted client bcus not keep alive" << std::endl; //debug
 			deleteClient(client);
 			return ;
 		}
 		else
 		{
-			std::cout << "reset client bcus keep alive" << std::endl; //debug
 			client->resetClient();
 			client->state = READ_REQUEST;
 			int clientFd = client->getSocket();
@@ -312,7 +310,6 @@ void	Core::handleClientError(Client* client, int statusCode)
 		fdPreCleanup(client->GetCgiExec()->getpipeFromCgi());
 		fdPreCleanup(client->GetCgiExec()->getpipeToCgi());
 	}
-	std::cout << "client iskeepalive inhandleclienterror: " << client->isKeepAlive()  << std::endl; //debug
 	//State update
 	client->state = SEND_RESPONSE;
 	respondRegister(client);
@@ -411,7 +408,6 @@ void	Core::pathCheck(std::string path)
 	else if(S_ISREG(fileInfo.st_mode))
 	{
 		if (access(fullPath.c_str(), F_OK) != 0) {
-			std::cout << "this 404 3" << std::endl; //debug
 			throw (404);
 		}
 		if (access(fullPath.c_str(), R_OK) != 0)
@@ -558,7 +554,7 @@ void Core::parse_http_request(Client* current_client, const std::string raw_req)
     }
 	
 	//putIntoCached(current_request); //importantdebug
-	debugHttpRequest(current_request); //importantdebug
+	// debugHttpRequest(current_request); //importantdebug
 	current_client->checkBestLocation();
 	current_client->state = HANDLE_REQUEST;
 }
@@ -633,6 +629,7 @@ void Core::print_location_config(const t_location& location, int index)
     std::cout << "Path: " << location.path << std::endl;
     std::cout << "Root: " << (location.root.empty() ? "[not set]" : location.root) << std::endl;
     std::cout << "CGI Enabled: " << (location.cgi_enabled ? "YES" : "NO") << std::endl;
+	std::cout << "Has Redirect: " << (location.has_redirect ? "YES" : "NO") << std::endl;
     
     if (location.cgi_enabled) {
         std::cout << "CGI Path: " << (location.interp.empty() ? "[not set]" : location.interp) << std::endl;
@@ -715,7 +712,7 @@ void Core::parseConnectionHeader(Client* client, const s_HttpRequest& request)
     
     if (keepAlive) {
         client->setConnStatus(KEEP_ALIVE);
-        std::cout << "✅ Connection will be kept alive (" << request.http_version << ")" << std::endl;
+        std::cout << "✅ Connection will be kept alive " /*(" << request.http_version << ")"*/ << std::endl;
     } else {
         client->setConnStatus(CLOSE);
     }
