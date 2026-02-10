@@ -26,7 +26,7 @@ class Parse
 {
 	public:
 		static int parse_outside(const std::string& line, int current_state);
-		static int parse_server(const std::string& line, int current_state, t_server& server_config);
+		static int parse_server(const std::string& line, int current_state, t_server& server_config, std::vector<int>& usedPorts);
 		static int parse_location(const std::string& line, int current_state, t_location& temp_location);
 		static std::string trim_line(const std::string& line);
 		static bool is_comment_or_empty(const std::string& line);

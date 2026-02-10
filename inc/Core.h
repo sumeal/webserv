@@ -68,6 +68,7 @@ public:
 	void 	initialize_server();
 	void 	accepter(int server_fd, size_t server_index);
 	void 	clientRegister(int clientFd, Client* client, size_t server_index);
+	std::vector<int> _usedPorts;
 
 
 
