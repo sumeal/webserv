@@ -6,7 +6,7 @@ import cgitb
 cgitb.enable()
 
 # Ensure this path is correct and accessible by the web server user
-TMP_DIR = "/home/muhamadd/42kl/webserv/www/uploads"
+TMP_DIR = "./../uploads"
 
 method = os.environ.get("REQUEST_METHOD", "GET")
 

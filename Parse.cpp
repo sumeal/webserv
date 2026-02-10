@@ -1,4 +1,4 @@
-#include "Parse.hpp"
+#include "./inc/Parse.hpp"
 
 int Parse::parse_outside(const std::string& line, int  current_state)
 {
@@ -157,6 +157,7 @@ t_location Parse::location_init(const std::string& line)
     new_location.allow_delete = false;
     new_location.auto_index = false;
     new_location.cgi_enabled = false;
+	new_location.has_redirect = false;
     new_location.interp = "";
     new_location.cgi_extension.clear();
     

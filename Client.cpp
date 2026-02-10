@@ -3,17 +3,17 @@
 /*                                                        :::      ::::::::   */
 /*   Client.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
+/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/05 14:19:03 by abin-moh         ###   ########.fr       */
+/*   Updated: 2026/02/10 12:44:00 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "Client.h"
-#include "CGI_data.h"
-#include "CgiExecute.h"
-#include "Respond.h"
+#include "./inc/Client.h"
+#include "./inc/CGI_data.h"
+#include "./inc/CgiExecute.h"
+#include "./inc/Respond.h"
 #include <ctime>
 #include <sys/poll.h>
 #include <unistd.h>
@@ -23,15 +23,19 @@
 #include <iostream>
 #include <cstdio>
 #include <cctype>
+#include <cstring>
+
+// void force_drain_socket(int client_fd, long long content_length);
+
 
 Client::Client(t_server& server_config, std::map<std::string, std::string>& cookies) : 
 	_serverConfig(server_config), _executor(NULL), 
-	_responder(_serverConfig, cookies), _socket(0), 
+	_responder(cookies), _socket(0), 
 	_hasCgi(false), _lastActivity(time(NULL)), _connStatus(CLOSE), 
 	_bestLocation(NULL), _headersParsed(false), _expectedBodyLength(0), 
-	_currentBodyLength(0), _requestComplete(false), 
-	_isChunked(false), _chunkedComplete(false), 
-	_maxBodySize(server_config.client_max_body_size), revived(false)
+	_currentBodyLength(0), _requestComplete(false), _disconnected(false), 
+	_isMaxPayload(false),_isChunked(false), _chunkedComplete(false), 
+	_maxBodySize(server_config.client_max_body_size)
 {
 	state = READ_REQUEST;
 	_responder.setClient(this);
@@ -52,10 +56,10 @@ void	Client::procInput(int i, struct pollfd& pFd)
 	(void)pFd;
 	if (state == HANDLE_REQUEST)
 	{
+		std::string protocol = request.http_version.empty() ? "HTTP/1.1" : request.http_version;
 		if (!_hasCgi)
 		{
 			// Set protocol from the parsed request - add safety check
-			std::string protocol = request.http_version.empty() ? "HTTP/1.1" : request.http_version;
 			getRespond().procNormalOutput(protocol);
 			getRespond().buildResponse();
 			state = SEND_RESPONSE;
@@ -64,7 +68,7 @@ void	Client::procInput(int i, struct pollfd& pFd)
 		{
 			// For CGI requests, we would need to create and configure the CGI executor
 			// For now, just serve as normal file
-			std::string protocol = request.http_version.empty() ? "HTTP/1.1" : request.http_version;
+			// std::string protocol = request.http_version.empty() ? "HTTP/1.1" : request.http_version;
 			setCgiExec(new CgiExecute(this, protocol));
 			GetCgiExec()->preExecute();
 			GetCgiExec()->execute();
@@ -77,7 +81,6 @@ void	Client::procInput(int i, struct pollfd& pFd)
 		GetCgiExec()->cgiState();
 		if (GetCgiExec()->isReadDone())
 		{
-			// fdPreCleanup(pipeFromCgi, i);//
 			fdPreCleanup(pFd);
 			if (GetCgiExec()->isDone())
 			{
@@ -124,7 +127,7 @@ void	Client::procOutput(int i, struct pollfd& pFd)
 		}
 		else if (status)
 		{
-			//getRespond().printResponse(); //importantdebug
+			// getRespond().printResponse(); //importantdebug
 			state = FINISHED;
 		}
 	}
@@ -168,8 +171,9 @@ bool	Client::isCGIextOK(const s_HttpRequest& request, const t_location& locate) 
 void	Client::resetClient()
 {
 	//reset request struct/class FromMuzz
-	if (_executor)
+	if /*(_executor)*/(isCgiExecuted())
 	{
+		std::cout << "deleted client" << std::endl;
 		delete _executor;
 		_executor = NULL;
 	}
@@ -181,8 +185,6 @@ void	Client::resetClient()
 	
 	// Reset non-blocking request buffer
 	resetRequestBuffer();
-	
-	revived = true; //testing
 }
 
 void	Client::fdPreCleanup(struct pollfd& pFd)
@@ -239,7 +241,7 @@ bool	Client::isIdle(time_t now)
 	return false;
 }
 
-bool	Client::isKeepAlive()
+int	Client::isKeepAlive()
 {
 	return _connStatus;
 }
@@ -257,6 +259,7 @@ void Client::setConnStatus(bool status)
 bool Client::readHttpRequest()
 {
 	char buffer[4096];
+	memset(buffer, 0, sizeof(buffer)); //debug
 	ssize_t bytes_read = recv(_socket, buffer, sizeof(buffer) - 1, MSG_DONTWAIT);
 
 	if (bytes_read > 0) {
@@ -289,12 +292,14 @@ bool Client::readHttpRequest()
 					_expectedBodyLength = 0; // Unknown for chunked
 				} else {
 					_expectedBodyLength = parseContentLength(headers_only);
-					std::cout << " TRIGGER Expected Body Length: " << _expectedBodyLength << std::endl; //debug
 					if (_expectedBodyLength > _maxBodySize) {
+						// long long remaining = _expectedBodyLength - _currentBodyLength; //debug
+						// std::cout << "remaining value: " << remaining << ". contentlength: "<< _expectedBodyLength << "currentbody_length" << _currentBodyLength << std::endl; //debug
+    					// force_drain_socket(_socket, remaining); //debug
 						// std::cout << "Request body too large" <<std::endl;
-						_requestComplete = false;
-						state = DISCONNECTED;
-						throw(413);
+						// _requestComplete = false;
+						// _disconnected = true;
+						_isMaxPayload = true;
 					}
 					// std::cout << "📋 Headers parsed - Expected body: " << _expectedBodyLength << " bytes";
 				}
@@ -324,6 +329,10 @@ bool Client::readHttpRequest()
 			}
 			
 			if (isComplete) {
+				if (_isMaxPayload)
+				{
+					throw(413);
+				}
 				_requestComplete = true;
 				_currentRequest = _rawBuffer;
 				
@@ -340,10 +349,8 @@ bool Client::readHttpRequest()
 	}
 	else if (bytes_read == 0) {
 		// std::cout << "📤 Client closed connection (FD: " << _socket << ")" << std::endl;
-		state = DISCONNECTED;
+		_disconnected = true;
 		_requestComplete = false;
-		resetRequestBuffer();
-		setConnStatus(false);
 		return false;
 	}
 	else {
@@ -357,9 +364,46 @@ bool Client::readHttpRequest()
 	}
 }
 
+//debug
+#include <sys/socket.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <iostream>
+
+void force_drain_socket(int client_fd, long long content_length) {
+    // 1. Set socket to BLOCKING mode 
+    // (This ensures recv waits for the data to arrive)
+    int flags = fcntl(client_fd, F_GETFL, 0);
+    fcntl(client_fd, F_SETFL, flags & ~O_NONBLOCK);
+
+    char buffer[8192];
+    long long total_discarded = 0;
+
+    std::cout << "Draining " << content_length << " bytes..." << std::endl;
+
+    // 2. Loop until all expected data is read or the client closes
+    while (total_discarded < content_length) {
+        ssize_t bytes_received = recv(client_fd, buffer, sizeof(buffer), 0);
+        
+        if (bytes_received <= 0) {
+            break; // Client closed connection or an error occurred
+        }
+        total_discarded += bytes_received;
+    }
+
+    std::cout << "Drain complete. Discarded: " << total_discarded << " bytes." << std::endl;
+}
+//debug
+
+
 bool Client::isRequestComplete()
 {
 	return _requestComplete;
+}
+
+bool Client::isDisconnected()
+{
+	return _disconnected;
 }
 
 std::string Client::getCompleteRequest()
@@ -378,8 +422,10 @@ void Client::resetRequestBuffer()
 	_expectedBodyLength = 0;
 	_currentBodyLength = 0;
 	_requestComplete = false;
-	_isChunked = false;
+	_disconnected = false;
+		_isChunked = false;
 	_chunkedComplete = false;
+	_isMaxPayload = false;
 	_chunkedBody.clear();
 }
 
@@ -388,8 +434,6 @@ size_t Client::parseContentLength(const std::string& headers)
 	size_t pos = 0;
 	size_t line_start = 0;
 	
-	std::cout << "Inside parseContentLength()" << std::endl; //debug
-	std::cout << "Headers " << headers << std::endl; //debug
 	while (pos < headers.length()) {
 		size_t line_end = headers.find('\n', pos);
 		if (line_end == std::string::npos) {
@@ -419,7 +463,7 @@ size_t Client::parseContentLength(const std::string& headers)
 					}
 					
 					if (start < value.length()) {
-						std::cout << "📏 Found Content-Length: " << value.substr(start) << std::endl;
+						// std::cout << "📏 Found Content-Length: " << value.substr(start) << std::endl;
 						return static_cast<size_t>(atoi(value.substr(start).c_str()));
 					}
 				}
@@ -558,50 +602,41 @@ t_server&	Client::getServerConfig()
 //what to compare to get the matching location. something from request?
 void	Client::checkBestLocation()
 {
-	// std::cout << "check best location enter" << std::endl; //debug
 	t_location*		bestLoc = NULL;
 	size_t			bestLen = 0;
 	s_HttpRequest&	request = getRequest();
 
-	// std::cout << "Request Path: " << request.path << std::endl;//debug
 	for (size_t i = 0; i < _serverConfig.locations.size();i++)
 	{
 		t_location& loc =  _serverConfig.locations[i];
 
-		// std::cout << "server path: " << loc.path << std::endl; //debug
-		// std::cout << "must same. location path: " << loc.path ; //debug
-		// std::cout << "request path: " << request.path << std::endl; //debug
 		if (request.path.compare(0, loc.path.size(), loc.path) == 0) // 1. img 2.img/
 		{
 			bool boundary = (request.path.size() == loc.path.size() //cases where match both. req: img and loc: img, /img and /img 
-			|| (!loc.path.empty() && loc.path[loc.path.size() - 1] == '/') //cases where loc is img/ and req is only img/... .  so we dont care after loc img/.  why req is only img/? the compare filter it
+			|| (!loc.path.empty() && loc.path[loc.path.size() - 1] == '/') //cases where loc is img/ and req is img/... .  so we dont care after loc img/.  why req is only img/? the compare filter it
 			|| request.path[loc.path.size()] == '/'); //cases where loc: img (no /) will match w/ req: img/ or imga or img.... we only want to allow req: img/
 			if (boundary && loc.path.length() > bestLen)
 			{
 				bestLen = loc.path.length();  
 				bestLoc = &_serverConfig.locations[i];
-				// std::cout << "best location path 1: " << bestLoc->path << std::endl;  //debug
-				// std::cout << "inside if " << i << std::endl;//debug
 			}
 		}
 	}
 	if (!bestLoc)
+	{
+		std::cout << "checkBestLocation 404" << std::endl; //debug
 		throw 404;
+	}
 	if (getRequest().method != "GET" && getRequest().method != "POST" 
 		&& getRequest().method != "DELETE")
 		throw 501;
-	// std::cout << "bestLoc: " << bestLoc->path << "get allowance: " << bestLoc->allow_get << std::endl;//debug
 	if ((getRequest().method == "GET" && !bestLoc->allow_get) ||
 		(getRequest().method == "POST" && !bestLoc->allow_post) || 
 		(getRequest().method == "DELETE" && !bestLoc->allow_delete))
 	{
-		// std::cout << "405 throw trigger" << std::endl; //debug
-		throw 405; //will throw crash server or handle that one client only
+		throw 405; //handle that one client only
 	}
  	_bestLocation = bestLoc;
-	std::cout << "best location path: " << _bestLocation->path << std::endl; //debug
-	std::cout << "root: " << _bestLocation->root << std::endl; //debug
-	// std::cout << "check best location doesnt throw" << std::endl; //debug
 }
 
 t_location*		Client::getBestLocation()
@@ -609,41 +644,12 @@ t_location*		Client::getBestLocation()
 	return _bestLocation;
 }
 
-// t_location&	Client::getCgiLocation()
-// {
-// 	size_t i = 0;
-// 	for (; i < _serverConfig.locations.size(); i++)
-// 	{
-// 		if (_serverConfig.locations[i].path == "/cgi-bin")
-// 			return _serverConfig.locations[i];
-// 	}
-// 	return _serverConfig.locations[i]; //suppose not to trigger
-// }
+void	Client::setLastActivity()
+{
+	_lastActivity = time(NULL);
+}
 
-	// // int pipeFromCgi = GetCgiExec()->getpipeFromCgi(); //my old commit
-	//
-	// if (state == READ_REQUEST)
-	// {
-	// 	//check client disconnect using received
-	// 	//READ REQUEST fromMuzz
-	// 	// if (/*read request finished*/)
-	// 	// if (state == HANDLE_REQUEST)
-	// 	// {
-	// 		if (!isCGI(request, locate))
-	// 		{
-	// 			getRespond().procNormalOutput(request, locate);
-	// 			getRespond().buildResponse();
-	// 			state = SEND_RESPONSE;
-	// 			// respondRegister(client);//
-	// 			// state = WAIT_RESPONSE;
-	// 		}
-	// 		else
-	// 		{
-	// 			setCgiExec(new CgiExecute(this, request, locate));
-	// 			GetCgiExec()->preExecute();
-	// 			GetCgiExec()->execute();
-	// 			state = EXECUTE_CGI;
-	// 			// cgiRegister(client);//
-	// 			// state = WAIT_CGI;
-	// 		}
-	// 	// }
+time_t	Client::getLastActivity()
+{
+	return _lastActivity;
+}

@@ -6,17 +6,16 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/14 10:54:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/01 18:02:42 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/09 14:53:46 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "CGI_data.h"
-#include "Core.h"
+#include "./inc/Core.h"
+#include "./inc/Helper.h"
 #include <csignal>
 #include <exception>
 #include <iostream>
 #include <csignal>
-#include "Helper.h"
 
 volatile sig_atomic_t g_shutdown = 0;
 
@@ -29,82 +28,21 @@ int main(int argc, char **argv)
 	}
 
 	std::string config_file = argv[1];
-
+	srand(time(NULL));
 	Core core;
 
 	core.parse_config(config_file);
-	// core.print_all_locations();
+	core.print_all_locations();
 	core.initialize_server();
-	try 
-	{
+	// try 
+	// {
 		signal(SIGINT, Helper::signalHandler);
 		core.run();
-	} 
-	catch (const std::exception& e) 
-	{
-		std::cerr << e.what() << std::endl;
-	}
-	// core.pathCheck("/index.html");
+		if (g_shutdown == 1)
+			core.CleanupAll();
+	// } 
+	// catch (const std::exception& e) 
+	// {
+	// 	std::cerr << e.what() << std::endl;
+	// }
 }
-
-// Testing functions (commented out - using new s_HttpRequest struct)
-// void	cgitest_data(t_location& _location, s_HttpRequest& _request);
-// void	test_static_get(t_location& loc, s_HttpRequest& req);
-// void 	test_static_post(t_location& loc, s_HttpRequest& req);
-// void	test_cgi_get(t_location& loc, s_HttpRequest& req);
-// void 	test_cgi_post(t_location& loc, s_HttpRequest& req);
-
-// void cgitest_data(t_location& loc, t_request& req)
-// {
-//     // --- 1. Data from the Request Parser ---
-//     req.method   = "POST";
-//     req.uri      = "/cgi-bin/simple.py?user=gemini&id=42"; // The full raw URI
-//     req.path     = "/cgi-bin/simple.py";                   // Path without query
-//     req.query    = "user=gemini&id=42";                 // The query string
-//     req.version  = "HTTP/1.1";
-    
-//     // Headers must include Content-Length for POST requests
-//     req.headers["Host"]           = "localhost:8080";
-//     req.headers["Content-Type"]   = "text/plain";
-//     req.headers["Content-Length"] = "28";
-//     req.headers["User-Agent"]     = "Mozilla/5.0";
-//     req.headers["Accept"]         = "*/*";
-    
-//     req.body = "This is a test body message!";
-
-//     // --- 2. Data from the Config Parser (Location block) ---
-//     loc.path          = "/cgi-bin";             // The prefix in the URL
-//     loc.root          = "./cgi-bin";        // Where scripts are on your disk
-//     loc.cgi_enabled   = true;
-//     loc.cgi_extension = ".py";
-//     loc.cgi_path      = "/usr/bin/python3";     // Path to the python executable
-    
-//     loc.methods.push_back("GET");
-//     loc.methods.push_back("POST");
-
-//     // --- 3. The "Missing Link" (The Absolute Path) ---
-//     // In your execute() logic, you need to calculate where the script actually is.
-//     // Usually: absolute_path = loc.root + (req.path - loc.path)
-//     // For this test, let's assume it's simply:
-//     // abs_path = "./www/cgi-bin/test.py"; 
-// 	if (argc != 2)
-// 	{
-// 		std::cerr << "Usage: " << argv[0] << " <config_file>" << std::endl;
-// 		return (1);
-// 	}
-// 	std::string config_file = argv[1];
-// 	TestServer t;
-	
-// 	// Parse config file (COMPONENT 1)
-// 	t.parse_config(config_file);
-	
-// 	// Initialize server with config values
-// 	t.initialize_server();
-	
-// 	// Debug: Print parsed config
-// 	t.print_config();
-	
-// 	// Launch server with correct port and settings
-// 	t.launch();
-// 	return (0);
-// }

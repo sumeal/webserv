@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   CGI_data.h                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: abin-moh <abin-moh@student.42.fr>          +#+  +:+       +#+        */
+/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/16 15:03:57 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/05 14:21:41 by abin-moh         ###   ########.fr       */
+/*   Updated: 2026/02/04 00:29:31 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -63,10 +63,10 @@ typedef struct s_HttpRequest
     std::map<std::string, std::string> headers;
 
     // Parsed headers (cached for convenience)
-    // std::string host;
-    // int         port;
-    // size_t      content_length;
-    // std::string content_type;
+    std::string host;
+    int         port;
+    size_t      content_length;
+    std::string content_type;
     bool        keep_alive;
 
     std::string body;

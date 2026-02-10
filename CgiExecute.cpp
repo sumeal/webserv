@@ -10,13 +10,12 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-// #include "CgiRequest.h"
-#include "CGI_data.h"
-#include "CgiExecute.h"
+#include "./inc/CGI_data.h"
+#include "./inc/CgiExecute.h"
+#include "./inc/Client.h"
 #include <cerrno>
 #include <cstddef>
 #include <cstdlib>
-#include <stdexcept>
 #include <string>
 #include <sys/poll.h>
 #include <unistd.h>
@@ -25,16 +24,10 @@
 #include <iostream>
 #include <poll.h>
 #include <fcntl.h>
-#include "Client.h"
-
-// CgiExecute::CgiExecute(Client* client, const t_location& locate, const t_request& request)
-// 	: _request(request), _locate(locate), _client(client), _pid(-1), _pipeToCgi(-1), 
-// 	_pipeFromCgi(-1), _bodySizeSent(0), _writeEnded(false), _readEnded(false), 
-// 	_exitStatus(0)
-// {}
+// #include <stdexcept>
 
 CgiExecute::CgiExecute(Client* client, std::string protocol)
-	: _request(client->getRequest()), /*_locate(client->getCgiLocation())*/ _locate(*client->getBestLocation()), _client(client), _pid(-1), _pipeToCgi(-1), 
+	: _request(client->getRequest()), _locate(*client->getBestLocation()), _client(client), _pid(-1), _pipeToCgi(-1), 
 	_pipeFromCgi(-1), _protocol(protocol), _output(""), _bodySizeSent(0), _writeEnded(false), _readEnded(false), 
 	_exitStatus(0)
 {}
@@ -44,10 +37,11 @@ CgiExecute::~CgiExecute()
 
 void	CgiExecute::execute()
 {
-	// std::cout << "start cgi execute" << std::endl; //debug
 	//				PIPE & FORK
 	if (pipe(_pipeIn) == -1)
+	{
 		throw (500);
+	}
 	if (pipe(_pipeOut) == -1)
 	{
 		close(_pipeIn[0]); close(_pipeIn[1]);
@@ -63,14 +57,15 @@ void	CgiExecute::execute()
 	else if (_pid == 0)
 		execChild();
 	//			NON-BLOCKING PIPE AND STORE RESULT
-	_client->setHasCgi(true);
+	//_client->setHasCgi(true); //changed
 	close(_pipeIn[0]); close(_pipeOut[1]);
 	_pipeToCgi = _pipeIn[1];
 	_pipeFromCgi = _pipeOut[0];
 	if (fcntl(_pipeToCgi, F_SETFL, O_NONBLOCK) == -1
 		|| fcntl(_pipeFromCgi, F_SETFL, O_NONBLOCK) == -1)
-		throw(500);
-	// std::cout << "end cgi execute" << std::endl; //debug
+		{
+			throw(500);
+		}
 }
 
 void	CgiExecute::execChild()
@@ -79,10 +74,24 @@ void	CgiExecute::execChild()
 	dup2(_pipeOut[1], STDOUT_FILENO);
 	close(_pipeIn[1]); close(_pipeOut[0]);
 
+	//				MOVE TO CGI DIRECTORY //changed
+	size_t lastSlash = _scriptPath.find_last_of("/");
+	if (lastSlash != std::string::npos)
+	{
+		std::string cgiDir	= _scriptPath.substr(0, lastSlash);
+		std::string file	= _scriptPath.substr(lastSlash + 1); 
+		if (chdir(cgiDir.c_str()) == -1)
+		{
+			std::cerr << "CGI Error: Could not change directory to " << cgiDir << std::endl;
+			exit (1);
+		}
+	}
 	//				EXEC CGI
 	// _locate.interp = "/usr/bin/python3"; //hardcode askMuzz
 	char*	interpreter = const_cast<char*>(_locate.interp.c_str());
-	char*	scriptPath = const_cast<char *>(_scriptPath.c_str());
+	// char*	scriptPath = const_cast<char *>(_scriptPath.c_str()); //old
+	std::string file	= _scriptPath.substr(lastSlash + 1);//changed
+	char*	scriptPath = const_cast<char *>(file.c_str());//changed
 	char*	args[] = { interpreter, scriptPath,NULL};
 	char**	envp = createEnvp();
 	execve(interpreter, args, envp);
@@ -111,10 +120,11 @@ char**	CgiExecute::createEnvp()
 	{
 		envpVector.push_back("REDIRECT_STATUS=200");
 		envpVector.push_back("GATEWAY_INTERFACE=CGI/1.1");
-		envpVector.push_back("SCRIPT_FILENAME=" + _scriptPath);
+		size_t lastSlash = _scriptPath.find_last_of("/"); //changed
+		std::string file	= _scriptPath.substr(lastSlash + 1);//changed
+		std::string	scriptPath = file; //changed
+		envpVector.push_back("SCRIPT_FILENAME=" + scriptPath);
 	}
-	std::cout << "AbsPath: " << _scriptPath << ". Request Path: " << _request.path << std::endl; //debug
-
 	//				FORMAT HEADER
 	//add HTTP_, upper char & push every headers from struct to the envp list
 	std::map<std::string, std::string>::const_iterator it;
@@ -160,7 +170,6 @@ void	CgiExecute::readExec()
 		if (errno == EAGAIN || errno == EWOULDBLOCK)
 			return ;
 
-		std::cerr << "CGI Read Error: " << strerror(errno) << std::endl; //debug
 		throw(502);
 	}
 }
@@ -189,44 +198,37 @@ void	CgiExecute::writeExec()
 //calculate abspath
 void	CgiExecute::preExecute()
 {
-	std::string script_name = _request.path.substr(_locate.path.size()); 
+	std::string script_name = _request.path.substr(_locate.path.size());
 	std::string	root 		= _locate.root;
 	size_t  dotPos = script_name.find_last_of(".");
 	std::string ext = script_name.substr(dotPos);
 	if (ext == ".py")
-		_locate.interp = "/usr/bin/python3"; //hardcode askMuzz
+		_locate.interp = "/usr/bin/python3";
 	else if (ext == ".php")
 		_locate.interp = "/usr/bin/php-cgi";
 	std::string	interp	= _locate.interp;
 
 	//script_name should be /test.py. locate.root should be ./www.
+	//					ROOT END NOT
+	if (!_locate.root.empty() && _locate.root[_locate.root.size() - 1] == '/') //changed
+		root.erase(root.size() - 1,  1); //changed
 	//					SCRIPT START W /
 	if (script_name[0] != '/')
 		script_name = "/" + script_name;
-	_scriptPath = root + _locate.path + script_name; 
-	//					ROOT END NOT /
-	if (!_locate.root.empty() && _locate.root[_locate.root.size() - 1] == '/')
-		root.erase(root.size() - 1,  1);
+	_scriptPath = root + _locate.path + script_name;
+	// std::cout << "script path: " << _scriptPath << std::endl; //debug
 	//					CHECK EXISTENCE
 	if (access(_scriptPath.c_str(), F_OK) == -1)
 		throw(404);
 	//					CHECK EXISTENCE & EXEC
 	if (access(_scriptPath.c_str(), X_OK) == -1)
-	{
-		std::cout << "absPath: " << _scriptPath << std::endl; //debug
-		std::cout << "403 here 1" << std::endl; //debug
 		throw(403);
-	}
 	if (access(interp.c_str(), X_OK) == -1)
-	{
-		std::cout << "403 here 2" << std::endl; //debug	
 		throw(403);
-	}
 }
 
 void	CgiExecute::cgiState()
 {
-	// std::cout << "start cgistate" << std::endl; //debug
 	if (_pid != -1)
 	{
 		int status;
@@ -241,17 +243,22 @@ void	CgiExecute::cgiState()
 				if (WEXITSTATUS(status) == 0) //maybe can remove since default is 200
 					_exitStatus = 200;
 				if (WEXITSTATUS(status))
+				{
 					_exitStatus = 500;
+				}
 			}
 			else //WIFSIGNALED case
+			{
 				_exitStatus = 500;
+			}
 		}
 		else if (res == -1)
+		{
 			_exitStatus = 500;
+		}
 	}
 	if (/*_cgi->pid == -1 &&*/ _readEnded && _writeEnded)
 		_client->state = SEND_RESPONSE;
-	// std::cout << "end cgistate. _exitstatus: " << _exitStatus << std::endl; //debug
 }
 
 //check 2 things
@@ -262,18 +269,14 @@ bool	CgiExecute::isCGI() const
 	return (_locate.cgi_enabled && isCGIextOK());
 }
 
-//should at least support one. which we focus on .py
 bool	CgiExecute::isCGIextOK() const
 {
 	const std::string	path		= _request.path;
 	const std::string	interp	= _locate.interp;
 	
-	//manually without taking from config cgi_ext
-	//use rfind to detect the last dot
 	size_t lastDot = path.rfind(".");
-	if (lastDot == std::string::npos) //how to check npos
+	if (lastDot == std::string::npos)
 		return false; 
-	//use path.substr and check
 	std::string ext = path.substr(lastDot);
 	if (ext != ".cgi" && ext != ".php" && ext != ".py"
 		&& ext != ".sh" && ext != ".pl")
@@ -297,16 +300,6 @@ void	CgiExecute::clearCgi()
 		waitpid(_pid, NULL, WNOHANG);
 		_pid = -1;
 	}
-	// if (_pipeFromCgi != -1)
-	// {
-	// 	close(_pipeFromCgi);
-	// 	_pipeFromCgi = -1;
-	// }
-	// if (_pipeToCgi != -1)
-	// {
-	// 	close(_pipeToCgi);
-	// 	_pipeToCgi =  -1;
-	// }
 }
 
 const std::string&	CgiExecute::getOutput() const
