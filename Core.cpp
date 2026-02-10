@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/09 17:13:39 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/10 12:32:40 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -531,7 +531,7 @@ void Core::parse_http_request(Client* current_client, const std::string raw_req)
 	
 	if (body_start != std::string::npos && body_start < raw_req.length()) {
 		current_request.body = raw_req.substr(body_start);
-		std::cout << "📦 Body extracted: " << current_request.body.length() << " bytes" << std::endl;
+		// std::cout << "📦 Body extracted: " << current_request.body.length() << " bytes" << std::endl;
 	} else {
 		current_request.body = "";
 	}

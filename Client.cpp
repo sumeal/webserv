@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/09 16:09:58 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/10 12:44:00 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -34,7 +34,7 @@ Client::Client(t_server& server_config, std::map<std::string, std::string>& cook
 	_hasCgi(false), _lastActivity(time(NULL)), _connStatus(CLOSE), 
 	_bestLocation(NULL), _headersParsed(false), _expectedBodyLength(0), 
 	_currentBodyLength(0), _requestComplete(false), _disconnected(false), 
-	_isChunked(false), _chunkedComplete(false), 
+	_isMaxPayload(false),_isChunked(false), _chunkedComplete(false), 
 	_maxBodySize(server_config.client_max_body_size)
 {
 	state = READ_REQUEST;
@@ -127,7 +127,7 @@ void	Client::procOutput(int i, struct pollfd& pFd)
 		}
 		else if (status)
 		{
-			getRespond().printResponse(); //importantdebug
+			// getRespond().printResponse(); //importantdebug
 			state = FINISHED;
 		}
 	}
@@ -297,9 +297,9 @@ bool Client::readHttpRequest()
 						// std::cout << "remaining value: " << remaining << ". contentlength: "<< _expectedBodyLength << "currentbody_length" << _currentBodyLength << std::endl; //debug
     					// force_drain_socket(_socket, remaining); //debug
 						// std::cout << "Request body too large" <<std::endl;
-						_requestComplete = false;
-						_disconnected = true;
-						throw(413);
+						// _requestComplete = false;
+						// _disconnected = true;
+						_isMaxPayload = true;
 					}
 					// std::cout << "📋 Headers parsed - Expected body: " << _expectedBodyLength << " bytes";
 				}
@@ -329,6 +329,10 @@ bool Client::readHttpRequest()
 			}
 			
 			if (isComplete) {
+				if (_isMaxPayload)
+				{
+					throw(413);
+				}
 				_requestComplete = true;
 				_currentRequest = _rawBuffer;
 				
@@ -421,6 +425,7 @@ void Client::resetRequestBuffer()
 	_disconnected = false;
 		_isChunked = false;
 	_chunkedComplete = false;
+	_isMaxPayload = false;
 	_chunkedBody.clear();
 }
 

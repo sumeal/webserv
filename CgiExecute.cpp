@@ -120,7 +120,10 @@ char**	CgiExecute::createEnvp()
 	{
 		envpVector.push_back("REDIRECT_STATUS=200");
 		envpVector.push_back("GATEWAY_INTERFACE=CGI/1.1");
-		envpVector.push_back("SCRIPT_FILENAME=" + _scriptPath);
+		size_t lastSlash = _scriptPath.find_last_of("/"); //changed
+		std::string file	= _scriptPath.substr(lastSlash + 1);//changed
+		std::string	scriptPath = file; //changed
+		envpVector.push_back("SCRIPT_FILENAME=" + scriptPath);
 	}
 	//				FORMAT HEADER
 	//add HTTP_, upper char & push every headers from struct to the envp list
@@ -213,7 +216,7 @@ void	CgiExecute::preExecute()
 	if (script_name[0] != '/')
 		script_name = "/" + script_name;
 	_scriptPath = root + _locate.path + script_name;
-	std::cout << "script path: " << _scriptPath << std::endl; //debug
+	// std::cout << "script path: " << _scriptPath << std::endl; //debug
 	//					CHECK EXISTENCE
 	if (access(_scriptPath.c_str(), F_OK) == -1)
 		throw(404);
