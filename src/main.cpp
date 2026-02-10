@@ -6,14 +6,13 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/14 10:54:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/09 14:53:46 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/10 16:26:36 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "./inc/Core.h"
-#include "./inc/Helper.h"
+#include "./../inc/Core.h"
+#include "./../inc/Helper.h"
 #include <csignal>
-#include <exception>
 #include <iostream>
 #include <csignal>
 
@@ -32,17 +31,10 @@ int main(int argc, char **argv)
 	Core core;
 
 	core.parse_config(config_file);
-	core.print_all_locations();
+	// core.print_all_locations(); //importantdebug
 	core.initialize_server();
-	// try 
-	// {
-		signal(SIGINT, Helper::signalHandler);
-		core.run();
-		if (g_shutdown == 1)
-			core.CleanupAll();
-	// } 
-	// catch (const std::exception& e) 
-	// {
-	// 	std::cerr << e.what() << std::endl;
-	// }
+	signal(SIGINT, Helper::signalHandler);
+	core.run();
+	if (g_shutdown == 1)
+		core.CleanupAll();
 }

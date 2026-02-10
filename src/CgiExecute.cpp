@@ -10,9 +10,9 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "./inc/CGI_data.h"
-#include "./inc/CgiExecute.h"
-#include "./inc/Client.h"
+#include "./../inc/CGI_data.h"
+#include "./../inc/CgiExecute.h"
+#include "./../inc/Client.h"
 #include <cerrno>
 #include <cstddef>
 #include <cstdlib>
@@ -219,7 +219,9 @@ void	CgiExecute::preExecute()
 	// std::cout << "script path: " << _scriptPath << std::endl; //debug
 	//					CHECK EXISTENCE
 	if (access(_scriptPath.c_str(), F_OK) == -1)
+	{
 		throw(404);
+	}
 	//					CHECK EXISTENCE & EXEC
 	if (access(_scriptPath.c_str(), X_OK) == -1)
 		throw(403);

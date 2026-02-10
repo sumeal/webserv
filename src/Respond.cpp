@@ -6,13 +6,13 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 17:17:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/09 16:40:13 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/10 16:25:50 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "./inc/Respond.h"
-#include "./inc/CGI_data.h"
-#include "./inc/Client.h"
+#include "./../inc/Respond.h"
+#include "./../inc/CGI_data.h"
+#include "./../inc/Client.h"
 #include <algorithm>
 #include <cctype>
 #include <cerrno>
@@ -197,6 +197,7 @@ void	Respond::procNormalOutput(std::string protocol)
 	std::string filePath;
 	_protocol = protocol;
 
+
 	if (requestPath == "/" || requestPath.empty())
 		filePath = documentRoot + "/index.html";
 	else
@@ -256,12 +257,12 @@ void	Respond::procGet(std::string filePath)
 	//			HANDLE REGULAR FILE	
 	else 
 		fileServe(filePath);
-	if (!_sessionValue.empty())
+	if (!_sessionValue.empty() && !_client->getHasCgi())
 	{
 		std::string greetingHtml = 
 			"<div style='position:fixed;top:20px;width:100%;text-align:center;color:white;"
             "font-family:Arial;font-weight:bold;z-index:9999;'> " + _sessionValue + ", Our Fans!</div>";
-		_body = greetingHtml + _body;
+		_body = _body + greetingHtml;
     	_contentLength = _body.size();
 	}
 }
@@ -289,7 +290,9 @@ void	Respond::fileServe(std::string filePath)
 {
 	std::ifstream file(filePath.c_str());
 	if (!file.is_open())
+	{
 		throw 404;
+	}
 	std::stringstream buffer;
 	buffer << file.rdbuf();
 	file.close();
@@ -333,7 +336,9 @@ void	Respond::procDelete(std::string filePath)
 	else 
 	{
 		if (errno == ENOENT) 		//File doesnt exist
+		{
 			throw (404);
+		}
 		else if (errno == EACCES) 	//Permission denied
 			throw (403);
 		else						//Other system error
@@ -442,7 +447,6 @@ void	Respond::buildErrorResponse(int statusCode)
 	
 	if (_protocol.empty())
 	{
-		std::cout << "protocol hardcoded" << std::endl; //debug
 		_protocol = "HTTP/1.1";
 	}
 	ss << _protocol << " " << _statusCode << " " << getStatusMsg() << "\r\n";

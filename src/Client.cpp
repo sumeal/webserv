@@ -6,14 +6,14 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/10 12:44:00 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/10 16:25:21 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "./inc/Client.h"
-#include "./inc/CGI_data.h"
-#include "./inc/CgiExecute.h"
-#include "./inc/Respond.h"
+#include "./../inc/Client.h"
+#include "./../inc/CGI_data.h"
+#include "./../inc/CgiExecute.h"
+#include "./../inc/Respond.h"
 #include <ctime>
 #include <sys/poll.h>
 #include <unistd.h>
@@ -171,9 +171,9 @@ bool	Client::isCGIextOK(const s_HttpRequest& request, const t_location& locate) 
 void	Client::resetClient()
 {
 	//reset request struct/class FromMuzz
-	if /*(_executor)*/(isCgiExecuted())
+	if (isCgiExecuted())
 	{
-		std::cout << "deleted client" << std::endl;
+		// std::cout << "deleted CGI" << std::endl;
 		delete _executor;
 		_executor = NULL;
 	}

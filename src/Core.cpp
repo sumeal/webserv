@@ -6,15 +6,15 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/10 12:32:40 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/10 16:24:57 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "./inc/Core.h"
-#include "./inc/CGI_data.h"
-#include "./inc/CgiExecute.h"
-#include "./inc/Client.h"
-#include "./inc/Respond.h"
+#include "./../inc/Core.h"
+#include "./../inc/CGI_data.h"
+#include "./../inc/CgiExecute.h"
+#include "./../inc/Client.h"
+#include "./../inc/Respond.h"
 #include <csignal>
 #include <cstddef>
 #include <poll.h>
@@ -134,7 +134,7 @@ void	Core::handleRequestRead(Client* client)
 		return ;
 	bool request_ready = client->readHttpRequest();
 	if (client->isDisconnected()) {
-		std::cout << "💀 Client disconnected, marking for cleanup" << std::endl;
+		//std::cout << "💀 Client disconnected, marking for cleanup" << std::endl;
 		client->state = DISCONNECTED;
 	} else if (request_ready && client->isRequestComplete()) {
 		std::string raw_request = client->getCompleteRequest();
@@ -167,7 +167,6 @@ void	Core::handleTransition(Client* client)
 	{
 		if (!client->isKeepAlive())
 		{
-			// sleep(1);//debug
 			deleteClient(client);
 			return ;
 		}
@@ -712,7 +711,7 @@ void Core::parseConnectionHeader(Client* client, const s_HttpRequest& request)
     
     if (keepAlive) {
         client->setConnStatus(KEEP_ALIVE);
-        std::cout << "✅ Connection will be kept alive " /*(" << request.http_version << ")"*/ << std::endl;
+        // std::cout << "✅ Connection will be kept alive " /*(" << request.http_version << ")"*/ << std::endl;
     } else {
         client->setConnStatus(CLOSE);
     }

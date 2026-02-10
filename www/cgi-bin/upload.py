@@ -57,14 +57,14 @@ if view_file:
     
     # Check if it's an image
     if view_file.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')):
-        print(f"<img src='/uploads/{view_file}'>")
+        print(f"<img src='./../uploads/{view_file}'>")
         # Added a spacer div for images too
         print("<div style='height: 20px;'></div>")
     else:
         # Added 'display: inline-block' and 'margin-bottom'
         print(f"""
             <p>No preview available for this file type.</p>
-            <a href='/uploads/{view_file}' 
+            <a href='./../uploads/{view_file}' 
                class='btn' 
                style='background: #94a3b8; display: inline-block; margin-bottom: 20px;'>
                View / Download
