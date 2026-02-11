@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Core.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
+/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/10 16:24:57 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/11 20:33:17 by muzz             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -167,6 +167,7 @@ void	Core::handleTransition(Client* client)
 	{
 		if (!client->isKeepAlive())
 		{
+			// sleep(1);//debug
 			deleteClient(client);
 			return ;
 		}
@@ -424,10 +425,10 @@ void Core::parse_config(const std::string &filename)
         std::cerr << "Error: config file failed" << std::endl;
         return;
     }
-
+	_usedPorts.clear();
     ParseState current_state = OUTSIDE;
     std::string line;
-
+	
     while (std::getline(file, line)) {
         line = Parse::trim_line(line);
         
@@ -442,7 +443,7 @@ void Core::parse_config(const std::string &filename)
 			}
         }
         else if (current_state == SERVER) {
-            int new_state = Parse::parse_server(line, current_state, temp_server);
+            int new_state = Parse::parse_server(line, current_state, temp_server, _usedPorts);
 			if (new_state == LOCATION && current_state == SERVER) {
 				temp_location = Parse::location_init(line);
 			}
@@ -463,7 +464,6 @@ void Core::parse_config(const std::string &filename)
             current_state = (ParseState)new_state;
         }
     }
-
     file.close();
     std::cout << "Config parsing completed" << std::endl;
 }
@@ -564,8 +564,7 @@ void Core::initialize_server()
 	for(size_t i = 0; i < server_config.size(); i++) {
 		int server_fd = SocketUtils::create_listening_socket(server_config[i].port);
 		if (server_fd < 0) {
-			// std::cerr << "Failed to create server socket" << std::endl;
-			return;
+			exit(1);
 		}
 		if (SocketUtils::set_non_blocking(server_fd) < 0) {
 			// perror("Failed to set non-blocking for Listening Socket");

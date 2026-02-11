@@ -9,15 +9,23 @@ int Parse::parse_outside(const std::string& line, int  current_state)
     return OUTSIDE;
 }
 
-int Parse::parse_server(const std::string& line, int current_state, Server& server_config)
+int Parse::parse_server(const std::string& line, int current_state, Server& server_config, std::vector<int>& _usedPorts)
 {
     std::vector<std::string> tokens = split_line(line);
     
     if (tokens.empty())
 		return current_state;
 		
-	if (tokens[0] == "listen" && tokens.size() >= 2)
+	if (tokens[0] == "listen" && tokens.size() >= 2) {
 		server_config.port = atoi(tokens[1].c_str());
+		for(size_t i = 0; i < _usedPorts.size(); i++) {
+			if (_usedPorts[i] == server_config.port) {
+				std::cout << "Error: Port " << server_config.port << " already in use in another server block." << std::endl;
+				exit(1);
+			}
+		}
+		_usedPorts.push_back(server_config.port);
+	}
 	else if (tokens[0] == "server_name" && tokens.size() >= 2)
 		server_config.server_name = tokens[1];
 	else if (tokens[0] == "root" && tokens.size() >= 2)

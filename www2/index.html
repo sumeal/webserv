@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Second Page</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: #222;
+            color: #fff;
+            padding: 20px;
+            text-align: center;
+        }
+
+        main {
+            padding: 20px;
+        }
+
+        footer {
+            background-color: #ddd;
+            text-align: center;
+            padding: 10px;
+            font-size: 14px;
+        }
+
+        .nav-buttons, .test-buttons {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        .btn:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-get { background-color: #28a745; }
+        .btn-get:hover { background-color: #1e7e34; }
+        
+        .btn-post { background-color: #ffc107; color: #000; }
+        .btn-post:hover { background-color: #d39e00; }
+        
+        .btn-delete { background-color: #dc3545; }
+        .btn-delete:hover { background-color: #a71e2a; }
+
+        #response-area {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            min-height: 50px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Welcome</h1>
+        <p>This is my simple second HTML page</p>
+    </header>
+
+    <main>
+        <h2>About</h2>
+        <p>
+            This page is built with plain HTML and a bit of CSS.
+            Perfect as a starting point for learning or small projects.
+        </p>
+
+        <h2>Navigation & Testing</h2>
+        <div class="nav-buttons">
+            <a href="/about.html" class="btn">About Page</a>
+            <a href="/contact.html" class="btn">Contact Page</a>
+            <a href="/gallery.html" class="btn">Gallery Page</a>
+            <a href="/test.html" class="btn">Test Page</a>
+            <a href="/testing.html" class="btn">🧪 HTTP Testing</a>
+        </div>
+
+    </main>
+
+    <footer>
+        © 2026     42Anonymous - Enhanced with Navigation & HTTP Testing
+    </footer>
+
+</body>
+</html>

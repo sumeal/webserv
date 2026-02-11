@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Respond.cpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
+/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 17:17:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/10 16:25:50 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/11 20:35:07 by muzz             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -292,7 +292,7 @@ void	Respond::fileServe(std::string filePath)
 	if (!file.is_open())
 	{
 		throw 404;
-	}
+	}	
 	std::stringstream buffer;
 	buffer << file.rdbuf();
 	file.close();
@@ -340,8 +340,10 @@ void	Respond::procDelete(std::string filePath)
 			throw (404);
 		}
 		else if (errno == EACCES) 	//Permission denied
+		{
 			throw (403);
-		else						//Other system error
+		}
+			else						//Other system error
 		{
 			throw (500);
 		}

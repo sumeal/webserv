@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Client.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
+/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/10 16:25:21 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/11 20:32:37 by muzz             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -353,14 +353,12 @@ bool Client::readHttpRequest()
 		_requestComplete = false;
 		return false;
 	}
-	else {
-		if (errno == EAGAIN || errno == EWOULDBLOCK) {
-			return false;
-		} else {
-			perror("recv error");
-			_requestComplete = false;
-			return false;
-		}
+	else
+	{
+		perror("recv error");
+		_requestComplete = false;
+		_disconnected = true;
+		return false;
 	}
 }
 
