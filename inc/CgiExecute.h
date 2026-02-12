@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/22 00:37:30 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/09 13:54:39 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/12 11:48:59 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,8 +31,6 @@ private:
 	int		_pipeToCgi;
 	int		_pipeFromCgi;
     std::string _scriptPath; // /var/www/html/cgi-bin/test.py
-    std::string _remoteAddr; // 192.168.1.5.  what is this for??
-    // int         _serverPort; // 8080
 	std::string	_protocol;
 	//CGI postresult
 	std::string	_output;

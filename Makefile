@@ -1,4 +1,4 @@
-NAME     = anonymous.exe
+NAME     = webserv
 SRC_DIR  = src
 OBJ_DIR  = obj
 INC_DIR  = inc

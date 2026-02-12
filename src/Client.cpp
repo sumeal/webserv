@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Client.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
+/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/12 10:31:02 by muzz             ###   ########.fr       */
+/*   Updated: 2026/02/12 11:52:46 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,9 +24,6 @@
 #include <cstdio>
 #include <cctype>
 #include <cstring>
-
-// void force_drain_socket(int client_fd, long long content_length);
-
 
 Client::Client(t_server& server_config, std::map<std::string, std::string>& cookies) : 
 	_serverConfig(server_config), _executor(NULL), 
@@ -68,7 +65,6 @@ void	Client::procInput(int i, struct pollfd& pFd)
 		{
 			// For CGI requests, we would need to create and configure the CGI executor
 			// For now, just serve as normal file
-			// std::string protocol = request.http_version.empty() ? "HTTP/1.1" : request.http_version;
 			setCgiExec(new CgiExecute(this, protocol));
 			GetCgiExec()->preExecute();
 			GetCgiExec()->execute();
@@ -157,14 +153,6 @@ bool	Client::isCGIextOK(const s_HttpRequest& request, const t_location& locate) 
 	if (ext != ".cgi" && ext != ".php" && ext != ".py"
 		&& ext != ".sh" && ext != ".pl")
 		return false;
-	//1 case may need to handle but idk necessary or not.
-	//./../../../etc/passwd.
-	//but still considering to do this right after location matching or now.
-	//bcus if now it might be redundant since static also may need it.
-	//this will causes the user to go outside of root & get private info
-	//if want to handle, use list and every node is separated by /. 
-	//lets say meet .. pop back the last node.
-	//then we create a string and compare with "var/www/html"
 	return true;
 }
 
@@ -173,7 +161,6 @@ void	Client::resetClient()
 	//reset request struct/class FromMuzz
 	if (isCgiExecuted())
 	{
-		// std::cout << "deleted CGI" << std::endl;
 		delete _executor;
 		_executor = NULL;
 	}
@@ -605,7 +592,6 @@ void	Client::checkBestLocation()
 	}
 	if (!bestLoc)
 	{
-		//std::cout << "checkBestLocation 404" << std::endl; //debug
 		throw 404;
 	}
 	if (getRequest().method != "GET" && getRequest().method != "POST" 

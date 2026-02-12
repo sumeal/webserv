@@ -216,7 +216,6 @@ void	CgiExecute::preExecute()
 	if (script_name[0] != '/')
 		script_name = "/" + script_name;
 	_scriptPath = root + _locate.path + script_name;
-	// std::cout << "script path: " << _scriptPath << std::endl; //debug
 	//					CHECK EXISTENCE
 	if (access(_scriptPath.c_str(), F_OK) == -1)
 	{
@@ -259,7 +258,7 @@ void	CgiExecute::cgiState()
 			_exitStatus = 500;
 		}
 	}
-	if (/*_cgi->pid == -1 &&*/ _readEnded && _writeEnded)
+	if (_readEnded && _writeEnded)
 		_client->state = SEND_RESPONSE;
 }
 
@@ -283,14 +282,6 @@ bool	CgiExecute::isCGIextOK() const
 	if (ext != ".cgi" && ext != ".php" && ext != ".py"
 		&& ext != ".sh" && ext != ".pl")
 		return false;
-	//1 case may need to handle but idk necessary or not.
-	//./../../../etc/passwd.
-	//but still considering to do this right after location matching or now.
-	//bcus if now it might be redundant since static also may need it.
-	//this will causes the user to go outside of root & get private info
-	//if want to handle, use list and every node is separated by /. 
-	//lets say meet .. pop back the last node.
-	//then we create a string and compare with "var/www/html"
 	return true;
 }
 

@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Respond.cpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
+/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/28 17:17:52 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/11 20:35:07 by muzz             ###   ########.fr       */
+/*   Updated: 2026/02/12 11:56:47 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,7 +41,7 @@ Respond::~Respond()
 void	Respond::procCgiOutput(std::string cgiOutput)
 {
 	if (cgiOutput.empty())
-		throw(502); //testing.
+		throw(502);
 
 	//			FIND SEPARATOR(usually \r\n\r\n)
 	size_t	separatorPos = cgiOutput.find("\r\n\r\n");
@@ -58,7 +58,7 @@ void	Respond::procCgiOutput(std::string cgiOutput)
 	std::string headerLow = header;
 	for (size_t i = 0; i < headerLow.length(); i++)
 		headerLow[i] = std::tolower(headerLow[i]);
-	//				FIND STATUS#
+	//				FIND STATUS
 	size_t	statusPos = headerLow.find("status");
 	if (statusPos == std::string::npos)
 		_statusCode = 200;
@@ -71,11 +71,11 @@ void	Respond::procCgiOutput(std::string cgiOutput)
 	}
 	if (_statusCode < 100 || _statusCode > 599)
 		_statusCode = 502;
-	//				FIND CONTENT TYPE#
+	//				FIND CONTENT TYPE
 	_contentType = getKeyValue(header, headerLow, "content-type");
 	if (_contentType.empty())
 		_contentType = "text/html";
-	// ---------------- FIND LOCATION# ----------------
+	//				FIND LOCATION
 	_location = getKeyValue(header, headerLow, "location");
 	//				EXTRACT COOKIE
 	_setCookie = getKeyValue(header, headerLow, "set-cookie");
@@ -343,7 +343,7 @@ void	Respond::procDelete(std::string filePath)
 		{
 			throw (403);
 		}
-			else						//Other system error
+		else						//Other system error
 		{
 			throw (500);
 		}

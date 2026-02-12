@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:03:33 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/10 12:41:16 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/12 11:49:34 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -71,7 +71,7 @@ public:
 	void	fdPreCleanup(struct pollfd& pFd);
 	void	resetClient();
 	int		getSocket();
-	void	setSocket(int socket); //askmuzz
+	void	setSocket(int socket);
 	CgiExecute* GetCgiExec();
 	void	setCgiExec(CgiExecute* executor);
 	Respond&	getRespond();

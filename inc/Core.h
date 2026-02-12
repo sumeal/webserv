@@ -23,7 +23,7 @@ class Core {
 private:
 	std::map<int, Client*> _clients;
 	std::vector<struct pollfd> _fds;
-	std::vector<struct pollfd> _stagedFds; //sementara
+	std::vector<struct pollfd> _stagedFds;
 	std::vector<t_server> server_config;
 	std::map<std::string, std::string> _cookies;
 	t_server temp_server;
@@ -57,7 +57,7 @@ public:
 	void	handleTimeout();
 	void	handleSocketDc();
 	void	addStagedFds();
-	void	fdCleanup(); //delStagedFd better naming?
+	void	fdCleanup(); 
 	void	CleanupAll();
 	void	pathCheck(std::string path);
 	std::map<std::string, std::string>& getCookiesMap();
@@ -70,11 +70,7 @@ public:
 	void 	clientRegister(int clientFd, Client* client, size_t server_index);
 	std::vector<int> _usedPorts;
 
-
-
-	// void	acceptMockConnections(t_location& locate, t_request& request, int& clientCount);
 	void	forceMockEvents();
     void	print_location_config(const t_location& location, int index = 0);
     void	print_all_locations();
-	// void	removeFd(int fd);//maybe not needed
 };

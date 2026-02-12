@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Core.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
+/*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/11 22:33:32 by muzz             ###   ########.fr       */
+/*   Updated: 2026/02/12 11:59:27 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -117,16 +117,6 @@ void	Core::handleEvents()
 		}
 	}
 }
-
-// void	Core::handleClientEvent()
-// {
-
-// }
-
-// void	Core::handleServerEvent()
-// {
-	
-// }
 
 void	Core::handleRequestRead(Client* client)
 {
@@ -260,7 +250,7 @@ void	Core::deleteClient(Client* client)
 {
 	int	socketFd = client->getSocket();
 	
-	if (client->getHasCgi()) //supposely dont need since all have closed their CGI
+	if (client->getHasCgi()) //maybe dont need since all have closed their CGI
 	{
 		int	pipeFromCgi = client->GetCgiExec()->getpipeFromCgi();
 		int	pipeToCgi	= client->GetCgiExec()->getpipeToCgi();
@@ -578,8 +568,6 @@ void Core::initialize_server()
 		}
 		_serverFd[server_fd] = i;
 		serverRegister(server_fd);
-		// std::cout << "Server initialized with:" << std::endl;
-		// std::cout << "Port: " << server_config[i].port << std::endl;
 	}
 }
 
@@ -589,7 +577,6 @@ void Core::accepter(int server_fd, size_t server_index)
 	socklen_t addrlen = sizeof(client_addr);
 
 	int new_socket = accept(server_fd, (struct sockaddr *)&client_addr, &addrlen);
-	// std::cout << "New Connection " << new_socket << " Accepted from Server : " << _serverFd[server_index] << std::endl;
 	
 	if (new_socket < 0) {
 		perror("Accept fail");
@@ -604,7 +591,6 @@ void Core::accepter(int server_fd, size_t server_index)
 	Client* new_client = new Client(server_config[server_index], _cookies);
 	clientRegister(new_socket, new_client, server_index);
 	
-	// std::cout << "Client registered seccessfully !" << std::endl;
 }
 
 
