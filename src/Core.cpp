@@ -6,7 +6,7 @@
 /*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/11 20:33:17 by muzz             ###   ########.fr       */
+/*   Updated: 2026/02/11 22:33:32 by muzz             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -241,6 +241,11 @@ void	Core::respondRegister(Client* client)
 		}
 	}
 }
+
+/*
+	POLLIN → Notify me when I can read (data available)
+	POLLOUT → Notify me when I can write (buffer space available)
+*/
 
 void Core::serverRegister(int serverFd)
 {

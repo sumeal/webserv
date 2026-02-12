@@ -6,7 +6,7 @@
 /*   By: muzz <muzz@student.42.fr>                  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/11 20:32:37 by muzz             ###   ########.fr       */
+/*   Updated: 2026/02/12 10:31:02 by muzz             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -293,12 +293,6 @@ bool Client::readHttpRequest()
 				} else {
 					_expectedBodyLength = parseContentLength(headers_only);
 					if (_expectedBodyLength > _maxBodySize) {
-						// long long remaining = _expectedBodyLength - _currentBodyLength; //debug
-						// std::cout << "remaining value: " << remaining << ". contentlength: "<< _expectedBodyLength << "currentbody_length" << _currentBodyLength << std::endl; //debug
-    					// force_drain_socket(_socket, remaining); //debug
-						// std::cout << "Request body too large" <<std::endl;
-						// _requestComplete = false;
-						// _disconnected = true;
 						_isMaxPayload = true;
 					}
 					// std::cout << "📋 Headers parsed - Expected body: " << _expectedBodyLength << " bytes";
@@ -504,7 +498,6 @@ bool Client::isChunkedComplete()
 	// Simple check for final chunk: look for "0\r\n\r\n" or "0\n\n"
 	if (body.find("0\r\n\r\n") != std::string::npos || 
 		body.find("0\n\n") != std::string::npos) {
-		// std::cout << "🏁 Chunked request final chunk detected" << std::endl;
 		return true;
 	}
 	
@@ -513,13 +506,6 @@ bool Client::isChunkedComplete()
 
 bool Client::parseTransferEncoding(const std::string& headers)
 {
-	// std::cout << "🔍 Checking for Transfer-Encoding header..." << std::endl;
-	// std::cout << "📋 Headers to check (" << headers.length() << " bytes):" << std::endl;
-	// std::cout << "📄 Raw headers content:" << std::endl;
-	// std::cout << "\"" << headers << "\"" << std::endl;
-	// std::cout << "--- End Headers ---" << std::endl;
-	
-	// Simple chunked detection - minimal implementation
 	size_t pos = 0;
 	
 	while (pos < headers.length()) {
@@ -533,9 +519,6 @@ bool Client::parseTransferEncoding(const std::string& headers)
 			line.erase(line.length() - 1);
 		}
 		
-		// Print each header line for debugging
-		// std::cout << "🔎 Header line: \"" << line << "\"" << std::endl;
-		
 		// Convert to lowercase for comparison
 		std::string lower_line = line;
 		for (size_t i = 0; i < lower_line.length(); i++) {
@@ -543,12 +526,12 @@ bool Client::parseTransferEncoding(const std::string& headers)
 		}
 		
 		if (lower_line.find("transfer-encoding:") == 0) {
-			// std::cout << "🎯 Found Transfer-Encoding header!" << std::endl;
+			// std::cout << "Found Transfer-Encoding header!" << std::endl;
 			if (lower_line.find("chunked") != std::string::npos) {
-				// std::cout << "✅ Chunked encoding detected!" << std::endl;
+				// std::cout << "Chunked encoding detected!" << std::endl;
 				return true;
 			} else {
-				// std::cout << "❌ Transfer-Encoding found but not chunked: \"" << line << "\"" << std::endl;
+				// std::cout << "ransfer-Encoding found but not chunked: \"" << line << "\"" << std::endl;
 			}
 			break;
 		}
@@ -556,7 +539,7 @@ bool Client::parseTransferEncoding(const std::string& headers)
 		pos = line_end + 1;
 	}
 	
-	// std::cout << "❌ No Transfer-Encoding: chunked header found" << std::endl;
+	// std::cout << " No Transfer-Encoding: chunked header found" << std::endl;
 	return false;
 }
 
@@ -622,7 +605,7 @@ void	Client::checkBestLocation()
 	}
 	if (!bestLoc)
 	{
-		std::cout << "checkBestLocation 404" << std::endl; //debug
+		//std::cout << "checkBestLocation 404" << std::endl; //debug
 		throw 404;
 	}
 	if (getRequest().method != "GET" && getRequest().method != "POST" 

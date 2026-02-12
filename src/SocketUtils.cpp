@@ -15,7 +15,7 @@ int SocketUtils::create_listening_socket(int port)
         close(server_fd);
         return (-1);
     }
-    //set the server socket to given port no
+    //set the server socket to give port number to the ip address
     struct sockaddr_in address;
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
@@ -36,6 +36,12 @@ int SocketUtils::create_listening_socket(int port)
     // std::cout << "Socket created and listening on port " << port << std::endl;
     return (server_fd);
 }
+
+/*
+	read(fd) → waits until data arrives
+	accept(fd) → waits for a client
+	send(fd) → waits if buffer is full
+*/
 
 int SocketUtils::set_non_blocking(int fd)
 {
