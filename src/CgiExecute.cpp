@@ -201,6 +201,8 @@ void	CgiExecute::preExecute()
 	std::string script_name = _request.path.substr(_locate.path.size());
 	std::string	root 		= _locate.root;
 	size_t  dotPos = script_name.find_last_of(".");
+	if (dotPos == std::string::npos)
+		throw(404); //changed
 	std::string ext = script_name.substr(dotPos);
 	if (ext == ".py")
 		_locate.interp = "/usr/bin/python3";
