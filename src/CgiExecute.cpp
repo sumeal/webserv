@@ -39,9 +39,7 @@ void	CgiExecute::execute()
 {
 	//				PIPE & FORK
 	if (pipe(_pipeIn) == -1)
-	{
 		throw (500);
-	}
 	if (pipe(_pipeOut) == -1)
 	{
 		close(_pipeIn[0]); close(_pipeIn[1]);
@@ -57,7 +55,6 @@ void	CgiExecute::execute()
 	else if (_pid == 0)
 		execChild();
 	//			NON-BLOCKING PIPE AND STORE RESULT
-	//_client->setHasCgi(true); //changed
 	close(_pipeIn[0]); close(_pipeOut[1]);
 	_pipeToCgi = _pipeIn[1];
 	_pipeFromCgi = _pipeOut[0];
@@ -87,12 +84,10 @@ void	CgiExecute::execChild()
 		}
 	}
 	//				EXEC CGI
-	// _locate.interp = "/usr/bin/python3"; //hardcode askMuzz
 	char*	interpreter = const_cast<char*>(_locate.interp.c_str());
-	// char*	scriptPath = const_cast<char *>(_scriptPath.c_str()); //old
-	std::string file	= _scriptPath.substr(lastSlash + 1);//changed
-	char*	scriptPath = const_cast<char *>(file.c_str());//changed
-	char*	args[] = { interpreter, scriptPath,NULL};
+	std::string file	= _scriptPath.substr(lastSlash + 1);
+	char*	scriptPath = const_cast<char *>(file.c_str());
+	char*	args[] = {interpreter, scriptPath, NULL};
 	char**	envp = createEnvp();
 	execve(interpreter, args, envp);
 
@@ -120,9 +115,9 @@ char**	CgiExecute::createEnvp()
 	{
 		envpVector.push_back("REDIRECT_STATUS=200");
 		envpVector.push_back("GATEWAY_INTERFACE=CGI/1.1");
-		size_t lastSlash = _scriptPath.find_last_of("/"); //changed
-		std::string file	= _scriptPath.substr(lastSlash + 1);//changed
-		std::string	scriptPath = file; //changed
+		size_t lastSlash = _scriptPath.find_last_of("/");
+		std::string file	= _scriptPath.substr(lastSlash + 1);
+		std::string	scriptPath = file;
 		envpVector.push_back("SCRIPT_FILENAME=" + scriptPath);
 	}
 	//				FORMAT HEADER
@@ -202,7 +197,7 @@ void	CgiExecute::preExecute()
 	std::string	root 		= _locate.root;
 	size_t  dotPos = script_name.find_last_of(".");
 	if (dotPos == std::string::npos)
-		throw(404); //changed
+		throw(404);
 	std::string ext = script_name.substr(dotPos);
 	if (ext == ".py")
 		_locate.interp = "/usr/bin/python3";
@@ -212,8 +207,8 @@ void	CgiExecute::preExecute()
 
 	//script_name should be /test.py. locate.root should be ./www.
 	//					ROOT END NOT
-	if (!_locate.root.empty() && _locate.root[_locate.root.size() - 1] == '/') //changed
-		root.erase(root.size() - 1,  1); //changed
+	if (!_locate.root.empty() && _locate.root[_locate.root.size() - 1] == '/')
+		root.erase(root.size() - 1,  1);
 	//					SCRIPT START W /
 	if (script_name[0] != '/')
 		script_name = "/" + script_name;
@@ -243,22 +238,16 @@ void	CgiExecute::cgiState()
 		{
 			if (WIFEXITED(status))
 			{
-				if (WEXITSTATUS(status) == 0) //maybe can remove since default is 200
+				if (WEXITSTATUS(status) == 0) //can remove since default is 200
 					_exitStatus = 200;
 				if (WEXITSTATUS(status))
-				{
 					_exitStatus = 500;
-				}
 			}
 			else //WIFSIGNALED case
-			{
 				_exitStatus = 500;
-			}
 		}
 		else if (res == -1)
-		{
 			_exitStatus = 500;
-		}
 	}
 	if (_readEnded && _writeEnded)
 		_client->state = SEND_RESPONSE;

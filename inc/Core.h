@@ -21,23 +21,19 @@
 
 class Core {
 private:
-	std::map<int, Client*> _clients;
-	std::vector<struct pollfd> _fds;
-	std::vector<struct pollfd> _stagedFds;
-	std::vector<t_server> server_config;
-	std::map<std::string, std::string> _cookies;
-	t_server temp_server;
-	t_location temp_location;
-	std::map<int, size_t> _serverFd;
-
-	std::vector<Client*> activeClients;
-
-	// Server class (location dalam Mad version) FromMuzz
-	bool	_needCleanup;
+	std::map<int, Client*> 				_clients;
+	std::vector<struct pollfd> 			_fds;
+	std::vector<struct pollfd> 			_stagedFds;
+	std::vector<t_server> 				server_config;
+	std::map<std::string, std::string> 	_cookies;
+	t_server 							temp_server;
+	t_location 							temp_location;
+	std::map<int, size_t> 				_serverFd;
+	std::vector<Client*> 				activeClients;
+	bool								_needCleanup;
+	int 								new_socket;
     void parseConnectionHeader(Client* client, const s_HttpRequest& request);
-	int new_socket;
 	void debugHttpRequest(const t_HttpRequest& request);
-    void putIntoCached(s_HttpRequest& request);
 	Core(const Core& other);
 	Core& operator=(const Core& other);
 public:
@@ -46,7 +42,6 @@ public:
 	void	handleTransition(Client* client);
 	void	cgiRegister(Client* client);
 	void	run();
-	//Geminied. muzz part
 	void 	serverRegister(int serverFd);
 	void	deleteClient(Client* client);
 	void	fdPreCleanup(int fd);
@@ -59,18 +54,15 @@ public:
 	void	addStagedFds();
 	void	fdCleanup(); 
 	void	CleanupAll();
-	void	pathCheck(std::string path);
-	std::map<std::string, std::string>& getCookiesMap();
 
-	//muzz part real
+	//muzz
 	void	parse_config(const std::string &filename);
 	void	parse_http_request(Client* current_client, std::string raw_request);
 	void 	initialize_server();
 	void 	accepter(int server_fd, size_t server_index);
 	void 	clientRegister(int clientFd, Client* client, size_t server_index);
-	std::vector<int> _usedPorts;
-
 	void	forceMockEvents();
     void	print_location_config(const t_location& location, int index = 0);
     void	print_all_locations();
+	std::vector<int> _usedPorts;
 };

@@ -14,7 +14,6 @@ public:
     static int create_listening_socket(int port);
     static int set_non_blocking(int fd);
     
-    // static void close_socket(int fd);
 };
 
 #endif

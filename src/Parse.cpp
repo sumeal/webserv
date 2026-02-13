@@ -3,9 +3,8 @@
 int Parse::parse_outside(const std::string& line, int  current_state)
 {
 	(void)current_state;
-    if (line.find("server") != std::string::npos && line.find("{") != std::string::npos) {
+    if (line.find("server") != std::string::npos && line.find("{") != std::string::npos)
         return SERVER;
-    }
     return OUTSIDE;
 }
 
@@ -16,10 +15,13 @@ int Parse::parse_server(const std::string& line, int current_state, Server& serv
     if (tokens.empty())
 		return current_state;
 		
-	if (tokens[0] == "listen" && tokens.size() >= 2) {
+	if (tokens[0] == "listen" && tokens.size() >= 2)
+	{
 		server_config.port = atoi(tokens[1].c_str());
-		for(size_t i = 0; i < _usedPorts.size(); i++) {
-			if (_usedPorts[i] == server_config.port) {
+		for(size_t i = 0; i < _usedPorts.size(); i++)
+		{
+			if (_usedPorts[i] == server_config.port)
+			{
 				std::cout << "Error: Port " << server_config.port << " already in use in another server block." << std::endl;
 				exit(1);
 			}
@@ -30,11 +32,13 @@ int Parse::parse_server(const std::string& line, int current_state, Server& serv
 		server_config.server_name = tokens[1];
 	else if (tokens[0] == "root" && tokens.size() >= 2)
 		server_config.root = tokens[1];
-	else if (tokens[0] == "index") {
+	else if (tokens[0] == "index")
+	{
 		for (size_t i = 1; i < tokens.size(); i++)  // Start from 1 to skip "index" keyword
 			server_config.index_files.push_back(tokens[i]);
 	}
-	else if (tokens[0] == "error_page" && tokens.size() >= 3) {
+	else if (tokens[0] == "error_page" && tokens.size() >= 3)
+	{
 		int error_code = atoi(tokens[1].c_str());
 		server_config.error_pages[error_code] = tokens[2];
 	}
@@ -46,22 +50,19 @@ int Parse::parse_server(const std::string& line, int current_state, Server& serv
         ss >> size;
         
         // Handle units (K, M, G)
-        if (value.find('K') != std::string::npos || value.find('k') != std::string::npos) {
+        if (value.find('K') != std::string::npos || value.find('k') != std::string::npos)
             size *= 1024;
-        } else if (value.find('M') != std::string::npos || value.find('m') != std::string::npos) {
+    	else if (value.find('M') != std::string::npos || value.find('m') != std::string::npos)
             size *= 1024 * 1024;
-        } else if (value.find('G') != std::string::npos || value.find('g') != std::string::npos) {
+         else if (value.find('G') != std::string::npos || value.find('g') != std::string::npos)
             size *= 1024 * 1024 * 1024;
-        }
+
         server_config.client_max_body_size = size;
-        // std::cout << "   client_max_body_size: " << size << " bytes" << std::endl;
 	}
-    else if (tokens[0] == "location" && tokens.size() >= 2 && line.find("{") != std::string::npos) {
+    else if (tokens[0] == "location" && tokens.size() >= 2 && line.find("{") != std::string::npos)
         return LOCATION;
-    }
-    else if (line.find("}") != std::string::npos) {
+    else if (line.find("}") != std::string::npos) 
         return OUTSIDE;
-    }
     
     return SERVER;
 }
@@ -74,47 +75,49 @@ int Parse::parse_location(const std::string& line, int current_state, Location& 
 		return current_state;
 	else if (tokens[0] == "root" && tokens.size() >= 2)
 		temp_location.root = tokens[1];
-	else if (tokens[0] == "cgi_enabled" && tokens.size() >= 2) {
+	else if (tokens[0] == "cgi_enabled" && tokens.size() >= 2)
 		temp_location.cgi_enabled = (tokens[1] == "true");
-	}
-	else if (tokens[0] == "allow_methods") {
-		for (size_t i = 1; i < tokens.size(); i++) {
+	else if (tokens[0] == "allow_methods")
+	{
+		for (size_t i = 1; i < tokens.size(); i++)
+		{
 			if (tokens[i] == "GET")
 				temp_location.allow_get = true;
 			else if (tokens[i] == "POST")
 				temp_location.allow_post = true;
 			else if (tokens[i] == "DELETE")
 				temp_location.allow_delete = true;
-			else {
+			else
+			{
 				std::cout << "Unknown method " << tokens[i] <<std::endl;
 				exit(1);
 			}
 		}
 	}
-	else if (tokens[0] == "cgi_ext") {
-		for (size_t i = 1; i < tokens.size(); i++) {
+	else if (tokens[0] == "cgi_ext")
+	{
+		for (size_t i = 1; i < tokens.size(); i++)
 			temp_location.cgi_extension.push_back(tokens[i]);
-		}
 	}
-	else if (tokens[0] == "upload_path" && tokens.size() >= 2) {
+	else if (tokens[0] == "upload_path" && tokens.size() >= 2)
 		temp_location.interp = tokens[1];
-	}
-	else if (tokens[0] == "interp" && tokens.size() >= 2) {
+	else if (tokens[0] == "interp" && tokens.size() >= 2)
+	{
 		std::cout << "interp: " << tokens[1] << std::endl;
 		temp_location.interp = tokens[1];
 	}
-	else if (tokens[0] == "autoindex" && tokens.size() >= 2) {
+	else if (tokens[0] == "autoindex" && tokens.size() >= 2)
 		temp_location.auto_index = (tokens[1] == "on");
-	}
-	else if (tokens[0] == "return" && tokens.size() >= 3) {
+	else if (tokens[0] == "return" && tokens.size() >= 3)
+	{
 		temp_location.has_redirect = true;
 		temp_location.redir_status = atoi(tokens[1].c_str());
 		temp_location.redir_path = tokens[2];
 	}
-    else if (line.find("}") != std::string::npos) {
-		if (!temp_location.allow_get && !temp_location.allow_post && !temp_location.allow_delete) {
+    else if (line.find("}") != std::string::npos)
+	{
+		if (!temp_location.allow_get && !temp_location.allow_post && !temp_location.allow_delete)
 			temp_location.allow_get = true;
-		}
         return SERVER;
     }
     return LOCATION;
@@ -141,9 +144,8 @@ std::vector<std::string> Parse::split_line(const std::string& line)
     std::istringstream iss(line);
     std::string token;
     
-    while (iss >> token) {
+    while (iss >> token)
         tokens.push_back(token);
-    }
     
     return tokens;
 }
@@ -153,11 +155,10 @@ t_location Parse::location_init(const std::string& line)
     t_location new_location;
     
     std::vector<std::string> tokens = split_line(line);
-    if (tokens.size() >= 2 && tokens[0] == "location") {
+    if (tokens.size() >= 2 && tokens[0] == "location")
         new_location.path = tokens[1];
-    } else {
+    else 
         new_location.path = "/";
-    }
     
     new_location.root = "";
     new_location.allow_get = false;

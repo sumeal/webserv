@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 00:05:01 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/12 11:52:46 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/13 15:08:47 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -47,10 +47,8 @@ Client::~Client()
 //i = index of Fds
 //if POLLHUP for waitcgi means cgi finished and disconnected
 //if POLLHUP for socket means socket disconnected
-void	Client::procInput(int i, struct pollfd& pFd)
+void	Client::procInput(struct pollfd& pFd)
 {
-	(void)i;
-	(void)pFd;
 	if (state == HANDLE_REQUEST)
 	{
 		std::string protocol = request.http_version.empty() ? "HTTP/1.1" : request.http_version;
@@ -89,15 +87,13 @@ void	Client::procInput(int i, struct pollfd& pFd)
 	}
 }
 
-void	Client::procOutput(int i, struct pollfd& pFd)
+void	Client::procOutput(struct pollfd& pFd)
 {
-	(void)i;
-	(void)pFd;
-	
 	if (state == WAIT_CGI && _executor)
 	{
 		int pipeToCgi = GetCgiExec()->getpipeToCgi();
-		if (pFd.fd == pipeToCgi) {
+		if (pFd.fd == pipeToCgi) 
+		{
 			GetCgiExec()->writeExec();
 			GetCgiExec()->cgiState();
 			if (GetCgiExec()->isWriteDone())
@@ -113,14 +109,11 @@ void	Client::procOutput(int i, struct pollfd& pFd)
 			}
 		}
 	}
-	if (state == WAIT_RESPONSE /*&& *fd == client->getSocket()*/)
+	if (state == WAIT_RESPONSE)
 	{
 		int status = getRespond().sendResponse();
 		if (status == -1)
-		{
-			state = DISCONNECTED;
-			//client disconnect since send return -1 or 0
-		}
+			state = DISCONNECTED; //client disconnect since send return -1 or 0
 		else if (status)
 		{
 			// getRespond().printResponse(); //importantdebug
@@ -249,87 +242,78 @@ bool Client::readHttpRequest()
 	memset(buffer, 0, sizeof(buffer)); //debug
 	ssize_t bytes_read = recv(_socket, buffer, sizeof(buffer) - 1, MSG_DONTWAIT);
 
-	if (bytes_read > 0) {
+	if (bytes_read > 0) 
+	{
 		buffer[bytes_read] = '\0';
 		_rawBuffer.append(buffer, bytes_read);
 		_lastActivity = time(NULL);
-		
-		// std::cout << "📥 Received " << bytes_read << " bytes from FD " << _socket << std::endl;
-		
-		if (!_headersParsed) {
+				
+		if (!_headersParsed) 
+		{
 			size_t header_end = _rawBuffer.find("\r\n\r\n");
-			if (header_end == std::string::npos) {
+			if (header_end == std::string::npos) 
+			{
 				header_end = _rawBuffer.find("\n\n");
-				if (header_end != std::string::npos) {
+				if (header_end != std::string::npos)
 					header_end += 2;
-				}
-			} else {
-				header_end += 4;
+				else
+					header_end += 4;
 			}
 			
-			if (header_end != std::string::npos) {
+			if (header_end != std::string::npos) 
+			{
 				_headersParsed = true;
 				
 				std::string headers_only = _rawBuffer.substr(0, header_end);
 				
 				_isChunked = parseTransferEncoding(headers_only);
 				
-				if (_isChunked) {
-					// std::cout << "📋 Headers parsed - CHUNKED transfer encoding detected" << std::endl;
+				if (_isChunked)
 					_expectedBodyLength = 0; // Unknown for chunked
-				} else {
+				else
+				{
 					_expectedBodyLength = parseContentLength(headers_only);
-					if (_expectedBodyLength > _maxBodySize) {
+					if (_expectedBodyLength > _maxBodySize)
 						_isMaxPayload = true;
-					}
-					// std::cout << "📋 Headers parsed - Expected body: " << _expectedBodyLength << " bytes";
 				}
 				
 				_currentBodyLength = _rawBuffer.length() - header_end;
-				// std::cout << ", Current: " << _currentBodyLength << " bytes" << std::endl;
 			}
-		} else {
+		} 
+		else 
+		{
 			_currentBodyLength = _rawBuffer.length() - (_rawBuffer.find("\r\n\r\n") + 4);
-			if (_rawBuffer.find("\r\n\r\n") == std::string::npos) {
+			if (_rawBuffer.find("\r\n\r\n") == std::string::npos) 
+			{
 				size_t header_end = _rawBuffer.find("\n\n");
-				if (header_end != std::string::npos) {
+				if (header_end != std::string::npos)
 					_currentBodyLength = _rawBuffer.length() - (header_end + 2);
-				}
 			}
 		}
 		
-		if (_headersParsed) {
+		if (_headersParsed) 
+		{
 			bool isComplete = false;
 			
-			if (_isChunked) {
-				// Simple chunked completion check
-				isComplete = isChunkedComplete();
-			} else {
-				// Normal Content-Length completion
-				isComplete = (_currentBodyLength >= _expectedBodyLength);
-			}
+			if (_isChunked)
+				isComplete = isChunkedComplete(); // Simple chunked completion check
+			else
+				isComplete = (_currentBodyLength >= _expectedBodyLength); // Normal Content-Length completion
 			
-			if (isComplete) {
+			if (isComplete) 
+			{
 				if (_isMaxPayload)
-				{
 					throw(413);
-				}
 				_requestComplete = true;
 				_currentRequest = _rawBuffer;
 				
-				if (_isChunked) {
-					// std::cout << "✅ Complete chunked HTTP request received" << std::endl;
-				} else {
-					// std::cout << "✅ Complete HTTP request received (" << _rawBuffer.length() << " bytes)" << std::endl;
-				}
 				return true;
 			}
 		}
-		
 		return false;
 	}
-	else if (bytes_read == 0) {
-		// std::cout << "📤 Client closed connection (FD: " << _socket << ")" << std::endl;
+	else if (bytes_read == 0) 
+	{
 		_disconnected = true;
 		_requestComplete = false;
 		return false;
@@ -349,7 +333,8 @@ bool Client::readHttpRequest()
 #include <unistd.h>
 #include <iostream>
 
-void force_drain_socket(int client_fd, long long content_length) {
+void force_drain_socket(int client_fd, long long content_length) 
+{
     // 1. Set socket to BLOCKING mode 
     // (This ensures recv waits for the data to arrive)
     int flags = fcntl(client_fd, F_GETFL, 0);
@@ -361,19 +346,17 @@ void force_drain_socket(int client_fd, long long content_length) {
     std::cout << "Draining " << content_length << " bytes..." << std::endl;
 
     // 2. Loop until all expected data is read or the client closes
-    while (total_discarded < content_length) {
+    while (total_discarded < content_length) 
+	{
         ssize_t bytes_received = recv(client_fd, buffer, sizeof(buffer), 0);
         
-        if (bytes_received <= 0) {
+        if (bytes_received <= 0)
             break; // Client closed connection or an error occurred
-        }
         total_discarded += bytes_received;
     }
 
     std::cout << "Drain complete. Discarded: " << total_discarded << " bytes." << std::endl;
 }
-//debug
-
 
 bool Client::isRequestComplete()
 {
@@ -387,9 +370,8 @@ bool Client::isDisconnected()
 
 std::string Client::getCompleteRequest()
 {
-	if (_requestComplete) {
+	if (_requestComplete)
 		return _currentRequest;
-	}
 	return "";
 }
 
@@ -413,38 +395,38 @@ size_t Client::parseContentLength(const std::string& headers)
 	size_t pos = 0;
 	size_t line_start = 0;
 	
-	while (pos < headers.length()) {
+	while (pos < headers.length()) 
+	{
 		size_t line_end = headers.find('\n', pos);
-		if (line_end == std::string::npos) {
+		if (line_end == std::string::npos)
 			line_end = headers.length();
-		}
 		std::string line = headers.substr(line_start, line_end - line_start);
-		if (!line.empty() && line[line.length() - 1] == '\r') {
+		if (!line.empty() && line[line.length() - 1] == '\r')
 			line.erase(line.length() - 1);
-		}
-		if (line.length() > 14) { // "Content-Length" is 14 chars
+		if (line.length() > 14) 
+		{ // "Content-Length" is 14 chars
 			std::string lower_line = line;
-			for (size_t i = 0; i < lower_line.length(); i++) {
+			for (size_t i = 0; i < lower_line.length(); i++)
 				lower_line[i] = std::tolower(lower_line[i]);
-			}
 			
-			if (lower_line.find("content-length:") == 0) {
+			if (lower_line.find("content-length:") == 0) 
+			{
 				// Extract value after colon
 				size_t colon_pos = line.find(':');
-				if (colon_pos != std::string::npos) {
+				if (colon_pos != std::string::npos) 
+				{
 					std::string value = line.substr(colon_pos + 1);
 					
 					// Trim whitespace manually
 					size_t start = 0;
 					while (start < value.length() && 
-						   (value[start] == ' ' || value[start] == '\t')) {
+						   (value[start] == ' ' || value[start] == '\t')) 
+					{
 						start++;
 					}
 					
-					if (start < value.length()) {
-						// std::cout << "📏 Found Content-Length: " << value.substr(start) << std::endl;
+					if (start < value.length())
 						return static_cast<size_t>(atoi(value.substr(start).c_str()));
-					}
 				}
 				break;
 			}
@@ -461,30 +443,29 @@ size_t Client::parseContentLength(const std::string& headers)
 bool Client::isChunkedComplete()
 {
 	// Simple chunked completion check - look for final chunk (0\r\n\r\n)
-	if (!_isChunked) {
+	if (!_isChunked)
 		return false;
-	}
 	
 	// Find where body starts
 	size_t body_start = _rawBuffer.find("\r\n\r\n");
-	if (body_start == std::string::npos) {
+	if (body_start == std::string::npos) 
+	{
 		body_start = _rawBuffer.find("\n\n");
-		if (body_start != std::string::npos) {
+		if (body_start != std::string::npos)
 			body_start += 2;
-		}
-	} else {
+	} 
+	else
 		body_start += 4;
-	}
 	
-	if (body_start == std::string::npos) {
+	if (body_start == std::string::npos)
 		return false;
-	}
 	
 	std::string body = _rawBuffer.substr(body_start);
 	
 	// Simple check for final chunk: look for "0\r\n\r\n" or "0\n\n"
 	if (body.find("0\r\n\r\n") != std::string::npos || 
-		body.find("0\n\n") != std::string::npos) {
+		body.find("0\n\n") != std::string::npos) 
+	{
 		return true;
 	}
 	
@@ -495,38 +476,31 @@ bool Client::parseTransferEncoding(const std::string& headers)
 {
 	size_t pos = 0;
 	
-	while (pos < headers.length()) {
+	while (pos < headers.length()) 
+	{
 		size_t line_end = headers.find('\n', pos);
-		if (line_end == std::string::npos) {
+		if (line_end == std::string::npos)
 			line_end = headers.length();
-		}
 		
 		std::string line = headers.substr(pos, line_end - pos);
-		if (!line.empty() && line[line.length() - 1] == '\r') {
+		if (!line.empty() && line[line.length() - 1] == '\r')
 			line.erase(line.length() - 1);
-		}
 		
 		// Convert to lowercase for comparison
 		std::string lower_line = line;
-		for (size_t i = 0; i < lower_line.length(); i++) {
+		for (size_t i = 0; i < lower_line.length(); i++)
 			lower_line[i] = std::tolower(lower_line[i]);
-		}
 		
-		if (lower_line.find("transfer-encoding:") == 0) {
-			// std::cout << "Found Transfer-Encoding header!" << std::endl;
-			if (lower_line.find("chunked") != std::string::npos) {
-				// std::cout << "Chunked encoding detected!" << std::endl;
+		if (lower_line.find("transfer-encoding:") == 0) 
+		{
+			if (lower_line.find("chunked") != std::string::npos)
 				return true;
-			} else {
-				// std::cout << "ransfer-Encoding found but not chunked: \"" << line << "\"" << std::endl;
-			}
 			break;
 		}
 		
 		pos = line_end + 1;
 	}
 	
-	// std::cout << " No Transfer-Encoding: chunked header found" << std::endl;
 	return false;
 }
 
@@ -536,29 +510,28 @@ std::string Client::readRawRequest()
 	char buffer[10000];
 	ssize_t bytes_read = recv(_socket, buffer, sizeof(buffer) - 1, 0);
 
-	if (bytes_read > 0) {
+	if (bytes_read > 0) 
+	{
 		buffer[bytes_read] = '\0';
 		_lastActivity = time(NULL);
-		// std::cout << std::endl << "📥 Received " << bytes_read << " bytes from FD " << _socket << ":" << std::endl;
-        // std::cout << "\"" << std::string(buffer) << "\"" << std::endl;
-        // std::cout << "--- End Request ---" << std::endl;
 		return (std::string(buffer));
 	}
-	else if (bytes_read == 0) {
-		// std::cout << "Client closed connection (FD: " << _socket << ")" << std::endl;
+	else if (bytes_read == 0)
 		return ("");
-	}
-	else {
+	else 
+	{
 		perror("Read error");
 		return ("");
 	}
 }
 
-s_HttpRequest& Client::getRequest() {
+s_HttpRequest& Client::getRequest() 
+{
 	return (request);
 }
 
-std::string Client::getRoot() {
+std::string Client::getRoot() 
+{
 	return (_serverConfig.root);
 }
 
@@ -567,7 +540,6 @@ t_server&	Client::getServerConfig()
 	return (_serverConfig);
 }
 
-//what to compare to get the matching location. something from request?
 void	Client::checkBestLocation()
 {
 	t_location*		bestLoc = NULL;
@@ -591,12 +563,12 @@ void	Client::checkBestLocation()
 		}
 	}
 	if (!bestLoc)
-	{
 		throw 404;
-	}
 	if (getRequest().method != "GET" && getRequest().method != "POST" 
 		&& getRequest().method != "DELETE")
+	{
 		throw 501;
+	}
 	if ((getRequest().method == "GET" && !bestLoc->allow_get) ||
 		(getRequest().method == "POST" && !bestLoc->allow_post) || 
 		(getRequest().method == "DELETE" && !bestLoc->allow_delete))

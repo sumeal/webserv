@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/19 17:40:56 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/12 11:59:27 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/13 15:12:45 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -81,25 +81,18 @@ void	Core::handleEvents()
 					std::cout << "No client found for FD " << fd << std::endl;
 					continue;
 				}
-				// Only for client socket (not cgi socket)
-				if ((revents & POLLHUP) && fd == client->getSocket())
+				if ((revents & POLLHUP) && fd == client->getSocket()) //client disconnect
 				{
-					deleteClient(client); //handle disconnect;
-					i--;
+					deleteClient(client);
 					continue ;
 				}
 				if (revents & POLLIN || revents & POLLHUP)  //POLLHUP for CGI
 				{
 					handleRequestRead(client);
-					client->procInput(i, _fds[i]);
-					if (_clients.find(fd) == _clients.end()) //what is this for
-					{
-                    	i--;
-                    	continue;
-					}
+					client->procInput(_fds[i]);
 				}
 				if (_fds[i].revents & POLLOUT || revents & POLLHUP)
-					client->procOutput(i, _fds[i]);
+					client->procOutput(_fds[i]);
 				//clean from maps/fd registration queue
 				handleTransition(client);
 			}
@@ -110,7 +103,7 @@ void	Core::handleEvents()
 			if (client) 
 				handleClientError(client, statusCode);
 		}
-		if (_fds[i].fd == -1) //might be extra check
+		if (_fds[i].fd == -1)
 		{
 			_clients.erase(fd);
 			_needCleanup = true;
@@ -123,20 +116,18 @@ void	Core::handleRequestRead(Client* client)
 	if (client->state != READ_REQUEST)
 		return ;
 	bool request_ready = client->readHttpRequest();
-	if (client->isDisconnected()) {
-		//std::cout << "💀 Client disconnected, marking for cleanup" << std::endl;
+	if (client->isDisconnected())
 		client->state = DISCONNECTED;
-	} else if (request_ready && client->isRequestComplete()) {
+	else if (request_ready && client->isRequestComplete()) 
+	{
 		std::string raw_request = client->getCompleteRequest();
-		if (!raw_request.empty()) {
-		// std::cout << "🚀 Processing complete HTTP request..." << std::endl;
+		if (!raw_request.empty())
+		{
 			parse_http_request(client, raw_request);
 			client->resetRequestBuffer();
-		} else {
-			client->state = DISCONNECTED;
 		}
-	} else if (!request_ready && !client->isRequestComplete() && !client->isDisconnected()) {
-		// std::cout << "📂 HTTP request incomplete, waiting for more data..." << std::endl;
+		else
+			client->state = DISCONNECTED;
 	}
 }
 
@@ -157,7 +148,6 @@ void	Core::handleTransition(Client* client)
 	{
 		if (!client->isKeepAlive())
 		{
-			// sleep(1);//debug
 			deleteClient(client);
 			return ;
 		}
@@ -179,9 +169,7 @@ void	Core::handleTransition(Client* client)
 		}
 	}
 	else if (client->state == DISCONNECTED)
-	{
 		deleteClient(client);
-	}
 }
 
 void	Core::handleTimeout()
@@ -250,7 +238,7 @@ void	Core::deleteClient(Client* client)
 {
 	int	socketFd = client->getSocket();
 	
-	if (client->getHasCgi()) //maybe dont need since all have closed their CGI
+	if (client->getHasCgi()) //extra check
 	{
 		int	pipeFromCgi = client->GetCgiExec()->getpipeFromCgi();
 		int	pipeToCgi	= client->GetCgiExec()->getpipeToCgi();
@@ -319,104 +307,11 @@ void	Core::addStagedFds()
 	_stagedFds.clear();
 }
 
-void	Core::pathCheck(std::string path)
-{
-	std::string rootPath = "/home/user/42/webserv/www";
-	
-	size_t start	= 1;
-	size_t end		= rootPath.find("/", 1);
-	std::vector<std::string>	rootPathVec;
-	
-	while (end != std::string::npos)
-	{
-		std::string name = rootPath.substr(start, end - start);
-		if (!name.empty())
-		{
-			if (name == "..")
-				rootPathVec.pop_back();
-			else if (name != ".")
-				rootPathVec.push_back(name);
-		}
-		start = end + 1;
-		end = rootPath.find("/", start);
-	}
-	std::string name = rootPath.substr(start);
-	if (!name.empty())
-		rootPathVec.push_back(name);
-
-	size_t	startPath	= 0;
-	size_t	endPath		= path.find("/");
-	size_t	rootFloor	= rootPathVec.size();
-	while(endPath != std::string::npos)
-	{
-		std::string name2 = path.substr(startPath, endPath - startPath); 
-		if (!name2.empty() && name2 != ".")
-		{
-			if (name2 == "..")
-			{
-				if (rootPathVec.empty())
-					throw("error");
-				else if (rootPathVec.size() > rootFloor)
-					rootPathVec.pop_back();
-			}
-			else
-				rootPathVec.push_back(name2);
-		}
-		startPath = endPath + 1;
-		endPath = path.find("/", startPath); 
-	}
-	std::string name2 = path.substr(startPath);
-	if (!name2.empty() && name2 != "." && name2 != "..")
-		rootPathVec.push_back(name2);
-	else if (name2 == "..")
-		rootPathVec.pop_back();
-	std::string fullPath = "/";
-	for (size_t i = 0; i < rootPathVec.size(); i++)
-	{
-		fullPath = fullPath + rootPathVec[i];
-		if (i < rootPathVec.size() - 1)
-			fullPath = fullPath + "/";
-	}
-	struct stat fileInfo;
-	if (stat(fullPath.c_str(), &fileInfo) != 0)
-		throw (403);
-	if(S_ISDIR(fileInfo.st_mode))
-	{
-		//check default file usually defined in config
-		std::string defaultPath = fullPath;
-		if (!defaultPath.empty() && defaultPath[defaultPath.length() - 1] != '/')
-        	defaultPath += "/";
-		defaultPath += "index.html"; //commonly index.html
-		struct stat defaultInfo;
-		//if custom file  not there send error
-		if (stat(defaultPath.c_str(), &defaultInfo) != 0)
-			throw (403);
-		else
-		{
-			if (access(defaultPath.c_str(), R_OK) != 0)
-			{
-				throw (403);
-			}
-			fullPath = defaultPath;
-		}
-	}
-	else if(S_ISREG(fileInfo.st_mode))
-	{
-		if (access(fullPath.c_str(), F_OK) != 0) {
-			throw (404);
-		}
-		if (access(fullPath.c_str(), R_OK) != 0)
-		{
-			throw (403);
-		}		
-	}
-	
-}
-
 void Core::parse_config(const std::string &filename)
 {
     std::ifstream file(filename.c_str());
-    if (!file.is_open()) {
+    if (!file.is_open()) 
+	{
         std::cerr << "Error: config file failed" << std::endl;
         return;
     }
@@ -424,48 +319,50 @@ void Core::parse_config(const std::string &filename)
     ParseState current_state = OUTSIDE;
     std::string line;
 	
-    while (std::getline(file, line)) {
+    while (std::getline(file, line)) 
+	{
         line = Parse::trim_line(line);
         
         if (Parse::is_comment_or_empty(line))
             continue;
         
-        if (current_state == OUTSIDE) {
+        if (current_state == OUTSIDE) 
+		{
             current_state = (ParseState)Parse::parse_outside(line, current_state);
-			if (current_state == SERVER) {
+			if (current_state == SERVER) 
+			{
 				temp_server = t_server();
 				temp_server.client_max_body_size = 1048576;
 			}
         }
-        else if (current_state == SERVER) {
+        else if (current_state == SERVER) 
+		{
             int new_state = Parse::parse_server(line, current_state, temp_server, _usedPorts);
-			if (new_state == LOCATION && current_state == SERVER) {
+			if (new_state == LOCATION && current_state == SERVER)
 				temp_location = Parse::location_init(line);
-			}
-			else if (new_state == OUTSIDE && current_state == SERVER) {
+			else if (new_state == OUTSIDE && current_state == SERVER)
 				server_config.push_back(temp_server);
-				// std::cout << "Parsed server block:" << std::endl;
-			}
 			current_state = (ParseState)new_state;
         }
-        else if (current_state == LOCATION) {
+        else if (current_state == LOCATION)
+		{
             int new_state = Parse::parse_location(line, current_state, temp_location);
-            if (new_state == SERVER && current_state == LOCATION) {
-				if (temp_location.root.empty()) {
+            if (new_state == SERVER && current_state == LOCATION)
+			{
+				if (temp_location.root.empty())
 					temp_location.root = temp_server.root;
-				}
                 temp_server.locations.push_back(temp_location);
             }
             current_state = (ParseState)new_state;
         }
     }
     file.close();
-    std::cout << "Config parsing completed" << std::endl;
 }
 
 void Core::parse_http_request(Client* current_client, const std::string raw_req)
 {
-	if (!current_client) {
+	if (!current_client) 
+	{
 		std::cerr << "Error: null client pointer in parse_http_request" <<std::endl;
 		return;
 	}
@@ -473,7 +370,8 @@ void Core::parse_http_request(Client* current_client, const std::string raw_req)
 	std::istringstream request_stream(raw_req);
 	std::string line;
 	current_request.is_cgi = false;
-	if (std::getline(request_stream, line)) {
+	if (std::getline(request_stream, line)) 
+	{
 		std::istringstream req_line(line);
 		req_line >> current_request.method >> current_request.uri >> current_request.http_version;
 
@@ -487,48 +385,46 @@ void Core::parse_http_request(Client* current_client, const std::string raw_req)
 		*/
 	
 		size_t query_pos = current_request.uri.find('?');
-		if (query_pos != std::string::npos) {
+		if (query_pos != std::string::npos) 
+		{
 			current_request.path = current_request.uri.substr(0, query_pos);
 			current_request.query = current_request.uri.substr(query_pos +1);
 		}
-		else {
+		else
 			current_request.path = current_request.uri;
-		}
 	}
 
-	// while std::getline return something and doesnot end with "\r" and is not empty
-	while (std::getline(request_stream, line) && line != "\r" && !line.empty()) {
+	// while std::getline return something and does not end with "\r" and is not empty
+	while (std::getline(request_stream, line) && line != "\r" && !line.empty()) 
+	{
 		size_t colon_pos = line.find(':');
-		if (colon_pos != std::string::npos) {
+		if (colon_pos != std::string::npos) 
+		{
 			std::string header_name = line.substr(0, colon_pos);
 			std::string header_value = line.substr(colon_pos + 2);
 
-			if (!header_value.empty() && header_value[header_value.length() - 1] == '\r') {
+			if (!header_value.empty() && header_value[header_value.length() - 1] == '\r')
 				header_value.erase(header_value.length() - 1);
-			}
 			current_request.headers[header_name] = header_value;
-			if (header_name == "Cookie") {
+			if (header_name == "Cookie")
 				current_request.cookie = header_value;
-			}
 		}
 	}
 	
 	size_t body_start = raw_req.find("\r\n\r\n");
-	if (body_start == std::string::npos) {
+	if (body_start == std::string::npos) 
+	{
 		body_start = raw_req.find("\n\n");
-		if (body_start != std::string::npos) {
+		if (body_start != std::string::npos)
 			body_start += 2;
-		}
-	} else {
+	} 
+	else
 		body_start += 4;
-	}
 	
-	if (body_start != std::string::npos && body_start < raw_req.length()) {
+	if (body_start != std::string::npos && body_start < raw_req.length()) 
 		current_request.body = raw_req.substr(body_start);
-		// std::cout << "📦 Body extracted: " << current_request.body.length() << " bytes" << std::endl;
-	} else {
+	else
 		current_request.body = "";
-	}
 
     parseConnectionHeader(current_client, current_request);
 	
@@ -536,18 +432,17 @@ void Core::parse_http_request(Client* current_client, const std::string raw_req)
     
     if (path.find("/cgi-bin/") == 0 || 
         path.find(".py") != std::string::npos ||
-        path.find(".php") != std::string::npos) {
-        
-        current_client->setHasCgi(true);
-        current_request.is_cgi = true;  // Set the flag in request too
-        // std::cout << "CGI request: " << path << std::endl;
-    } else {
+        path.find(".php") != std::string::npos) 
+	{
+        	current_client->setHasCgi(true);
+        	current_request.is_cgi = true;  // Set the flag in request too
+	} 
+	else 
+	{
         current_client->setHasCgi(false);
         current_request.is_cgi = false; // Set to false for non-CGI
-        // std::cout << "Normal file request: " << path << std::endl;
     }
 	
-	//putIntoCached(current_request); //importantdebug
 	// debugHttpRequest(current_request); //importantdebug
 	current_client->checkBestLocation();
 	current_client->state = HANDLE_REQUEST;
@@ -556,13 +451,13 @@ void Core::parse_http_request(Client* current_client, const std::string raw_req)
 void Core::initialize_server()
 {
 	std::cout << std::endl;
-	for(size_t i = 0; i < server_config.size(); i++) {
+	for(size_t i = 0; i < server_config.size(); i++) 
+	{
 		int server_fd = SocketUtils::create_listening_socket(server_config[i].port);
-		if (server_fd < 0) {
+		if (server_fd < 0)
 			exit(1);
-		}
-		if (SocketUtils::set_non_blocking(server_fd) < 0) {
-			// perror("Failed to set non-blocking for Listening Socket");
+		if (SocketUtils::set_non_blocking(server_fd) < 0) 
+		{
 			close(server_fd);
 			continue;
 		}
@@ -578,12 +473,14 @@ void Core::accepter(int server_fd, size_t server_index)
 
 	int new_socket = accept(server_fd, (struct sockaddr *)&client_addr, &addrlen);
 	
-	if (new_socket < 0) {
+	if (new_socket < 0) 
+	{
 		perror("Accept fail");
 		return;
 	}
 	
-	if (SocketUtils::set_non_blocking(new_socket) < 0) {
+	if (SocketUtils::set_non_blocking(new_socket) < 0) 
+	{
 		perror("Failed to set non-blocking");
 		return;
 	}
@@ -672,39 +569,32 @@ void Core::parseConnectionHeader(Client* client, const s_HttpRequest& request)
 {
     bool keepAlive = false;
     
-    if (request.http_version == "HTTP/1.1") {
+    if (request.http_version == "HTTP/1.1")
         keepAlive = true;
-    } else {
+    else
         keepAlive = false;
-    }
     
     std::map<std::string, std::string>::const_iterator conn_it = request.headers.find("Connection");
-    if (conn_it == request.headers.end()) {
+    if (conn_it == request.headers.end())
         conn_it = request.headers.find("connection");
-    }
     
-    if (conn_it != request.headers.end()) {
+    if (conn_it != request.headers.end()) 
+	{
         std::string conn_value = conn_it->second;
         
-        for (size_t i = 0; i < conn_value.length(); i++) {
+        for (size_t i = 0; i < conn_value.length(); i++)
             conn_value[i] = std::tolower(conn_value[i]);
-        }
         
-        if (conn_value.find("keep-alive") != std::string::npos) {
+        if (conn_value.find("keep-alive") != std::string::npos)
             keepAlive = true;
-            // std::cout << "🔄 Keep-Alive requested by client" << std::endl;
-        } else if (conn_value.find("close") != std::string::npos) {
+        else if (conn_value.find("close") != std::string::npos)
             keepAlive = false;
-            // std::cout << "❌ Connection close requested by client" << std::endl;
-        }
     }
     
-    if (keepAlive) {
+    if (keepAlive)
         client->setConnStatus(KEEP_ALIVE);
-        // std::cout << "✅ Connection will be kept alive " /*(" << request.http_version << ")"*/ << std::endl;
-    } else {
+    else
         client->setConnStatus(CLOSE);
-    }
 }
 
 void Core::debugHttpRequest(const t_HttpRequest& request)
@@ -785,81 +675,6 @@ void Core::debugHttpRequest(const t_HttpRequest& request)
     std::cout << std::string(60, '=') << "\n" << std::endl;
 }
 
-void Core::putIntoCached(s_HttpRequest& request)
-{
-    std::cout << "🔄 Caching parsed headers..." << std::endl;
-    
-    // 1. Cache Host header and extract port
-    std::map<std::string, std::string>::iterator host_it = request.headers.find("Host");
-    if (host_it != request.headers.end()) {
-        std::string host_header = host_it->second;
-        
-        // Check if port is specified in Host header (e.g., "localhost:8088")
-        size_t port_pos = host_header.find(':');
-        if (port_pos != std::string::npos) {
-            request.host = host_header.substr(0, port_pos);
-            std::string port_str = host_header.substr(port_pos + 1);
-            request.port = atoi(port_str.c_str());
-        } else {
-            request.host = host_header;
-            request.port = 80;  // Default for HTTP
-        }
-        std::cout << "   ✅ Host: \"" << request.host << ":" << request.port << "\"" << std::endl;
-    } else {
-        request.host = "";
-        request.port = 0;
-        std::cout << "   ⚠️ No Host header found" << std::endl;
-    }
-    
-    std::map<std::string, std::string>::iterator cl_it = request.headers.find("Content-Length");
-    if (cl_it != request.headers.end()) {
-        request.content_length = static_cast<size_t>(atoi(cl_it->second.c_str()));
-        std::cout << "    Content-Length: " << request.content_length << " bytes" << std::endl;
-    } else {
-        request.content_length = 0;
-        if (request.method == "POST" || request.method == "PUT" || request.method == "PATCH") {
-            std::cout << "   ⚠️ No Content-Length for " << request.method << " request" << std::endl;
-        }
-    }
-    
-    std::map<std::string, std::string>::iterator ct_it = request.headers.find("Content-Type");
-    if (ct_it != request.headers.end()) {
-        request.content_type = ct_it->second;
-        std::cout << "    Content-Type: \"" << request.content_type << "\"" << std::endl;
-    } else {
-        request.content_type = "";
-        if (request.method == "POST" || request.method == "PUT" || request.method == "PATCH") {
-            std::cout << "   ⚠️ No Content-Type for " << request.method << " request" << std::endl;
-        }
-    }
-    
-    request.keep_alive = (request.http_version == "HTTP/1.1");  // Default
-    
-    std::map<std::string, std::string>::iterator conn_it = request.headers.find("Connection");
-    if (conn_it == request.headers.end()) {
-        conn_it = request.headers.find("connection");
-    }
-    
-    if (conn_it != request.headers.end()) {
-        std::string conn_value = conn_it->second;
-        for (size_t i = 0; i < conn_value.length(); i++) {
-            conn_value[i] = std::tolower(conn_value[i]);
-        }
-        
-        if (conn_value.find("keep-alive") != std::string::npos) {
-            request.keep_alive = true;
-        } else if (conn_value.find("close") != std::string::npos) {
-            request.keep_alive = false;
-        }
-    }
-    std::cout << "    Keep-Alive: " << (request.keep_alive ? "TRUE" : "FALSE") << std::endl;
-}
-
-std::map<std::string, std::string>& Core::getCookiesMap()
-{
-	return _cookies;
-}
-
 void	Core::CleanupAll()
 {
 	std::map<int, Client*>::iterator it;
@@ -873,150 +688,3 @@ void	Core::CleanupAll()
 			deleteClient(client);
 	}
 }
-
-//Delete after fully tested. This one is the latest modifications interms of concepts
-// void	Core::handleTimeout()
-// {
-// 	time_t now = time(NULL);
-//     std::vector<int> clients_to_delete; // Store FDs to delete
-//     // First pass: identify clients to delete
-//     for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it)
-//     {
-//         Client* client = it->second;
-        
-//         if (client && client->state == 3 && client->isIdle(now))
-//         {
-//             // if (client->state == READ_REQUEST || client->state == FINISHED)
-//             // {
-//             //     clients_to_delete.push_back(it->first);
-//             // }
-//             // else
-//             // {
-//                 handleClientError(client, client->GetCgiExec() && client->GetCgiExec()->getpid() ? 504 : 408);
-//             // }
-//         }
-//     }
-    
-//     // Second pass: delete clients
-//     for (size_t i = 0; i < clients_to_delete.size(); i++)
-//     {
-//         int fd = clients_to_delete[i];
-//         Client* client = _clients[fd];
-//         if (client) {
-//             deleteClient(client);
-//         }
-//     }
-// }
-
-// void	Core::removeFd(int fd)
-// {
-// 	for (std::vector<struct pollfd>::iterator it = _fds.begin(); it != _fds.end(); ++it)
-// 	{
-// 		if (it->fd == fd)
-// 		{
-// 			close(it->fd);
-// 			_fds.erase(it);
-// 			_clients.erase(fd);
-// 			fd = -1;
-// 			return ;
-// 		}
-// 	}
-// }
-
-// void	Core::run()
-// {
-// 	while (g_shutdown == 0)
-// 	{
-// 		handleTimeout();
-// 		int result = poll(&_fds[0], _fds.size(), 10000);
-// 		if (result < 0) {
-// 			if (errno == EINTR)
-// 				return ;
-// 			perror("Polls error");
-// 			continue;
-// 		} 
-// 		for (long unsigned int i = 0; i < _fds.size(); i++)
-// 		{
-// 			int	oriFd = _fds[i].fd;
-// 			if (oriFd == -1)
-// 				continue ;
-// 			int	revents = _fds[i].revents;
-// 			if (!revents)
-// 				continue;
-// 			try
-// 			{
-// 				if (_serverFd.find(oriFd) != _serverFd.end()) 
-// 				{
-// 					if (revents & POLLIN)
-// 					{
-// 						size_t server_index = _serverFd[oriFd];
-// 						accepter(oriFd, server_index);
-// 						continue ;
-// 					}
-// 				}
-// 				else 
-// 				{	
-// 					Client* client = _clients[oriFd];
-
-// 					if (!client) {
-// 						std::cout << "No client found for FD " << oriFd << std::endl;
-// 						continue;
-// 					}
-// 					// Only for client socket (not cgi socket)
-// 					if ((revents & POLLHUP) && oriFd == client->getSocket())
-// 					{
-// 						deleteClient(client); //handle disconnect;
-// 						i--;
-// 						continue ;
-// 					}
-// 					if (revents & POLLIN || revents & POLLHUP)  //POLLHUP for CGI
-// 					{
-// 						if (client->state == READ_REQUEST) 
-// 						{
-// 							bool request_ready = client->readHttpRequest();
-// 							if (client->isDisconnected()) {
-// 								std::cout << "💀 Client disconnected, marking for cleanup" << std::endl;
-// 								client->state = DISCONNECTED;
-// 							} else if (request_ready && client->isRequestComplete()) {
-// 								std::string raw_request = client->getCompleteRequest();
-// 								if (!raw_request.empty()) {
-// 									// std::cout << "🚀 Processing complete HTTP request..." << std::endl;
-// 									parse_http_request(client, raw_request);
-// 									client->resetRequestBuffer();
-// 								} else {
-// 									client->state = DISCONNECTED;
-// 								}
-// 							} else if (!request_ready && !client->isRequestComplete() && !client->isDisconnected()) {
-// 								// std::cout << "📂 HTTP request incomplete, waiting for more data..." << std::endl;
-// 							}
-// 						}
-// 						client->procInput(i, _fds[i]);
-// 						if (_clients.find(oriFd) == _clients.end()) 
-// 						{
-//                         	i--;
-//                         	continue;
-// 						}
-// 					}
-// 					if (_fds[i].revents & POLLOUT || revents & POLLHUP)
-// 						client->procOutput(i, _fds[i]);
-// 					//clean from maps/fd registration queue
-// 					handleTransition(client);
-// 				}
-// 			}
-// 			catch (int statusCode)
-// 			{
-// 				Client* client = _clients[oriFd];
-// 				if (client) 
-// 					handleClientError(client, statusCode);
-// 			}
-// 			if (_fds[i].fd == -1)
-// 			{
-// 				_clients.erase(oriFd);
-// 				_needCleanup = true;
-// 			}
-// 		}
-// 		//delete all in the delete list
-// 		fdCleanup();
-// 		addStagedFds(); //handle all sementara
-// 	}
-// }

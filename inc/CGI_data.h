@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/16 15:03:57 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/12 11:49:15 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/13 15:23:34 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,15 +19,15 @@
 #include <map>
 #include <vector>
 
-typedef struct s_location {
-    std::string path;              // "/cgi-bin" also for redirection
-    std::string root;              // filesystem root
+typedef struct s_location 
+{
+    std::string path;          
+    std::string root;             
     bool cgi_enabled;
 	bool has_redirect;
 	int  redir_status;
 	std::string	redir_path;
-   
-    std::string interp;          // "/usr/bin/python3". the binary
+    std::string interp;          // "/usr/bin/python3"
 	std::vector<std::string> cgi_extension;
 	bool allow_get;
 	bool allow_post;

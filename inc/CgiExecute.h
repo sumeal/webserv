@@ -6,7 +6,7 @@
 /*   By: mbani-ya <mbani-ya@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/22 00:37:30 by mbani-ya          #+#    #+#             */
-/*   Updated: 2026/02/12 11:48:59 by mbani-ya         ###   ########.fr       */
+/*   Updated: 2026/02/13 15:23:53 by mbani-ya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,6 +24,7 @@ private:
 	s_HttpRequest _request;
 	t_location _locate;
 	Client*		_client;
+	
 	//CGI pre
 	pid_t	_pid;
 	int		_pipeIn[2];
@@ -32,7 +33,8 @@ private:
 	int		_pipeFromCgi;
     std::string _scriptPath; // /var/www/html/cgi-bin/test.py
 	std::string	_protocol;
-	//CGI postresult
+	
+	//CGI post
 	std::string	_output;
 	size_t		_bodySizeSent;
 	bool		_writeEnded;
@@ -50,7 +52,6 @@ public:
 	void	writeExec();
 	void	cgiState();
 	void	clearCgi();
-	// void	cleanup();
 
 	bool	isCGI() const;
 	bool	isCGIextOK() const;
